@@ -4,6 +4,10 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\ChecklistController;
+use App\Http\Controllers\Api\ProjectController;
+use App\Http\Controllers\Api\VersionItemController;
+use App\Http\Controllers\Api\ProjectVersionController;
 
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -11,15 +15,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
 
-    // ✅ routes de test par rôle
-    Route::get('/admin-only', fn () => response()->json(['ok' => true, 'area' => 'admin']))
-        ->middleware('role:admin');
-
-    Route::get('/chef-only', fn () => response()->json(['ok' => true, 'area' => 'chef']))
-        ->middleware('role:chef');
-
-    Route::get('/testeur-only', fn () => response()->json(['ok' => true, 'area' => 'testeur']))
-        ->middleware('role:testeur');
 
     // ✅ Users CRUD (ADMIN ONLY)
     Route::middleware('role:admin')->group(function () {
@@ -29,4 +24,24 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/users/{user}', [UserController::class, 'update']);
         Route::delete('/users/{user}', [UserController::class, 'destroy']);
     });
+
+Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::get('/checklists', [ChecklistController::class, 'index']);
+    Route::post('/checklists', [ChecklistController::class, 'store']);
+    Route::get('/checklists/{checklist}', [ChecklistController::class, 'show']);
+    Route::put('/checklists/{checklist}', [ChecklistController::class, 'update']);
+    Route::delete('/checklists/{checklist}', [ChecklistController::class, 'destroy']);
+    Route::patch('/checklists/{checklist}/toggle', [ChecklistController::class, 'toggle']);
+});
+
+Route::middleware(['auth:sanctum', 'role:admin|chef'])->group(function () {
+    Route::post('/projects/{project}/versions', [ProjectController::class, 'createVersion']);
+    Route::get('/projects', [ProjectController::class, 'index']);
+    Route::post('/projects', [ProjectController::class, 'store']); // crée projet + version 1
+    Route::get('/projects/{project}', [ProjectController::class, 'show']);
+});
+Route::middleware(['auth:sanctum', 'role:admin|chef|testeur'])->group(function () {
+    Route::patch('/version-items/{versionItem}/status', [VersionItemController::class, 'updateStatus']);
+     Route::get('/project-versions/{projectVersion}/progress', [ProjectVersionController::class, 'progress']);
+});
 });
