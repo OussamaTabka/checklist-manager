@@ -22,29 +22,34 @@ class UserController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'unique:users,email'],
-            'password' => ['nullable', 'string', 'min:6'],
-            'role' => ['required', Rule::in(['admin', 'chef', 'testeur'])],
-        ]);
+{
+    $data = $request->validate([
+        'name' => ['required', 'string', 'max:255'],
+        'email' => ['required', 'email', 'unique:users,email'],
+        'password' => ['nullable', 'string', 'min:6'],
+        'role' => ['required', Rule::in(['admin', 'chef', 'testeur'])],
+    ]);
 
-        $plainPassword = $data['password'] ?? $this->generatePassword();
+    // Vérifie proprement si password existe
+    $hasPassword = isset($data['password']) && !empty($data['password']);
 
-        $user = User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => Hash::make($plainPassword),
-        ]);
+    $plainPassword = $hasPassword
+        ? $data['password']
+        : $this->generatePassword();
 
-        $user->syncRoles([$data['role']]);
+    $user = User::create([
+        'name' => $data['name'],
+        'email' => $data['email'],
+        'password' => Hash::make($plainPassword),
+    ]);
 
-        return response()->json([
-            'user' => $user->load('roles:name'),
-            'generated_password' => $data['password'] ? null : $plainPassword,
-        ], 201);
-    }
+    $user->syncRoles([$data['role']]);
+
+    return response()->json([
+        'user' => $user->load('roles:name'),
+        'generated_password' => $hasPassword ? null : $plainPassword,
+    ], 201);
+}
 
     public function show(User $user)
     {
