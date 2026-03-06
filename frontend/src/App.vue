@@ -1,11 +1,54 @@
-<script setup></script>
+<script setup>
+import { computed } from 'vue'
+import { RouterLink, RouterView, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import LogoHeader from '@/components/LogoHeader.vue'
+
+const auth = useAuthStore()
+const router = useRouter()
+
+const roleLabel = computed(() => auth.roles.join(', '))
+
+async function handleLogout() {
+  await auth.logout()
+  await router.push({ name: 'login' })
+}
+</script>
 
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
-</template>
+  <div class="portal-shell">
+    <template v-if="auth.isAuthenticated">
+      <header class="topbar">
+        <LogoHeader />
 
-<style scoped></style>
+        <div class="topbar-right">
+          <div class="user-meta">
+            <strong>{{ auth.user?.name }}</strong>
+            <span>{{ roleLabel }}</span>
+          </div>
+          <button class="btn btn-secondary" @click="handleLogout">Logout</button>
+        </div>
+      </header>
+
+      <div class="portal-layout">
+        <aside class="sidebar">
+          <div class="sidebar-title">Navigation</div>
+          <nav class="sidebar-nav">
+            <RouterLink :to="{ name: 'dashboard' }">Dashboard</RouterLink>
+            <RouterLink :to="{ name: 'projects' }">Projects</RouterLink>
+            <RouterLink v-if="auth.isAdmin" :to="{ name: 'checklists' }">Checklist Templates</RouterLink>
+            <RouterLink v-if="auth.isAdmin" :to="{ name: 'users' }">Users & Roles</RouterLink>
+          </nav>
+        </aside>
+
+        <main class="portal-content">
+          <RouterView />
+        </main>
+      </div>
+    </template>
+
+    <main v-else class="auth-content">
+      <RouterView />
+    </main>
+  </div>
+</template>

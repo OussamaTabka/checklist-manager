@@ -2,10 +2,16 @@
 
 namespace App\Providers;
 
+use App\Models\Project;
+use App\Policies\ProjectPolicy;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
+    protected $policies = [
+        Project::class => ProjectPolicy::class,
+    ];
+
     /**
      * Register any application services.
      */

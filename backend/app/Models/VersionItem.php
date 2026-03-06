@@ -16,4 +16,9 @@ class VersionItem extends Model
     {
         return $this->belongsTo(ProjectVersion::class, 'project_version_id');
     }
+
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
 }
