@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Models\ProjectVersion;
 use App\Models\VersionItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ProjectController extends Controller
@@ -63,15 +64,23 @@ class ProjectController extends Controller
 }
     public function index()
     {
+        $user = Auth::user();
+        $query = Project::with(['creator:id,name,email']);
+
+        // Chef voit seulement ses projets, Admin voit tous, Testeur voit tous
+        if ($user->hasRole('chef') && !$user->hasRole('admin')) {
+            $query->where('created_by', $user->id);
+        }
+
         return response()->json(
-            Project::with(['creator:id,name,email'])
-                ->orderByDesc('id')
-                ->paginate(10)
+            $query->orderByDesc('id')->paginate(10)
         );
     }
 
     public function show(Project $project)
     {
+        $this->authorize('view', $project);
+
         return response()->json(
             $project->load([
                 'creator:id,name,email',
@@ -106,7 +115,7 @@ class ProjectController extends Controller
             $project = Project::create([
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
-                'created_by' => auth()->id(),
+                'created_by' => Auth::id(),
             ]);
 
             $version = ProjectVersion::create([
@@ -137,5 +146,27 @@ class ProjectController extends Controller
             DB::rollBack();
             return response()->json(['message' => 'Error creating project'], 500);
         }
+    }
+
+    public function update(Request $request, Project $project)
+    {
+        $this->authorize('update', $project);
+
+        $data = $request->validate([
+            'name' => ['sometimes', 'required', 'string'],
+            'description' => ['nullable', 'string'],
+        ]);
+
+        $project->update($data);
+        $project->load(['creator:id,name,email', 'versions']);
+        return response()->json($project);
+    }
+
+    public function destroy(Project $project)
+    {
+        $this->authorize('delete', $project);
+
+        $project->delete();
+        return response()->json(null, 204);
     }
 }

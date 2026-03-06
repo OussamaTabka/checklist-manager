@@ -1,44 +1,45 @@
-# frontend
+# Frontend (Vue)
 
-This template should help get you started developing with Vue 3 in Vite.
+This frontend is a standalone Vue app and is intentionally outside the Laravel backend.
 
-## Recommended IDE Setup
+Project structure:
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+- `backend/` → Laravel API only
+- `frontend/` → Vue UI only
 
-## Recommended Browser Setup
+## Environment
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
+Create `.env` inside `frontend/` from `.env.example`:
 
 ```sh
-npm install
+cp .env.example .env
 ```
 
-### Compile and Hot-Reload for Development
+Set the API base URL:
+
+```env
+VITE_API_URL=http://127.0.0.1:8000/api
+```
+
+## Run frontend
 
 ```sh
+cd frontend
+npm install
 npm run dev
 ```
 
-### Compile and Minify for Production
+## Run backend (separately)
+
+```sh
+cd backend
+php artisan serve
+```
+
+Frontend and backend run as two separate processes.
+
+## Build
 
 ```sh
 npm run build
-```
-
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
-npm run lint
 ```

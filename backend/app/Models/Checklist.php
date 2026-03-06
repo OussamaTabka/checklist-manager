@@ -14,6 +14,7 @@ class Checklist extends Model
     protected $fillable = [
         'name',
         'description',
+        'category',
         'is_active',
         'created_by'
     ];

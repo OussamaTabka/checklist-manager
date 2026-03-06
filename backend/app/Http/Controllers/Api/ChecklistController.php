@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Checklist;
 use App\Models\ChecklistItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ChecklistController extends Controller
@@ -37,6 +38,7 @@ class ChecklistController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string'],
             'description' => ['nullable', 'string'],
+            'category' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.title' => ['required', 'string'],
             'items.*.description' => ['nullable', 'string'],
@@ -50,7 +52,8 @@ class ChecklistController extends Controller
             $checklist = Checklist::create([
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
-                'created_by' => auth()->id(),
+                'category' => $data['category'] ?? 'General',
+                'created_by' => Auth::id(),
                 'is_active' => true,
             ]);
 
@@ -90,6 +93,7 @@ class ChecklistController extends Controller
     $data = $request->validate([
         'name' => ['sometimes', 'required', 'string'],
         'description' => ['nullable', 'string'],
+        'category' => ['nullable', 'string'],
         'is_active' => ['sometimes', 'boolean'],
 
         'items' => ['sometimes', 'array', 'min:1'],
@@ -107,6 +111,7 @@ class ChecklistController extends Controller
         $checklist->update([
             'name' => $data['name'] ?? $checklist->name,
             'description' => array_key_exists('description', $data) ? $data['description'] : $checklist->description,
+            'category' => $data['category'] ?? $checklist->category,
             'is_active' => $data['is_active'] ?? $checklist->is_active,
         ]);
 
