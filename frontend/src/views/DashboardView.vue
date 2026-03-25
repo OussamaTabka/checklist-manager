@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { apiRequest } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
@@ -15,22 +15,35 @@ const globalProgress = ref(0)
 const failedCriticalItems = ref(0)
 const projectSuccessRows = ref([])
 
-function computeVersionStats(version) {
-  const items = version?.items || []
-  const passed = items.filter((item) => item.status === 'Passed').length
-  const failed = items.filter((item) => item.status === 'Failed').length
-  const blocked = items.filter((item) => item.status === 'Blocked').length
-  const pending = items.filter((item) => item.status === 'Not Tested').length
-  const total = items.length
+const averageSuccessRate = computed(() => {
+  if (!projectSuccessRows.value.length) return 0
+  const total = projectSuccessRows.value.reduce((sum, row) => sum + (Number(row.successRate) || 0), 0)
+  return Number((total / projectSuccessRows.value.length).toFixed(1))
+})
 
-  const tested = passed + failed + blocked
-  const completion = total ? Number(((tested / total) * 100).toFixed(2)) : 0
-  const successRate = tested ? Number(((passed / tested) * 100).toFixed(2)) : 0
-  const criticalFailed = items.filter(
-    (item) => item.criticality === 'Critical' && item.status === 'Failed',
-  ).length
+const averageCompletion = computed(() => {
+  if (!projectSuccessRows.value.length) return 0
+  const total = projectSuccessRows.value.reduce((sum, row) => sum + (Number(row.completion) || 0), 0)
+  return Number((total / projectSuccessRows.value.length).toFixed(1))
+})
 
-  return { total, passed, failed, blocked, pending, completion, successRate, criticalFailed }
+const qualityScore = computed(() => {
+  const penalty = Math.min(failedCriticalItems.value * 3, 35)
+  const weighted = (averageSuccessRate.value * 0.65) + (averageCompletion.value * 0.35)
+  return Math.max(0, Number((weighted - penalty).toFixed(1)))
+})
+
+function pct(value) {
+  const n = Number(value) || 0
+  return Math.max(0, Math.min(100, n))
+}
+
+function meterColor(value) {
+  const n = pct(value)
+  if (n >= 80) return '#16a34a'
+  if (n >= 60) return '#2563eb'
+  if (n >= 40) return '#d97706'
+  return '#dc2626'
 }
 
 async function loadDashboard() {
@@ -38,47 +51,12 @@ async function loadDashboard() {
   errorMessage.value = ''
 
   try {
-    const projectsPage = await apiRequest('/projects', {}, auth.token)
-    const projects = projectsPage.data || []
-    totalProjects.value = projectsPage.total || projects.length
-
-    if (auth.isAdmin) {
-      try {
-        const checklistsPage = await apiRequest('/checklists', {}, auth.token)
-        totalChecklists.value = checklistsPage.total || (checklistsPage.data || []).length
-      } catch {
-        totalChecklists.value = null
-      }
-    }
-
-    const details = await Promise.all(
-      projects.map((project) => apiRequest(`/projects/${project.id}`, {}, auth.token)),
-    )
-
-    let totalItems = 0
-    let testedItems = 0
-    let criticalFailures = 0
-
-    projectSuccessRows.value = details.map((project) => {
-      const latestVersion = (project.versions || []).sort((a, b) => b.version_number - a.version_number)[0]
-      const stats = computeVersionStats(latestVersion)
-
-      totalItems += stats.total
-      testedItems += stats.passed + stats.failed + stats.blocked
-      criticalFailures += stats.criticalFailed
-
-      return {
-        id: project.id,
-        name: project.name,
-        version: latestVersion?.version_number || '-',
-        successRate: stats.successRate,
-        completion: stats.completion,
-        failed: stats.failed,
-      }
-    })
-
-    globalProgress.value = totalItems ? Number(((testedItems / totalItems) * 100).toFixed(2)) : 0
-    failedCriticalItems.value = criticalFailures
+    const summary = await apiRequest('/dashboard/summary', {}, auth.token)
+    totalProjects.value = summary.totalProjects || 0
+    totalChecklists.value = summary.totalChecklists ?? null
+    globalProgress.value = summary.globalProgress || 0
+    failedCriticalItems.value = summary.failedCriticalItems || 0
+    projectSuccessRows.value = summary.projectSuccessRows || []
   } catch (error) {
     errorMessage.value = error.data?.message || error.message
   } finally {
@@ -115,11 +93,55 @@ onMounted(async () => {
       <article class="stat-card">
         <div class="stat-label">Global Progress</div>
         <div class="stat-value">{{ globalProgress }}%</div>
+        <div style="margin-top: 0.6rem; width: 100%; height: 10px; background: #e5e7eb; border-radius: 999px; overflow: hidden">
+          <div
+            :style="{ width: `${pct(globalProgress)}%`, background: meterColor(globalProgress), height: '100%', transition: 'width 250ms ease' }"
+          />
+        </div>
       </article>
 
       <article class="stat-card">
         <div class="stat-label">Critical Items Failed</div>
         <div class="stat-value">{{ failedCriticalItems }}</div>
+      </article>
+    </div>
+
+    <div class="stats-grid" v-if="!loading">
+      <article class="card stack">
+        <div class="section-header" style="margin-bottom: 0.2rem">
+          <h3>Average Completion</h3>
+          <strong>{{ averageCompletion }}%</strong>
+        </div>
+        <div style="width: 100%; height: 12px; background: #e5e7eb; border-radius: 999px; overflow: hidden">
+          <div
+            :style="{ width: `${pct(averageCompletion)}%`, background: meterColor(averageCompletion), height: '100%', transition: 'width 250ms ease' }"
+          />
+        </div>
+      </article>
+
+      <article class="card stack">
+        <div class="section-header" style="margin-bottom: 0.2rem">
+          <h3>Average Success</h3>
+          <strong>{{ averageSuccessRate }}%</strong>
+        </div>
+        <div style="width: 100%; height: 12px; background: #e5e7eb; border-radius: 999px; overflow: hidden">
+          <div
+            :style="{ width: `${pct(averageSuccessRate)}%`, background: meterColor(averageSuccessRate), height: '100%', transition: 'width 250ms ease' }"
+          />
+        </div>
+      </article>
+
+      <article class="card stack">
+        <div class="section-header" style="margin-bottom: 0.2rem">
+          <h3>Quality Score</h3>
+          <strong>{{ qualityScore }} / 100</strong>
+        </div>
+        <div style="width: 100%; height: 12px; background: #e5e7eb; border-radius: 999px; overflow: hidden">
+          <div
+            :style="{ width: `${pct(qualityScore)}%`, background: meterColor(qualityScore), height: '100%', transition: 'width 250ms ease' }"
+          />
+        </div>
+        <small class="muted">Quality score uses success + completion, penalized by critical failures.</small>
       </article>
     </div>
 
@@ -144,8 +166,30 @@ onMounted(async () => {
             <tr v-for="row in projectSuccessRows" :key="row.id">
               <td>{{ row.name }}</td>
               <td>v{{ row.version }}</td>
-              <td>{{ row.successRate }}%</td>
-              <td>{{ row.completion }}%</td>
+              <td>
+                <div style="min-width: 180px">
+                  <div style="display: flex; justify-content: space-between; font-size: 0.86rem; margin-bottom: 0.35rem">
+                    <span class="muted">{{ row.successRate }}%</span>
+                  </div>
+                  <div style="width: 100%; height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden">
+                    <div
+                      :style="{ width: `${pct(row.successRate)}%`, background: meterColor(row.successRate), height: '100%', transition: 'width 250ms ease' }"
+                    />
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div style="min-width: 180px">
+                  <div style="display: flex; justify-content: space-between; font-size: 0.86rem; margin-bottom: 0.35rem">
+                    <span class="muted">{{ row.completion }}%</span>
+                  </div>
+                  <div style="width: 100%; height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden">
+                    <div
+                      :style="{ width: `${pct(row.completion)}%`, background: meterColor(row.completion), height: '100%', transition: 'width 250ms ease' }"
+                    />
+                  </div>
+                </div>
+              </td>
               <td>{{ row.failed }}</td>
               <td>
                 <RouterLink class="btn btn-secondary btn-sm" :to="{ name: 'project-detail', params: { id: row.id } }">

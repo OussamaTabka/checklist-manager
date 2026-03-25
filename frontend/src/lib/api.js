@@ -4,10 +4,25 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api'
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
+  withXSRFToken: true,
   headers: {
     Accept: 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
   },
 })
+
+const APP_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '')
+
+export async function ensureCsrfCookie() {
+  await axios.get(`${APP_BASE_URL}/sanctum/csrf-cookie`, {
+    withCredentials: true,
+    headers: {
+      Accept: 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+    },
+  })
+}
 
 export async function apiRequest(path, options = {}, token = null) {
   try {

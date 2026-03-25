@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { apiRequest } from '@/lib/api'
+import { API_BASE_URL, apiRequest } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -16,6 +16,7 @@ const checklists = ref([])
 const progress = ref(null)
 
 const selectedVersionId = ref('')
+const openExportDropdown = ref(null)
 const selectedItemId = ref(null)
 const comments = ref([])
 const commentsLoading = ref(false)
@@ -195,35 +196,63 @@ async function deleteComment(commentId, itemId) {
   }
 }
 
-async function exportVersion(versionId) {
+async function exportVersion(versionId, format = 'csv') {
   actionError.value = ''
   actionSuccess.value = ''
 
   try {
-    const data = await apiRequest(`/project-versions/${versionId}/export`, {}, auth.token)
-    downloadJSON(data, `version-${versionId}-export.json`)
+    await downloadExportFile(
+      `/project-versions/${versionId}/export/${format}`,
+      `version-${versionId}-export.${format}`,
+    )
+    openExportDropdown.value = null
     actionSuccess.value = 'Version exported successfully.'
   } catch (error) {
     actionError.value = error.data?.message || error.message
   }
 }
 
-async function exportProject() {
+async function exportProject(format = 'csv') {
   actionError.value = ''
   actionSuccess.value = ''
 
   try {
-    const data = await apiRequest(`/projects/${route.params.id}/export`, {}, auth.token)
-    downloadJSON(data, `project-${route.params.id}-export.json`)
+    await downloadExportFile(
+      `/projects/${route.params.id}/export/${format}`,
+      `project-${route.params.id}-export.${format}`,
+    )
+    openExportDropdown.value = null
     actionSuccess.value = 'Project exported successfully.'
   } catch (error) {
     actionError.value = error.data?.message || error.message
   }
 }
 
-function downloadJSON(data, filename) {
-  const jsonString = JSON.stringify(data, null, 2)
-  const blob = new Blob([jsonString], { type: 'application/json' })
+async function downloadExportFile(endpoint, fallbackFilename) {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: {
+      Accept: '*/*',
+    },
+  })
+
+  if (!response.ok) {
+    let message = `Export failed with status ${response.status}`
+    try {
+      const body = await response.json()
+      message = body.message || body.error || message
+    } catch {
+      // Keep default message when body is not JSON.
+    }
+    throw new Error(message)
+  }
+
+  const blob = await response.blob()
+  const contentDisposition = response.headers.get('content-disposition') || ''
+  const match = contentDisposition.match(/filename="?([^\"]+)"?/) || contentDisposition.match(/filename=([^;]+)/)
+  const filename = match?.[1]?.trim() || fallbackFilename
+
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
@@ -290,8 +319,41 @@ onMounted(async () => {
             </select>
           </div>
           <div style="align-items: end; display: flex; gap: 0.5rem">
-            <button v-if="selectedVersionId" class="btn btn-secondary btn-sm" @click="exportVersion(Number(selectedVersionId))">Export Version</button>
-            <button class="btn btn-secondary btn-sm" @click="exportProject">Export Project</button>
+            <div v-if="selectedVersionId" style="position: relative">
+              <button
+                class="btn btn-secondary btn-sm"
+                @click="openExportDropdown = openExportDropdown === 'version' ? null : 'version'"
+              >
+                Export Version
+              </button>
+              <div
+                v-if="openExportDropdown === 'version'"
+                class="card stack"
+                style="position: absolute; right: 0; top: calc(100% + 0.4rem); z-index: 20; min-width: 120px; padding: 0.4rem"
+              >
+                <button class="btn btn-secondary btn-sm" @click="exportVersion(Number(selectedVersionId), 'csv')">CSV</button>
+                <button class="btn btn-secondary btn-sm" @click="exportVersion(Number(selectedVersionId), 'pdf')">PDF</button>
+                <button class="btn btn-secondary btn-sm" @click="exportVersion(Number(selectedVersionId), 'xls')">XLS</button>
+              </div>
+            </div>
+
+            <div style="position: relative">
+              <button
+                class="btn btn-secondary btn-sm"
+                @click="openExportDropdown = openExportDropdown === 'project' ? null : 'project'"
+              >
+                Export Project
+              </button>
+              <div
+                v-if="openExportDropdown === 'project'"
+                class="card stack"
+                style="position: absolute; right: 0; top: calc(100% + 0.4rem); z-index: 20; min-width: 120px; padding: 0.4rem"
+              >
+                <button class="btn btn-secondary btn-sm" @click="exportProject('csv')">CSV</button>
+                <button class="btn btn-secondary btn-sm" @click="exportProject('pdf')">PDF</button>
+                <button class="btn btn-secondary btn-sm" @click="exportProject('xls')">XLS</button>
+              </div>
+            </div>
           </div>
         </div>
 
