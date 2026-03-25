@@ -199,14 +199,15 @@ onMounted(async () => {
           <tbody>
             <tr v-for="project in projects" :key="project.id">
               <td>{{ project.id }}</td>
-              <td>{{ project.name }}</td>
+              <td>
+                <RouterLink :to="{ name: 'project-detail', params: { id: project.id } }">
+                  {{ project.name }}
+                </RouterLink>
+              </td>
               <td>{{ project.creator?.name || '-' }}</td>
               <td>{{ project.description || '-' }}</td>
               <td>
                 <div class="actions">
-                  <RouterLink class="btn btn-secondary btn-sm" :to="{ name: 'project-detail', params: { id: project.id } }">
-                    Open
-                  </RouterLink>
                   <button v-if="canManageProject(project)" class="btn btn-secondary btn-sm" @click="editProject(project)">Edit</button>
                   <button v-if="canManageProject(project)" class="btn btn-danger btn-sm" @click="deleteProject(project.id)">Delete</button>
                 </div>

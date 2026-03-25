@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, computed } from 'vue'
 import { apiRequest, withQuery } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 
@@ -11,6 +11,9 @@ const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const submitting = ref(false)
+const availableItems = ref([])
+const selectedExistingItemId = ref('')
+const itemSearchQueries = ref({}) // Track search input for each item field
 
 const defaultItem = () => ({
   id: null,
@@ -29,6 +32,27 @@ const form = reactive({
   items: [defaultItem()],
 })
 
+const addableExistingItems = computed(() => {
+  const usedSignatures = new Set(
+    form.items.map((item) => `${item.title}|${item.description || ''}|${item.priority}|${item.criticality}`)
+  )
+
+  return availableItems.value.filter((item) => {
+    const signature = `${item.title}|${item.description || ''}|${item.priority}|${item.criticality}`
+    return !usedSignatures.has(signature)
+  })
+})
+
+// Compute filtered items for autocomplete based on search query
+const getFilteredItems = (itemIndex) => {
+  const query = itemSearchQueries.value[itemIndex] || ''
+  if (!query) return availableItems.value
+  
+  return availableItems.value.filter(item =>
+    item.title.toLowerCase().startsWith(query.toLowerCase())
+  )
+}
+
 function resetForm() {
   form.id = null
   form.name = ''
@@ -36,6 +60,8 @@ function resetForm() {
   form.category = ''
   form.is_active = true
   form.items = [defaultItem()]
+  selectedExistingItemId.value = ''
+  itemSearchQueries.value = {}
 }
 
 function editChecklist(checklist) {
@@ -51,10 +77,35 @@ function editChecklist(checklist) {
     priority: item.priority,
     criticality: item.criticality,
   }))
+  itemSearchQueries.value = {}
 }
 
 function addItem() {
   form.items.push(defaultItem())
+}
+
+function addExistingItemToForm() {
+  if (!selectedExistingItemId.value) {
+    return
+  }
+
+  const existingItem = availableItems.value.find(
+    (item) => String(item.id) === String(selectedExistingItemId.value)
+  )
+
+  if (!existingItem) {
+    return
+  }
+
+  form.items.push({
+    id: null,
+    title: existingItem.title,
+    description: existingItem.description || '',
+    priority: existingItem.priority,
+    criticality: existingItem.criticality,
+  })
+
+  selectedExistingItemId.value = ''
 }
 
 function removeItem(index) {
@@ -62,6 +113,19 @@ function removeItem(index) {
     return
   }
   form.items.splice(index, 1)
+  delete itemSearchQueries.value[index]
+}
+
+// Select an item from autocomplete suggestions
+function selectExistingItem(itemIndex, existingItem) {
+  form.items[itemIndex] = {
+    id: null,
+    title: existingItem.title,
+    description: existingItem.description || '',
+    priority: existingItem.priority,
+    criticality: existingItem.criticality,
+  }
+  itemSearchQueries.value[itemIndex] = ''
 }
 
 async function loadChecklists(page = 1) {
@@ -77,6 +141,15 @@ async function loadChecklists(page = 1) {
     errorMessage.value = error.data?.message || error.message
   } finally {
     loading.value = false
+  }
+}
+
+async function loadAvailableItems() {
+  try {
+    const data = await apiRequest('/checklists/items/available', {}, auth.token)
+    availableItems.value = data || []
+  } catch (error) {
+    console.log('Could not load available items:', error.message)
   }
 }
 
@@ -139,6 +212,7 @@ async function deleteChecklist(checklistId) {
 
 onMounted(async () => {
   await loadChecklists()
+  await loadAvailableItems()
 })
 </script>
 
@@ -189,11 +263,75 @@ onMounted(async () => {
             <button type="button" class="btn btn-secondary btn-sm" @click="addItem">Add item</button>
           </div>
 
-          <div v-for="(item, index) in form.items" :key="index" class="card stack">
+          <div v-if="!form.id" class="card stack">
+            <h4>Previous use cases</h4>
+            <p class="muted">Pick an already existing item and add it to this new checklist.</p>
             <div class="grid">
               <div class="field">
+                <label>Existing item</label>
+                <select v-model="selectedExistingItemId">
+                  <option value="">Select a previous use case</option>
+                  <option v-for="existingItem in addableExistingItems" :key="existingItem.id" :value="existingItem.id">
+                    {{ existingItem.title }} ({{ existingItem.priority }} / {{ existingItem.criticality }})
+                  </option>
+                </select>
+              </div>
+              <div class="field" style="align-self: end;">
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  :disabled="!selectedExistingItemId"
+                  @click="addExistingItemToForm"
+                >
+                  Add selected use case
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div v-for="(item, index) in form.items" :key="index" class="card stack">
+            <div class="grid">
+              <div class="field" style="position: relative;">
                 <label>Title</label>
-                <input v-model="item.title" required />
+                <input 
+                  v-model="item.title" 
+                  required
+                  @input="itemSearchQueries[index] = item.title"
+                  @focus="loadAvailableItems"
+                  placeholder="Start typing to search existing items..."
+                />
+                <!-- Autocomplete suggestions dropdown -->
+                <div v-if="getFilteredItems(index).length > 0 && itemSearchQueries[index]" 
+                     class="autocomplete-dropdown"
+                     style="
+                       position: absolute;
+                       top: 100%;
+                       left: 0;
+                       right: 0;
+                       background: white;
+                       border: 1px solid #ddd;
+                       border-top: none;
+                       max-height: 200px;
+                       overflow-y: auto;
+                       z-index: 10;
+                     ">
+                  <div v-for="suggestion in getFilteredItems(index)" 
+                       :key="suggestion.id"
+                       @click="selectExistingItem(index, suggestion)"
+                       style="
+                         padding: 8px 12px;
+                         cursor: pointer;
+                         border-bottom: 1px solid #eee;
+                       "
+                       @mouseenter="$event.target.style.backgroundColor = '#f0f0f0'"
+                       @mouseleave="$event.target.style.backgroundColor = 'white'">
+                    <strong>{{ suggestion.title }}</strong>
+                    <div style="font-size: 0.85em; color: #666;">{{ suggestion.description || 'No description' }}</div>
+                    <div style="font-size: 0.8em; color: #999;">
+                      Priority: {{ suggestion.priority }} | Criticality: {{ suggestion.criticality }}
+                    </div>
+                  </div>
+                </div>
               </div>
               <div class="field">
                 <label>Priority</label>
@@ -231,7 +369,7 @@ onMounted(async () => {
           <button type="button" class="btn btn-secondary" @click="resetForm">Reset</button>
         </div>
       </form>
-    </div>>
+    </div>
 
     <div class="card stack">
       <h2>Checklist list</h2>
@@ -267,6 +405,7 @@ onMounted(async () => {
                 <div class="actions">
                   <button class="btn btn-secondary btn-sm" @click="editChecklist(checklist)">Edit</button>
                   <button class="btn btn-secondary btn-sm" @click="toggleChecklist(checklist)">Toggle</button>
+
                   <button class="btn btn-danger btn-sm" @click="deleteChecklist(checklist.id)">Delete</button>
                 </div>
               </td>

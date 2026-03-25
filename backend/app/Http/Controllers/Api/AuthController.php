@@ -19,21 +19,21 @@ class AuthController extends Controller
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
-        // IMPORTANT: récupérer l'user authentifié après attempt
-        $user = $request->user() ?? Auth::user();
+        $request->session()->regenerate();
 
-        $token = $user->createToken('api-token')->plainTextToken;
+        $user = $request->user() ?? Auth::user();
 
         return response()->json([
             'user' => $user,
             'roles' => $user->getRoleNames(),
-            'token' => $token,
         ]);
     }
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return response()->json(['message' => 'Logged out successfully']);
     }

@@ -10,11 +10,14 @@ use App\Models\VersionItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ProjectController extends Controller
 {
     public function createVersion(Request $request, Project $project)
 {
+    $this->authorize('update', $project);
+
     $data = $request->validate([
         'checklist_id' => ['required', 'integer', 'exists:checklists,id'],
     ]);
@@ -59,11 +62,18 @@ class ProjectController extends Controller
         );
     } catch (\Exception $e) {
         DB::rollBack();
+        Log::error('Error creating project version', [
+            'project_id' => $project->id,
+            'checklist_id' => $data['checklist_id'] ?? null,
+            'user_id' => Auth::id(),
+            'error' => $e->getMessage(),
+        ]);
         return response()->json(['message' => 'Error creating version'], 500);
     }
 }
     public function index()
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         $query = Project::with(['creator:id,name,email']);
 
@@ -94,6 +104,8 @@ class ProjectController extends Controller
     // POST /api/projects  => crée projet + version 1 + snapshot items
     public function store(Request $request)
     {
+        $this->authorize('create', Project::class);
+
         $data = $request->validate([
             'name' => ['required', 'string'],
             'description' => ['nullable', 'string'],
@@ -144,6 +156,12 @@ class ProjectController extends Controller
             );
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Error creating project', [
+                'name' => $data['name'] ?? null,
+                'checklist_id' => $data['checklist_id'] ?? null,
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+            ]);
             return response()->json(['message' => 'Error creating project'], 500);
         }
     }

@@ -57,7 +57,7 @@ router.beforeEach(async (to) => {
   const auth = useAuthStore()
   auth.hydrate()
 
-  if (auth.isAuthenticated && !auth.user) {
+  if ((to.meta.requiresAuth || to.meta.guestOnly) && !auth.user) {
     await auth.fetchMe()
   }
 

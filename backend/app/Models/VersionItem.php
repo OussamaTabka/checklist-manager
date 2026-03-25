@@ -21,4 +21,9 @@ class VersionItem extends Model
     {
         return $this->hasMany(Comment::class);
     }
+
+    public function tester()
+    {
+        return $this->belongsTo(User::class, 'tested_by');
+    }
 }
