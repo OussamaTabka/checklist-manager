@@ -222,11 +222,11 @@ onMounted(async () => {
       <h1>Checklists</h1>
     </div>
 
-    <div v-if="!auth.isAdmin" class="card error">
-      <p>Only administrators can create or edit checklists.</p>
+    <div v-if="!auth.canManageChecklists" class="card error">
+      <p>Only project managers and content admins can create or edit checklists.</p>
     </div>
 
-    <div v-if="auth.isAdmin" class="card stack">
+    <div v-if="auth.canManageChecklists" class="card stack">
       <h2>{{ form.id ? `Edit checklist #${form.id}` : 'Create checklist' }}</h2>
 
       <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
@@ -263,9 +263,9 @@ onMounted(async () => {
             <button type="button" class="btn btn-secondary btn-sm" @click="addItem">Add item</button>
           </div>
 
-          <div v-if="!form.id" class="card stack">
+          <div class="card stack">
             <h4>Previous use cases</h4>
-            <p class="muted">Pick an already existing item and add it to this new checklist.</p>
+            <p class="muted">Pick an already existing item and add it to this checklist.</p>
             <div class="grid">
               <div class="field">
                 <label>Existing item</label>

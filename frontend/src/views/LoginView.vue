@@ -50,6 +50,10 @@ async function onSubmit() {
           <input v-model="form.password" type="password" required autocomplete="current-password" />
         </div>
 
+        <div style="display: flex; justify-content: flex-end">
+          <RouterLink :to="{ name: 'forgot-password' }" class="muted">Forgot password?</RouterLink>
+        </div>
+
         <button class="btn btn-primary" type="submit" :disabled="isSubmitting">
           {{ isSubmitting ? 'Signing in...' : 'Sign in' }}
         </button>

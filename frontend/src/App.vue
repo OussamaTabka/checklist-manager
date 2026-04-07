@@ -36,8 +36,8 @@ async function handleLogout() {
           <nav class="sidebar-nav">
             <RouterLink :to="{ name: 'dashboard' }">Dashboard</RouterLink>
             <RouterLink :to="{ name: 'projects' }">Projects</RouterLink>
-            <RouterLink v-if="auth.isAdmin" :to="{ name: 'checklists' }">Checklist Templates</RouterLink>
-            <RouterLink v-if="auth.isAdmin" :to="{ name: 'users' }">Users & Roles</RouterLink>
+            <RouterLink v-if="auth.canManageChecklists" :to="{ name: 'checklists' }">Checklist Templates</RouterLink>
+            <RouterLink v-if="auth.canManageUsers" :to="{ name: 'users' }">Users & Roles</RouterLink>
           </nav>
         </aside>
 

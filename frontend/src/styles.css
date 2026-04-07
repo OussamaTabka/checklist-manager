@@ -42,11 +42,18 @@
   .grid {@apply grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4;}
   .field {@apply flex flex-col gap-2;}
   .field label {@apply text-sm font-bold uppercase tracking-wider text-gray-700;}
-  .field input, .field select, .field textarea {@apply w-full border-2 border-gray-200 rounded-lg px-4 py-3 text-sm bg-white transition-all;}
+  .field input, .field select, .field textarea {@apply w-full border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white transition-all;}
+  .field input[type="file"] {
+    @apply px-0 py-2 cursor-pointer;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
   .field input::placeholder, .field textarea::placeholder {@apply text-gray-400;}
-  .field input:hover, .field select:hover, .field textarea:hover {@apply border-gray-300 bg-gray-50;}
-  .field input:focus, .field select:focus, .field textarea:focus {@apply outline-none border-blue-500 ring-4 ring-blue-100 bg-white;}
-  .field select {@apply appearance-none bg-right bg-no-repeat;}
+  .field input:hover, .field select:hover, .field textarea:hover {@apply border-gray-400 shadow-sm;}
+  .field input:focus, .field select:focus, .field textarea:focus {@apply outline-none border-blue-500 ring-2 ring-blue-200 bg-white;}
+  .field select {
+    @apply appearance-none cursor-pointer;
+  }
   .field textarea {@apply min-h-[100px]; resize: vertical;}
   .btn {@apply inline-flex items-center gap-2 whitespace-nowrap border-2 rounded-lg px-5 py-2.5 font-bold text-sm transition-all;}
   .btn:hover:not(:disabled) {@apply -translate-y-0.5 shadow-lg;}
@@ -73,11 +80,40 @@
   .tag {@apply inline-flex items-center rounded-full px-3.5 py-1.5 text-xs font-bold border-2 transition-all;}
   .tag.active {@apply text-green-900 border-green-300 bg-green-100;}
   .tag.inactive {@apply text-amber-900 border-amber-300 bg-amber-100;}
-  .status-select {@apply min-w-[140px] px-4 py-2.5 font-bold tracking-wider appearance-none border-2 border-gray-200 rounded-lg bg-white transition-all bg-right bg-no-repeat;}
-  .status-select:hover {@apply border-gray-300 bg-gray-50;}
-  .status-select:focus {@apply outline-none border-blue-500 ring-4 ring-blue-100;}
+  .progress-stats-grid {@apply grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 auto-rows-fr;}
+  .progress-stat {@apply flex flex-col gap-3;}
+  .progress-stat-header {@apply flex justify-between items-center;}
+  .progress-stat-label {@apply text-xs font-bold uppercase tracking-wider text-gray-600;}
+  .progress-stat-value {@apply text-xl font-bold;}
+  .progress-bar {@apply flex-1 flex items-end w-full bg-gray-200 rounded-full h-3 overflow-hidden;}
+  .progress-bar-fill {@apply h-full transition-all duration-300;}
+  .status-select {
+    @apply min-w-[140px] px-4 py-2.5 font-medium tracking-wider appearance-none border border-gray-300 rounded-lg bg-white transition-all cursor-pointer shadow-sm;
+  }
+  .status-select:hover {
+    @apply border-blue-400 shadow-md;
+  }
+  .status-select:focus {
+    @apply outline-none border-blue-500 ring-2 ring-blue-200;
+  }
   .status-select:disabled {@apply opacity-60 cursor-not-allowed bg-gray-50;}
   .pagination {@apply flex justify-end gap-2;}
+
+  /* Project Setup Styles */
+  .project-setup-section {@apply bg-gradient-to-br from-white to-gray-50 border-2 border-gray-100;}
+  
+  .project-setup-section label[style*="display: flex"][style*="items-flex-start"] {
+    @apply hover:border-blue-300 hover:shadow-sm hover:bg-gradient-to-r hover:from-blue-50 hover:to-gray-50;
+  }
+
+  input[type="checkbox"] {
+    @apply cursor-pointer accent-blue-600;
+    appearance: auto;
+  }
+
+  input[type="checkbox"]:checked {
+    @apply bg-blue-600 border-blue-600;
+  }
   .comment-item {@apply border-l-4 border-blue-600 px-4 py-3 bg-blue-50 rounded-xl mb-4 transition-all;}
   .comment-item:hover {@apply shadow-md;}
   .comment-item p {@apply my-2 leading-relaxed;}
