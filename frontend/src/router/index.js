@@ -1,6 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import LoginView from '@/views/LoginView.vue'
+import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
+import ResetPasswordView from '@/views/ResetPasswordView.vue'
+import AcceptInvitationView from '@/views/AcceptInvitationView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import ProjectsView from '@/views/ProjectsView.vue'
 import ProjectDetailView from '@/views/ProjectDetailView.vue'
@@ -17,6 +20,23 @@ const router = createRouter({
       meta: { guestOnly: true },
     },
     {
+      path: '/forgot-password',
+      name: 'forgot-password',
+      component: ForgotPasswordView,
+      meta: { guestOnly: true },
+    },
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: ResetPasswordView,
+      meta: { guestOnly: true },
+    },
+    {
+      path: '/accept-invitation',
+      name: 'accept-invitation',
+      component: AcceptInvitationView,
+    },
+    {
       path: '/',
       redirect: { name: 'dashboard' },
     },
@@ -30,7 +50,7 @@ const router = createRouter({
       path: '/projects',
       name: 'projects',
       component: ProjectsView,
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, roles: ['admin', 'chef', 'admin_contenus', 'testeur'] },
     },
     {
       path: '/projects/:id',
@@ -42,7 +62,7 @@ const router = createRouter({
       path: '/checklists',
       name: 'checklists',
       component: ChecklistsView,
-      meta: { requiresAuth: true, roles: ['admin'] },
+      meta: { requiresAuth: true, roles: ['chef', 'admin_contenus'] },
     },
     {
       path: '/users',

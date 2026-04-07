@@ -9,7 +9,10 @@ class Comment extends Model
     protected $fillable = [
         'version_item_id',
         'user_id',
-        'content'
+        'content',
+        'file_path',
+        'file_name',
+        'file_size'
     ];
 
     // Relation : un commentaire appartient à un version_item

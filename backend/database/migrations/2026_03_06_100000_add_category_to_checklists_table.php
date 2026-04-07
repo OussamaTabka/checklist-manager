@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('checklists', function (Blueprint $table) {
-            $table->string('category')->default('General')->after('title');
+            $table->string('category')->default('General')->after('name');
         });
     }
 

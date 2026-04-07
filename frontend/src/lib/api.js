@@ -39,7 +39,13 @@ export async function apiRequest(path, options = {}, token = null) {
 
     return response.data
   } catch (axiosError) {
-    const error = new Error(axiosError.response?.data?.message || axiosError.message || 'Request failed')
+    const backendMessage = axiosError.response?.data?.message
+    const backendError = axiosError.response?.data?.error
+    const composedMessage = backendError
+      ? `${backendMessage || 'Request failed'}: ${backendError}`
+      : backendMessage || axiosError.message || 'Request failed'
+
+    const error = new Error(composedMessage)
     error.status = axiosError.response?.status
     error.data = axiosError.response?.data
     throw error

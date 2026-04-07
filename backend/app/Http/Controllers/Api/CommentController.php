@@ -18,13 +18,28 @@ class CommentController extends Controller
     public function store(Request $request, VersionItem $versionItem)
     {
         $validated = $request->validate([
-            'content' => 'required|string|min:1'
+            'content' => 'required|string|min:1',
+            'file' => 'nullable|file|max:10240' // 10 MB max
         ]);
 
-        $comment = $versionItem->comments()->create([
+        $commentData = [
             'user_id' => auth()->id(),
             'content' => $validated['content']
-        ]);
+        ];
+
+        // Handle file upload if provided
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            
+            // Store file in storage/app/comments directory
+            $path = $file->store('comments', 'local');
+            
+            $commentData['file_path'] = $path;
+            $commentData['file_name'] = $file->getClientOriginalName();
+            $commentData['file_size'] = $file->getSize();
+        }
+
+        $comment = $versionItem->comments()->create($commentData);
 
         $comment->load('user');
         return response()->json($comment, 201);

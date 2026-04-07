@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 // ✅ AJOUTE ÇA
 use Spatie\Permission\Middleware\RoleMiddleware;
@@ -18,6 +19,15 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
+
+        // Return 401 for API/JSON unauthenticated requests instead of redirecting to a missing login route.
+        $middleware->redirectGuestsTo(function (Request $request): ?string {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return null;
+            }
+
+            return '/login';
+        });
 
         $middleware->alias([
             'role' => RoleMiddleware::class,

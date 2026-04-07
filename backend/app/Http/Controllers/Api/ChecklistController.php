@@ -26,6 +26,7 @@ class ChecklistController extends Controller
     public function index()
     {
         $checklists = Checklist::with('items')
+            ->where('is_active', true)
             ->orderByDesc('id')
             ->paginate(10);
 

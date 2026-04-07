@@ -3,7 +3,9 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\InvitationController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\UserInvitationController;
 use App\Http\Controllers\Api\ChecklistController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\VersionItemController;
@@ -13,22 +15,42 @@ use App\Http\Controllers\Api\ExportController;
 
 Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:password-reset-link');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:password-reset');
+    Route::get('/invitations/validate', [InvitationController::class, 'validateInvitation'])->middleware('throttle:invitation-validate');
+    Route::post('/invitations/accept', [InvitationController::class, 'acceptInvitation'])->middleware('throttle:invitation-accept');
 
     Route::middleware('auth:sanctum')->group(function () {
+        // ==========================================
+        // AUTHENTIFICATION - Accessible à tous
+        // ==========================================
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
+        Route::get('/token', [AuthController::class, 'getToken']); // Get API token for authenticated user
 
-        // Users CRUD (ADMIN ONLY)
+        // ==========================================
+        // SYSTEM DATA - Accessible to all authenticated users
+        // ==========================================
+        Route::get('/available-testers', [UserController::class, 'getAvailableTesters']); // Get users available for project assignment
+
+        // ==========================================
+        // GESTION UTILISATEURS & SYSTÈME (ADMIN ONLY)
+        // ==========================================
+        // Users CRUD (ADMINISTRATEUR SYSTÈME ONLY)
         Route::middleware('role:admin')->group(function () {
             Route::get('/users', [UserController::class, 'index']);
             Route::post('/users', [UserController::class, 'store']);
             Route::get('/users/{user}', [UserController::class, 'show']);
             Route::put('/users/{user}', [UserController::class, 'update']);
             Route::delete('/users/{user}', [UserController::class, 'destroy']);
+            Route::post('/users/{user}/invitations/resend', [UserInvitationController::class, 'resend'])->middleware('throttle:invitation-send');
+            Route::post('/users/{user}/invitations/revoke', [UserInvitationController::class, 'revoke'])->middleware('throttle:invitation-send');
         });
 
-
-        Route::middleware(['role:admin'])->group(function () {
+        // ==========================================
+        // GESTION CHECKLISTS (CHEF & ADMIN_CONTENUS)
+        // ==========================================
+        Route::middleware(['role:chef|admin_contenus'])->group(function () {
             Route::get('/checklists', [ChecklistController::class, 'index']);
             Route::post('/checklists', [ChecklistController::class, 'store']);
             Route::get('/checklists/{id}/export/json', [ChecklistController::class, 'exportJson']);
@@ -44,32 +66,55 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
             Route::patch('/checklists/{checklist}/toggle', [ChecklistController::class, 'toggle']);
         });
 
-        Route::middleware(['role:admin|chef|testeur'])->group(function () {
+        // ==========================================
+        // DASHBOARD & VUE D'ENSEMBLE
+        // ==========================================
+        Route::middleware(['role:admin|chef|admin_contenus|testeur'])->group(function () {
             Route::get('/dashboard/summary', [\App\Http\Controllers\Api\DashboardController::class, 'summary']);
+        });
+
+        // ==========================================
+        // GESTION PROJETS (CHEF ONLY)
+        // ==========================================
+        Route::middleware(['role:chef'])->group(function () {
+            Route::get('/projects/metadata', [ProjectController::class, 'metadata']);
+            Route::post('/projects', [ProjectController::class, 'store']);
+            Route::put('/projects/{project}', [ProjectController::class, 'update']);
+            Route::delete('/projects/{project}', [ProjectController::class, 'destroy']);
+            Route::post('/projects/{project}/versions', [ProjectController::class, 'createVersion']);
+            Route::post('/projects/{project}/assign-testers', [ProjectController::class, 'assignTesters']);
+            Route::post('/projects/{project}/assign-checklists', [ProjectController::class, 'assignChecklists']);
+            Route::get('/projects/{project}/export/{format?}', [ExportController::class, 'exportProject']);
+        });
+
+        // ==========================================
+        // VUE PROJETS GÉNÉRALE (TOUS LES RÔLES)
+        // ==========================================
+        Route::middleware(['role:admin|chef|admin_contenus|testeur'])->group(function () {
             Route::get('/projects', [ProjectController::class, 'index']);
             Route::get('/projects/{project}', [ProjectController::class, 'show']);
             Route::get('/project-versions/{projectVersion}/export/{format?}', [ExportController::class, 'exportProjectVersion']);
         });
 
-        Route::middleware(['role:admin|chef'])->group(function () {
-            Route::post('/projects/{project}/versions', [ProjectController::class, 'createVersion']);
-            Route::post('/projects', [ProjectController::class, 'store']);
-            Route::put('/projects/{project}', [ProjectController::class, 'update']);
-            Route::delete('/projects/{project}', [ProjectController::class, 'destroy']);
+        // ==========================================
+        // VUE PROJETS & GESTION POUR LES UTILISATEURS STANDARD
+        // ==========================================
+        Route::middleware(['role:chef|admin_contenus|testeur'])->group(function () {
+            // Get project version with items
+            Route::get('/project-versions/{projectVersion}', [ProjectVersionController::class, 'show']);
             
-            // Exports
-            Route::get('/projects/{project}/export/{format?}', [ExportController::class, 'exportProject']);
-        });
-
-        Route::middleware(['role:admin|chef|testeur'])->group(function () {
-            Route::patch('/version-items/{versionItem}/status', [VersionItemController::class, 'updateStatus']);
+            // Update status & progress
             Route::get('/project-versions/{projectVersion}/progress', [ProjectVersionController::class, 'progress']);
+            Route::patch('/version-items/{versionItem}/status', [VersionItemController::class, 'updateStatus']);
             
             // Comments routes
             Route::get('/version-items/{versionItem}/comments', [CommentController::class, 'index']);
             Route::post('/version-items/{versionItem}/comments', [CommentController::class, 'store']);
             Route::put('/comments/{comment}', [CommentController::class, 'update']);
             Route::delete('/comments/{comment}', [CommentController::class, 'destroy']);
+            
+            // Change history & traceability
+            Route::get('/version-items/{versionItem}/history', [VersionItemController::class, 'getHistory']);
         });
     });
 });

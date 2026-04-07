@@ -7,6 +7,17 @@ use App\Models\ProjectVersion;
 
 class ProjectVersionController extends Controller
 {
+    public function show(ProjectVersion $projectVersion)
+    {
+        return response()->json(
+            $projectVersion->load([
+                'items.comments.user',
+                'checklist',
+                'project.creator'
+            ])
+        );
+    }
+
     public function progress(ProjectVersion $projectVersion)
     {
         $items = $projectVersion->items();
