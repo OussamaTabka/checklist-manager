@@ -1,0 +1,15 @@
+{
+    "run_id": "12db41a6-5e93-402b-9349-5aa81cb37397",
+    "external_id": 40,
+    "test_case_title": "Accessibility (WCAG)",
+    "test_case_description": "Check WCAG 2.1 compliance",
+    "test_case_text": "Accessibility (WCAG)\nCheck WCAG 2.1 compliance",
+    "base_url": "https://practicetestautomation.com/practice-test-login",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "Medium",
+    "criticality": "Major",
+    "current_status": "Not Tested",
+    "project_version_id": 11
+}

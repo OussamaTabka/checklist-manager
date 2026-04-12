@@ -1,0 +1,47 @@
+name: Build Checks
+
+on:
+  push:
+    paths:
+      - playwright-agent/**
+      - playwright-orchestrator/**
+      - playwright-runner-job/**
+      - .github/workflows/**
+  pull_request:
+    paths:
+      - playwright-agent/**
+      - playwright-orchestrator/**
+      - playwright-runner-job/**
+      - .github/workflows/**
+  workflow_dispatch:
+
+jobs:
+  build-and-image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            playwright-agent/package-lock.json
+            playwright-orchestrator/package-lock.json
+            playwright-runner-job/package-lock.json
+
+      - name: Install and build playwright-agent
+        run: |
+          npm ci --prefix playwright-agent
+          npm run build --prefix playwright-agent
+
+      - name: Install and build playwright-orchestrator
+        run: |
+          npm ci --prefix playwright-orchestrator
+          npm run build --prefix playwright-orchestrator
+
+      - name: Build playwright-runner-job Docker image
+        run: docker build -t checklist-playwright-job-ci -f playwright-runner-job/Dockerfile playwright-runner-job

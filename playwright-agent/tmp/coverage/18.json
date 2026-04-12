@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Simulate concurrent users",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  18,
+    "test_case_title":  "Load Testing",
+    "use_auth":  false,
+    "test_case_text":  "Load Testing Simulate concurrent users",
+    "run_id":  "coverage-18"
+}

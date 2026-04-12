@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "run_id": "a0fa7c38-7392-4199-9eba-9d24ccd2f984",
+  "runner_run_id": "runner-1775924981808",
+  "base_url_used": "http://host.docker.internal:5173",
+  "status": "done",
+  "summary": {
+    "passed": 0,
+    "failed": 1,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 1,
+      "status": "failed",
+      "attempt": 1,
+      "duration_ms": 33418,
+      "error_type": "assertion_failed",
+      "error_message": "Expected visible but selector was not visible: testid=dashboard-stats (TimeoutError: locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n  - waiting for getByTestId('dashboard-stats') to be visible\n)",
+      "artifacts": {
+        "trace_path": "artifacts/1/trace.zip",
+        "screenshot_path": "artifacts/1/fail.png",
+        "video_path": "artifacts/1/video.webm"
+      }
+    }
+  ]
+}

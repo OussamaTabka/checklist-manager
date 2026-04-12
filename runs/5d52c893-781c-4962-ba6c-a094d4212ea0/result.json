@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "run_id": "5d52c893-781c-4962-ba6c-a094d4212ea0",
+  "runner_run_id": "runner-1775841538950",
+  "base_url_used": "http://172.25.64.1:5173",
+  "status": "done",
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "blocked": 1,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 1,
+      "status": "passed",
+      "attempt": 1,
+      "duration_ms": 2612,
+      "error_type": null,
+      "error_message": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      }
+    },
+    {
+      "external_id": 2,
+      "status": "blocked",
+      "attempt": 1,
+      "duration_ms": 34461,
+      "error_type": "selector_not_found",
+      "error_message": "locator.fill: Timeout 30000ms exceeded.\nCall log:\n  - waiting for getByTestId('login-input-email')\n",
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "run_id": "strict-fix-generated-selector-smoke",
+  "target": { "base_url": "https://www.apple.com/tn/buy" },
+  "runtime": {
+    "headless": true,
+    "timeout_ms": 30000,
+    "viewport": { "width": 1280, "height": 720 },
+    "trace": "off",
+    "video": "off",
+    "screenshot": "off"
+  },
+  "cases": [
+    {
+      "external_id": 1000,
+      "title": "Generated button selector smoke",
+      "severity": "major",
+      "use_auth": false,
+      "steps": [
+        { "action": "goto", "url": "https://www.apple.com/tn/buy" },
+        {
+          "action": "wait_for_selector",
+          "selector": { "by": "css", "value": "main button:not([disabled]), main [role=\"button\"]:not([aria-disabled=\"true\"]), main input[type=\"button\"]:not([disabled]), main input[type=\"submit\"]:not([disabled]), main a[role=\"button\"], main a[href]" },
+          "state": "visible",
+          "timeout_ms": 20000
+        },
+        { "action": "click", "selector": { "by": "css", "value": "main button:not([disabled]), main [role=\"button\"]:not([aria-disabled=\"true\"]), main input[type=\"button\"]:not([disabled]), main input[type=\"submit\"]:not([disabled]), main a[role=\"button\"], main a[href]" } }
+      ],
+      "asserts": [
+        { "type": "expect_visible", "selector": { "by": "css", "value": "main button:not([disabled]), main [role=\"button\"]:not([aria-disabled=\"true\"]), main input[type=\"button\"]:not([disabled]), main input[type=\"submit\"]:not([disabled]), main a[role=\"button\"], main a[href]" } }
+      ]
+    }
+  ]
+}

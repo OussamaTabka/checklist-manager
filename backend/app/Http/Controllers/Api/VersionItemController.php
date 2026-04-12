@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\VersionItem;
 use App\Models\ItemChange;
+use App\Models\TestRun;
 use Illuminate\Http\Request;
 
 class VersionItemController extends Controller
@@ -91,6 +92,67 @@ class VersionItemController extends Controller
                 ];
             });
 
+        // Get failed execution events from persisted test results
+        $failedExecutions = $versionItem->testResults()
+            ->with(['testRun:id,run_id,status'])
+            ->where('status', 'failed')
+            ->orderByDesc('executed_at')
+            ->orderByDesc('id')
+            ->get()
+            ->map(function ($result) {
+                return [
+                    'id' => 'execution-' . $result->id,
+                    'type' => 'execution',
+                    'timestamp' => $result->executed_at ?? $result->created_at,
+                    'title' => 'Test execution failed',
+                    'status' => $result->status,
+                    'run_id' => $result->testRun?->run_id,
+                    'error_type' => $result->error_type,
+                    'error_message' => $result->error_message ?: 'Execution failed without an explicit error message.',
+                    'duration_ms' => $result->duration_ms,
+                ];
+            });
+
+        // Capture failed runs that have payload errors but no failed test_result row yet
+        $failedExecutionRunIds = $failedExecutions
+            ->pluck('run_id')
+            ->filter(static fn ($runId) => is_string($runId) && $runId !== '')
+            ->values()
+            ->all();
+
+        $failedRunPayloadErrors = TestRun::query()
+            ->where('request_payload->test_case_id', $versionItem->id)
+            ->where('status', 'failed')
+            ->with('requester:id,name,email')
+            ->orderByDesc('finished_at')
+            ->orderByDesc('id')
+            ->get()
+            ->filter(function ($run) use ($failedExecutionRunIds) {
+                if (in_array($run->run_id, $failedExecutionRunIds, true)) {
+                    return false;
+                }
+
+                $payload = is_array($run->request_payload) ? $run->request_payload : [];
+                return isset($payload['last_error']) && is_string($payload['last_error']) && trim($payload['last_error']) !== '';
+            })
+            ->map(function ($run) {
+                $payload = is_array($run->request_payload) ? $run->request_payload : [];
+
+                return [
+                    'id' => 'execution-run-' . $run->id,
+                    'type' => 'execution',
+                    'timestamp' => $run->finished_at ?? $run->updated_at ?? $run->created_at,
+                    'title' => 'Test execution failed',
+                    'status' => 'failed',
+                    'run_id' => $run->run_id,
+                    'user' => $run->requester,
+                    'user_name' => $run->requester?->name,
+                    'error_type' => 'runtime_error',
+                    'error_message' => (string) $payload['last_error'],
+                    'duration_ms' => null,
+                ];
+            });
+
         // Add testing info if tested
         $timeline = collect();
 
@@ -111,6 +173,8 @@ class VersionItemController extends Controller
         $timeline = $timeline
             ->merge($changes)
             ->merge($comments)
+            ->merge($failedExecutions)
+            ->merge($failedRunPayloadErrors)
             ->sortByDesc('timestamp')
             ->values()
             ->toArray();

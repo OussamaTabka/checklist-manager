@@ -1,0 +1,9 @@
+{
+  "run_id": "strict-fix-button",
+  "external_id": 46,
+  "test_case_title": "Button Functionality",
+  "test_case_description": "Ensure interactive buttons work",
+  "test_case_text": "Button Functionality",
+  "base_url": "https://www.apple.com/tn/buy",
+  "use_auth": false
+}

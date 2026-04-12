@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "run_id": "strict-fix-generated-selector-smoke",
+  "status": "done",
+  "updated_at": "2026-04-12T18:12:34.871Z",
+  "cases": [
+    {
+      "external_id": 1000,
+      "title": "Generated button selector smoke",
+      "status": "passed",
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://www.apple.com/tn/buy -> ok (740ms)",
+        "[chrome] Step 2: wait_for_selector css=main button:not([disabled]), main [role=\"button\"]:not([aria-disabled=\"true\"]), main input[type=\"button\"]:not([disabled]), main input[type=\"submit\"]:not([disabled]), main a[role=\"button\"], main a[href] state=visible -> ok (140ms)",
+        "[chrome] Step 3: click css=main button:not([disabled]), main [role=\"button\"]:not([aria-disabled=\"true\"]), main input[type=\"button\"]:not([disabled]), main input[type=\"submit\"]:not([disabled]), main a[role=\"button\"], main a[href] -> ok (153ms)",
+        "[chrome] Assert 1: expect_visible css=main button:not([disabled]), main [role=\"button\"]:not([aria-disabled=\"true\"]), main input[type=\"button\"]:not([disabled]), main input[type=\"submit\"]:not([disabled]), main a[role=\"button\"], main a[href] -> ok (73ms)",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

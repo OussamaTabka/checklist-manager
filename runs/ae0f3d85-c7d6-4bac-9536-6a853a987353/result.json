@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "run_id": "ae0f3d85-c7d6-4bac-9536-6a853a987353",
+  "runner_run_id": "runner-1775998868107",
+  "base_url_used": "https://www.apple.com/tn",
+  "status": "done",
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 12,
+      "status": "passed",
+      "attempt": 1,
+      "duration_ms": 9693,
+      "error_type": null,
+      "error_message": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      }
+    }
+  ]
+}

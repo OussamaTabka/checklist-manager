@@ -1,0 +1,9 @@
+{
+  "run_id": "title-all-a11y",
+  "external_id": 105,
+  "test_case_title": "Accessibility (WCAG)",
+  "test_case_description": "Ensure basic WCAG-related visibility baselines",
+  "test_case_text": "Accessibility (WCAG)",
+  "base_url": "https://www.apple.com/tn/buy",
+  "use_auth": false
+}

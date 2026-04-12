@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Validate main flows and layout consistency across browsers and viewport breakpoints.",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  33,
+    "test_case_title":  "Cross-Browser Compatibility - Test on Chrome, Firefox, Safari, Edge",
+    "use_auth":  false,
+    "test_case_text":  "Cross-Browser Compatibility - Test on Chrome, Firefox, Safari, Edge Validate main flows and layout consistency across browsers and viewport breakpoints.",
+    "run_id":  "coverage-33"
+}

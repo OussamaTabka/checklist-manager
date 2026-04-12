@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Verify XSS protection mechanisms",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  2,
+    "test_case_title":  "XSS Attack Prevention",
+    "use_auth":  false,
+    "test_case_text":  "XSS Attack Prevention Verify XSS protection mechanisms",
+    "run_id":  "coverage-2"
+}

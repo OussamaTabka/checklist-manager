@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "run_id": "262144b0-2b39-42e4-835b-4f1eb4ae1b5a",
+  "runner_run_id": "runner-1776016384367",
+  "base_url_used": "https://www.apple.com/tn/buy",
+  "status": "done",
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 41,
+      "status": "passed",
+      "attempt": 1,
+      "duration_ms": 59306,
+      "error_type": null,
+      "error_message": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      },
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://www.apple.com/tn/buy -> ok (1819ms)",
+        "[chrome] Step 2: screenshot cross-browser-home -> ok (289ms)",
+        "[chrome] Assert 1: expect_visible css=body -> ok (29ms)",
+        "[chrome] Assert 2: expect_url_contains 'www.apple.com' -> ok (1ms)",
+        "[chrome] Run completed successfully",
+        "[firefox] Browser context started",
+        "[firefox] Step 1: goto https://www.apple.com/tn/buy -> ok (1793ms)",
+        "[firefox] Step 2: screenshot cross-browser-home -> ok (204ms)",
+        "[firefox] Assert 1: expect_visible css=body -> ok (54ms)",
+        "[firefox] Assert 2: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[firefox] Run completed successfully",
+        "[safari] Browser context started",
+        "[safari] Step 1: goto https://www.apple.com/tn/buy -> ok (1942ms)",
+        "[safari] Step 2: screenshot cross-browser-home -> ok (414ms)",
+        "[safari] Assert 1: expect_visible css=body -> ok (53ms)",
+        "[safari] Assert 2: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[safari] Run completed successfully",
+        "[edge] Browser context started",
+        "[edge] Step 1: goto https://www.apple.com/tn/buy -> ok (1466ms)",
+        "[edge] Step 2: screenshot cross-browser-home -> ok (311ms)",
+        "[edge] Assert 1: expect_visible css=body -> ok (26ms)",
+        "[edge] Assert 2: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[edge] Run completed successfully"
+      ]
+    }
+  ]
+}

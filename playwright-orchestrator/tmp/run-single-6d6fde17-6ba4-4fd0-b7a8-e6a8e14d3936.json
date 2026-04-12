@@ -1,0 +1,47 @@
+{
+    "schema_version": "1.0",
+    "run_id": "6d6fde17-6ba4-4fd0-b7a8-e6a8e14d3936",
+    "target": {
+        "base_url": "https://www.apple.com/tn/buy"
+    },
+    "runtime": {
+        "headless": false,
+        "slow_mo_ms": 700,
+        "hold_open_ms": 12000,
+        "timeout_ms": 30000,
+        "viewport": {
+            "width": 1280,
+            "height": 720
+        },
+        "trace": "retain-on-failure",
+        "video": "retain-on-failure",
+        "screenshot": "only-on-failure"
+    },
+    "cases": [
+        {
+            "external_id": 46,
+            "title": "Button Functionality",
+            "severity": "critical",
+            "use_auth": true,
+            "steps": [
+                {
+                    "action": "goto",
+                    "url": "https://www.apple.com/tn/buy"
+                }
+            ],
+            "asserts": [
+                {
+                    "type": "expect_visible",
+                    "selector": {
+                        "by": "css",
+                        "value": "body"
+                    }
+                },
+                {
+                    "type": "expect_url_contains",
+                    "value": "www.apple.com"
+                }
+            ]
+        }
+    ]
+}

@@ -1,6 +1,43 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api'
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]'])
+
+function resolveApiBaseUrl() {
+  const configured = import.meta.env.VITE_API_URL
+
+  if (!configured) {
+    if (typeof window !== 'undefined') {
+      return `${window.location.protocol}//${window.location.hostname}:8000/api`
+    }
+
+    return 'http://127.0.0.1:8000/api'
+  }
+
+  try {
+    const parsed = new URL(configured)
+
+    // Keep loopback hosts aligned with the current page host so XSRF cookies
+    // are readable and axios can send X-XSRF-TOKEN correctly.
+    if (typeof window !== 'undefined') {
+      const pageHost = window.location.hostname
+      const configuredHost = parsed.hostname
+
+      if (
+        LOOPBACK_HOSTS.has(pageHost) &&
+        LOOPBACK_HOSTS.has(configuredHost) &&
+        pageHost !== configuredHost
+      ) {
+        parsed.hostname = pageHost
+      }
+    }
+
+    return parsed.toString().replace(/\/$/, '')
+  } catch {
+    return configured
+  }
+}
+
+const API_BASE_URL = resolveApiBaseUrl()
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -13,6 +50,22 @@ const apiClient = axios.create({
 })
 
 const APP_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '')
+const PUBLIC_AUTH_PATHS = new Set(['/login', '/forgot-password', '/reset-password', '/invitations/validate', '/invitations/accept'])
+
+let unauthorizedEventQueued = false
+
+function queueUnauthorizedEvent() {
+  if (unauthorizedEventQueued || typeof window === 'undefined') {
+    return
+  }
+
+  unauthorizedEventQueued = true
+  window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+
+  setTimeout(() => {
+    unauthorizedEventQueued = false
+  }, 250)
+}
 
 export async function ensureCsrfCookie() {
   await axios.get(`${APP_BASE_URL}/sanctum/csrf-cookie`, {
@@ -26,19 +79,27 @@ export async function ensureCsrfCookie() {
 
 export async function apiRequest(path, options = {}, token = null) {
   try {
+    const savedToken = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+    const effectiveToken = token || savedToken
+
     const response = await apiClient.request({
       url: path,
       method: options.method || 'GET',
       data: options.body,
-      headers: token
+      headers: effectiveToken
         ? {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${effectiveToken}`,
           }
         : undefined,
     })
 
     return response.data
   } catch (axiosError) {
+    const status = axiosError.response?.status
+    if (status === 401 && !PUBLIC_AUTH_PATHS.has(path)) {
+      queueUnauthorizedEvent()
+    }
+
     const backendMessage = axiosError.response?.data?.message
     const backendError = axiosError.response?.data?.error
     const composedMessage = backendError
@@ -46,7 +107,7 @@ export async function apiRequest(path, options = {}, token = null) {
       : backendMessage || axiosError.message || 'Request failed'
 
     const error = new Error(composedMessage)
-    error.status = axiosError.response?.status
+    error.status = status
     error.data = axiosError.response?.data
     throw error
   }

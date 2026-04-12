@@ -1,0 +1,9 @@
+{
+  "run_id": "title-all-form",
+  "external_id": 103,
+  "test_case_title": "Form Validation",
+  "test_case_description": "Test all form input validations",
+  "test_case_text": "Form Validation",
+  "base_url": "https://www.apple.com/tn/buy",
+  "use_auth": false
+}

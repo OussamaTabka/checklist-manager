@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Test login, logout, session handling",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  4,
+    "test_case_title":  "Authentication Testing",
+    "use_auth":  false,
+    "test_case_text":  "Authentication Testing Test login, logout, session handling",
+    "run_id":  "coverage-4"
+}

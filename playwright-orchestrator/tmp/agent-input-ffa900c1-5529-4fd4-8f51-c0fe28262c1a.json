@@ -1,0 +1,15 @@
+{
+    "run_id": "ffa900c1-5529-4fd4-8f51-c0fe28262c1a",
+    "external_id": 45,
+    "test_case_title": "Navigation Testing",
+    "test_case_description": "Verify all navigation links work",
+    "test_case_text": "Navigation Testing\nVerify all navigation links work",
+    "base_url": "https://www.apple.com/tn/buy",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "Medium",
+    "criticality": "Minor",
+    "current_status": "Failed",
+    "project_version_id": 12
+}

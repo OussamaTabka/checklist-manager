@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Check CSRF token implementation",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  3,
+    "test_case_title":  "CSRF Token Validation",
+    "use_auth":  false,
+    "test_case_text":  "CSRF Token Validation Check CSRF token implementation",
+    "run_id":  "coverage-3"
+}

@@ -143,24 +143,24 @@ onMounted(async () => {
     <div class="card stack">
       <h2>{{ form.id ? `Edit user ${form.id}` : 'Create user' }}</h2>
 
-      <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
-      <p v-if="successMessage" class="success">{{ successMessage }}</p>
+      <p v-if="errorMessage" class="error" data-testid="users-msg-error">{{ errorMessage }}</p>
+      <p v-if="successMessage" class="success" data-testid="users-msg-success">{{ successMessage }}</p>
 
-      <form class="stack" @submit.prevent="submitUser">
+      <form class="stack" @submit.prevent="submitUser" data-testid="users-form">
         <div class="grid">
           <div class="field">
             <label>Name</label>
-            <input v-model="form.name" required />
+            <input v-model="form.name" required data-testid="users-input-name" />
           </div>
 
           <div class="field">
             <label>Email</label>
-            <input v-model="form.email" type="email" required />
+            <input v-model="form.email" type="email" required data-testid="users-input-email" />
           </div>
 
           <div class="field">
             <label>Role</label>
-            <select v-model="form.role" required>
+            <select v-model="form.role" required data-testid="users-select-role">
               <option v-for="option in roleOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
             </select>
           </div>
@@ -169,7 +169,7 @@ onMounted(async () => {
         <p v-if="!form.id" class="muted">The user will receive an invitation email to set their own password.</p>
 
         <div class="actions">
-          <button class="btn btn-primary" type="submit">{{ form.id ? 'Update user' : 'Create user' }}</button>
+          <button class="btn btn-primary" type="submit" data-testid="users-btn-submit">{{ form.id ? 'Update user' : 'Create user' }}</button>
           <button class="btn btn-secondary" type="button" @click="resetForm">Reset</button>
         </div>
       </form>
@@ -180,7 +180,7 @@ onMounted(async () => {
       <p v-if="loading" class="muted">Loading users...</p>
 
       <div class="table-wrap" v-if="!loading">
-        <table>
+        <table data-testid="users-table">
           <thead>
             <tr>
               <th>ID</th>

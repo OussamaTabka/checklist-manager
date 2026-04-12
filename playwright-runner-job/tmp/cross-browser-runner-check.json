@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "run_id": "cross-browser-runner-check",
+  "target": { "base_url": "https://example.com" },
+  "runtime": {
+    "headless": true,
+    "slow_mo_ms": 0,
+    "hold_open_ms": 0,
+    "browsers": ["chromium", "firefox", "webkit"],
+    "timeout_ms": 30000,
+    "viewport": { "width": 1280, "height": 720 },
+    "trace": "off",
+    "video": "off",
+    "screenshot": "off"
+  },
+  "cases": [
+    {
+      "external_id": 1,
+      "title": "cross-browser trace",
+      "use_auth": false,
+      "steps": [
+        { "action": "goto", "url": "https://example.com" }
+      ],
+      "asserts": [
+        { "type": "expect_visible", "selector": { "by": "css", "value": "body" } }
+      ]
+    }
+  ]
+}

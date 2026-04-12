@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Test on Chrome, Firefox, Safari, Edge",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  27,
+    "test_case_title":  "Cross-Browser Compatibility",
+    "use_auth":  false,
+    "test_case_text":  "Cross-Browser Compatibility Test on Chrome, Firefox, Safari, Edge",
+    "run_id":  "coverage-27"
+}

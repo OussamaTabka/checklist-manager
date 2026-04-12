@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\VersionItemController;
 use App\Http\Controllers\Api\ProjectVersionController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\ExportController;
+use App\Http\Controllers\Api\TestRunController;
+use App\Http\Controllers\Api\TestCaseRunController;
 
 Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
@@ -106,6 +108,15 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
             // Update status & progress
             Route::get('/project-versions/{projectVersion}/progress', [ProjectVersionController::class, 'progress']);
             Route::patch('/version-items/{versionItem}/status', [VersionItemController::class, 'updateStatus']);
+
+            // Test runs (batch ingest for agent/runner)
+            Route::post('/test-runs', [TestRunController::class, 'store']);
+            Route::post('/test-runs/{run_id}/results', [TestRunController::class, 'storeResults']);
+            Route::get('/test-runs/{run_id}', [TestRunController::class, 'show']);
+
+            // Single test-case run flow
+            Route::get('/test-cases/{id}', [TestCaseRunController::class, 'show']);
+            Route::post('/test-cases/{id}/runs', [TestCaseRunController::class, 'run']);
             
             // Comments routes
             Route::get('/version-items/{versionItem}/comments', [CommentController::class, 'index']);

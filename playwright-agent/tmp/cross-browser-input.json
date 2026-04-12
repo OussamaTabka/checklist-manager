@@ -1,0 +1,9 @@
+{
+  "run_id": "cross-browser-check",
+  "external_id": 1,
+  "test_case_title": "Cross-Browser Compatibility",
+  "test_case_description": "Test on Chrome, Firefox, Safari, Edge",
+  "test_case_text": "Test on Chrome, Firefox, Safari, Edge",
+  "base_url": "https://practicetestautomation.com/practice-test-login/",
+  "use_auth": false
+}

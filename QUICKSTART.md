@@ -3,6 +3,21 @@
 **Status**: Manual testing system ready to deploy on your machine  
 **Estimated Setup Time**: 5-10 minutes
 
+## One Command Startup (Recommended)
+
+From the project root, run:
+
+```bash
+npm run dev
+```
+
+This starts:
+- Laravel API on http://localhost:8000
+- Queue worker
+- Vue frontend on http://localhost:5173 (or next available port)
+- MailDev SMTP server on 127.0.0.1:2525
+- Mail inbox UI on http://127.0.0.1:8025
+
 ---
 
 ## Prerequisites (Install First)

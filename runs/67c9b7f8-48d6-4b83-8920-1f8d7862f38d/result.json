@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "run_id": "67c9b7f8-48d6-4b83-8920-1f8d7862f38d",
+  "runner_run_id": "runner-1776011060159",
+  "base_url_used": "https://practicetestautomation.com/practice-test-login",
+  "status": "done",
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 44,
+      "status": "passed",
+      "attempt": 1,
+      "duration_ms": 2632,
+      "error_type": null,
+      "error_message": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      }
+    }
+  ]
+}

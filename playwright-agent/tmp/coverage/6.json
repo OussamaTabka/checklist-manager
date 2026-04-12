@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Check password strength requirements",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  6,
+    "test_case_title":  "Password Policy Validation",
+    "use_auth":  false,
+    "test_case_text":  "Password Policy Validation Check password strength requirements",
+    "run_id":  "coverage-6"
+}

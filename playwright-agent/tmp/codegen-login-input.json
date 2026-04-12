@@ -1,0 +1,9 @@
+{
+  "run_id": "codegen-login-check",
+  "external_id": 1,
+  "test_case_title": "Positive LogIn test",
+  "test_case_description": "",
+  "test_case_text": "Open page https://practicetestautomation.com/practice-test-login/ Type username student into Username field Type password Password123 into Password field Push Submit button Verify new page URL contains practicetestautomation.com/logged-in-successfully/ Verify new page contains expected text ('Congratulations' or 'successfully logged in') Verify button Log out is displayed on the new page",
+  "base_url": "https://practicetestautomation.com/practice-test-login/",
+  "use_auth": false
+}

@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "run_id": "7d3b74b6-af62-4378-a43c-b8ee23618126",
+  "runner_run_id": "runner-1775924779369",
+  "base_url_used": "http://host.docker.internal:5173",
+  "status": "done",
+  "summary": {
+    "passed": 0,
+    "failed": 1,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 1,
+      "status": "failed",
+      "attempt": 1,
+      "duration_ms": 739,
+      "error_type": "unexpected_error",
+      "error_message": "page.goto: net::ERR_CONNECTION_REFUSED at http://host.docker.internal:5173/dashboard\nCall log:\n  - navigating to \"http://host.docker.internal:5173/dashboard\", waiting until \"domcontentloaded\"\n",
+      "artifacts": {
+        "trace_path": "artifacts/1/trace.zip",
+        "screenshot_path": "artifacts/1/fail.png",
+        "video_path": "artifacts/1/video.webm"
+      }
+    }
+  ]
+}

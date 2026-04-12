@@ -1,0 +1,9 @@
+{
+  "run_id": "title-all-error",
+  "external_id": 106,
+  "test_case_title": "Error Handling Tests",
+  "test_case_description": "Verify app error path handling",
+  "test_case_text": "Error Handling Tests",
+  "base_url": "https://www.apple.com/tn/buy",
+  "use_auth": false
+}

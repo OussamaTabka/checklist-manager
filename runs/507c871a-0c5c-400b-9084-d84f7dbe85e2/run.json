@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0",
+  "run_id": "507c871a-0c5c-400b-9084-d84f7dbe85e2",
+  "target": {
+    "base_url": "http://localhost:5173"
+  },
+  "runtime": {
+    "headless": true,
+    "timeout_ms": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "trace": "retain-on-failure",
+    "video": "retain-on-failure",
+    "screenshot": "only-on-failure"
+  },
+  "cases": [
+    {
+      "external_id": 11,
+      "title": "CORS Configuration",
+      "severity": "critical",
+      "use_auth": true,
+      "steps": [
+        {
+          "action": "goto",
+          "url": "about:blank"
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_url_contains",
+          "value": "__agent_unknown_scenario__"
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "mode": "api",
+    "csrf_cookie_url": "http://host.docker.internal:8000/sanctum/csrf-cookie",
+    "login_url": "http://host.docker.internal:8000/api/login",
+    "verify_url": "http://host.docker.internal:8000/api/me",
+    "username_env": "E2E_EMAIL",
+    "password_env": "E2E_PASSWORD",
+    "username_field": "email",
+    "password_field": "password",
+    "body_format": "json"
+  }
+}

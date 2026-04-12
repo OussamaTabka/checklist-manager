@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "run_id": "fba59182-0f35-444d-8b00-b9cb1e98986d",
+  "target": {
+    "base_url": "http://localhost:5173"
+  },
+  "runtime": {
+    "headless": true,
+    "timeout_ms": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "trace": "retain-on-failure",
+    "video": "retain-on-failure",
+    "screenshot": "only-on-failure"
+  },
+  "cases": [
+    {
+      "external_id": 38,
+      "title": "[FORCED-FAIL 20260412-130602] Checklists table should load",
+      "severity": "critical",
+      "use_auth": false,
+      "steps": [
+        {
+          "action": "goto",
+          "url": "/checklists"
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_visible",
+          "selector": {
+            "by": "testid",
+            "id": "checklists-table"
+          }
+        }
+      ]
+    }
+  ]
+}

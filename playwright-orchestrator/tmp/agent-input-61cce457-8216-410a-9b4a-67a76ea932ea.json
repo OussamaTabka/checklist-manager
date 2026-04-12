@@ -1,0 +1,15 @@
+{
+    "run_id": "61cce457-8216-410a-9b4a-67a76ea932ea",
+    "external_id": 23,
+    "test_case_title": "Accessibility (WCAG)",
+    "test_case_description": "Check WCAG 2.1 compliance",
+    "test_case_text": "Accessibility (WCAG)\nCheck WCAG 2.1 compliance",
+    "base_url": "http://localhost:5173",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "Medium",
+    "criticality": "Major",
+    "current_status": "Passed",
+    "project_version_id": 5
+}

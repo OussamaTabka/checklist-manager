@@ -73,13 +73,13 @@ onMounted(async () => {
   <section class="page stack">
     <div class="section-header">
       <h1>Dashboard</h1>
-      <button class="btn btn-secondary btn-sm" @click="loadDashboard">Refresh</button>
+      <button class="btn btn-secondary btn-sm" @click="loadDashboard" data-testid="dashboard-btn-refresh">Refresh</button>
     </div>
 
-    <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
-    <p v-if="loading" class="muted">Loading dashboard...</p>
+    <p v-if="errorMessage" class="error" data-testid="dashboard-msg-error">{{ errorMessage }}</p>
+    <p v-if="loading" class="muted" data-testid="dashboard-msg-loading">Loading dashboard...</p>
 
-    <div class="stats-grid" v-if="!loading">
+    <div class="stats-grid" v-if="!loading" data-testid="dashboard-stats">
       <article class="stat-card">
         <div class="stat-label">Total Projects</div>
         <div class="stat-value">{{ totalProjects }}</div>
@@ -145,13 +145,13 @@ onMounted(async () => {
       </article>
     </div>
 
-    <div class="card stack" v-if="!loading">
+    <div class="card stack" v-if="!loading" data-testid="dashboard-project-success">
       <div class="section-header">
         <h2>Project Success Rate</h2>
       </div>
 
       <div class="table-wrap">
-        <table>
+        <table data-testid="dashboard-project-success">
           <thead>
             <tr>
               <th>Project</th>

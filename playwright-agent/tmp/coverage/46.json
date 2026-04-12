@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Test all interactive buttons",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  46,
+    "test_case_title":  "Button Functionality",
+    "use_auth":  false,
+    "test_case_text":  "Button Functionality Test all interactive buttons",
+    "run_id":  "coverage-46"
+}

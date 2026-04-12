@@ -1,0 +1,15 @@
+{
+    "run_id": "0dd86542-49f7-4c9f-b999-dbe8fcb42bb2",
+    "external_id": 7,
+    "test_case_title": "Request/Response Validation",
+    "test_case_description": "Validate JSON schema compliance",
+    "test_case_text": "Request/Response Validation\nValidate JSON schema compliance",
+    "base_url": "https://www.apple.com/tn",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "High",
+    "criticality": "Critical",
+    "current_status": "Failed",
+    "project_version_id": 2
+}

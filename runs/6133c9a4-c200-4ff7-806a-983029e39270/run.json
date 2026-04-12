@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "run_id": "6133c9a4-c200-4ff7-806a-983029e39270",
+  "target": {
+    "base_url": "http://localhost:5173"
+  },
+  "runtime": {
+    "headless": true,
+    "timeout_ms": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "trace": "retain-on-failure",
+    "video": "retain-on-failure",
+    "screenshot": "only-on-failure"
+  },
+  "cases": [
+    {
+      "external_id": 38,
+      "title": "[FORCED-FAIL] Projects grid should render",
+      "severity": "critical",
+      "use_auth": false,
+      "steps": [
+        {
+          "action": "goto",
+          "url": "/"
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_visible",
+          "selector": {
+            "by": "css",
+            "value": "body"
+          }
+        }
+      ]
+    }
+  ]
+}

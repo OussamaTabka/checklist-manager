@@ -1,0 +1,15 @@
+{
+    "run_id": "5ee310ad-a3b6-4ec8-8950-17c25e3661a2",
+    "external_id": 27,
+    "test_case_title": "Cross-Browser Compatibility",
+    "test_case_description": "Test on Chrome, Firefox, Safari, Edge",
+    "test_case_text": "Cross-Browser Compatibility\nTest on Chrome, Firefox, Safari, Edge",
+    "base_url": "http://localhost:5173",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "High",
+    "criticality": "Major",
+    "current_status": "Failed",
+    "project_version_id": 6
+}

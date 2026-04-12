@@ -1,0 +1,53 @@
+{
+    "schema_version": "1.0",
+    "run_id": "bc94453a-a04a-41c0-9c4d-77ec4eefb5a0",
+    "target": {
+        "base_url": "https://practicetestautomation.com/practice-test-login"
+    },
+    "runtime": {
+        "headless": false,
+        "slow_mo_ms": 700,
+        "hold_open_ms": 12000,
+        "browsers": [
+            "chromium",
+            "firefox",
+            "webkit",
+            "msedge"
+        ],
+        "timeout_ms": 30000,
+        "viewport": {
+            "width": 1280,
+            "height": 720
+        },
+        "trace": "retain-on-failure",
+        "video": "retain-on-failure",
+        "screenshot": "only-on-failure"
+    },
+    "cases": [
+        {
+            "external_id": 41,
+            "title": "Cross-Browser Compatibility",
+            "severity": "critical",
+            "use_auth": true,
+            "steps": [
+                {
+                    "action": "goto",
+                    "url": "https://practicetestautomation.com/practice-test-login"
+                }
+            ],
+            "asserts": [
+                {
+                    "type": "expect_visible",
+                    "selector": {
+                        "by": "css",
+                        "value": "body"
+                    }
+                },
+                {
+                    "type": "expect_url_contains",
+                    "value": "practicetestautomation.com"
+                }
+            ]
+        }
+    ]
+}

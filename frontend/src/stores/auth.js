@@ -8,7 +8,7 @@ export const useAuthStore = defineStore('auth', () => {
   const roles = ref([])
   const isBootstrapped = ref(false)
 
-  const isAuthenticated = computed(() => Boolean(user.value))
+  const isAuthenticated = computed(() => Boolean(user.value && token.value))
   
   // ADMINISTRATEUR SYSTÈME - Gestion des utilisateurs et du système
   const isSystemAdmin = computed(() => roles.value.includes('admin'))
@@ -53,10 +53,16 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function hydrate() {
+    const savedToken = localStorage.getItem('auth_token')
+    token.value = ''
+    if (savedToken) {
+      token.value = savedToken
+    }
+
     // Load user from localStorage if available
     const savedUser = localStorage.getItem('auth_user')
-    
-    if (savedUser) {
+
+    if (savedUser && savedToken) {
       try {
         const userData = JSON.parse(savedUser)
         user.value = userData.user
@@ -65,6 +71,9 @@ export const useAuthStore = defineStore('auth', () => {
       } catch (e) {
         console.error('[Auth] Failed to parse saved user data:', e)
       }
+    } else if (savedUser && !savedToken) {
+      // Prevent stale UI auth state when token was lost/expired.
+      clear()
     }
     
     isBootstrapped.value = true
@@ -72,7 +81,21 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(credentials) {
     await ensureCsrfCookie()
-    const data = await apiRequest('/login', { method: 'POST', body: credentials })
+    let data
+
+    try {
+      data = await apiRequest('/login', { method: 'POST', body: credentials })
+    } catch (error) {
+      // A stale/missing CSRF cookie can happen after server restarts or host changes.
+      // Refresh once and retry before surfacing the error.
+      if (error?.status === 419) {
+        await ensureCsrfCookie()
+        data = await apiRequest('/login', { method: 'POST', body: credentials })
+      } else {
+        throw error
+      }
+    }
+
     user.value = data.user
     roles.value = data.roles || []
     
@@ -159,6 +182,7 @@ export const useAuthStore = defineStore('auth', () => {
     
     // Methods
     hydrate,
+    clear,
     login,
     requestPasswordReset,
     resetPassword,

@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Check Bearer token validation",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  10,
+    "test_case_title":  "Authentication Headers",
+    "use_auth":  false,
+    "test_case_text":  "Authentication Headers Check Bearer token validation",
+    "run_id":  "coverage-10"
+}

@@ -1,0 +1,45 @@
+{
+    "schema_version": "1.0",
+    "run_id": "0dd86542-49f7-4c9f-b999-dbe8fcb42bb2",
+    "target": {
+        "base_url": "https://www.apple.com/tn"
+    },
+    "runtime": {
+        "headless": true,
+        "timeout_ms": 30000,
+        "viewport": {
+            "width": 1280,
+            "height": 720
+        },
+        "trace": "retain-on-failure",
+        "video": "retain-on-failure",
+        "screenshot": "only-on-failure"
+    },
+    "cases": [
+        {
+            "external_id": 7,
+            "title": "Request/Response Validation",
+            "severity": "critical",
+            "use_auth": true,
+            "steps": [
+                {
+                    "action": "goto",
+                    "url": "https://www.apple.com/tn"
+                }
+            ],
+            "asserts": [
+                {
+                    "type": "expect_visible",
+                    "selector": {
+                        "by": "css",
+                        "value": "body"
+                    }
+                },
+                {
+                    "type": "expect_url_contains",
+                    "value": "www.apple.com"
+                }
+            ]
+        }
+    ]
+}

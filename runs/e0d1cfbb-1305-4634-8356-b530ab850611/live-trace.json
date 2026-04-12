@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "e0d1cfbb-1305-4634-8356-b530ab850611",
+  "status": "done",
+  "updated_at": "2026-04-12T17:54:56.477Z",
+  "cases": [
+    {
+      "external_id": 42,
+      "title": "Responsive Design",
+      "status": "passed",
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://www.apple.com/tn/buy -> ok (1409ms)",
+        "[chrome] Assert 1: expect_visible css=body -> ok (52ms)",
+        "[chrome] Assert 2: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

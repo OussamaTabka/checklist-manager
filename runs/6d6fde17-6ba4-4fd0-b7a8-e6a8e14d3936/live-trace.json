@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "6d6fde17-6ba4-4fd0-b7a8-e6a8e14d3936",
+  "status": "done",
+  "updated_at": "2026-04-12T17:55:46.832Z",
+  "cases": [
+    {
+      "external_id": 46,
+      "title": "Button Functionality",
+      "status": "passed",
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://www.apple.com/tn/buy -> ok (1492ms)",
+        "[chrome] Assert 1: expect_visible css=body -> ok (48ms)",
+        "[chrome] Assert 2: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

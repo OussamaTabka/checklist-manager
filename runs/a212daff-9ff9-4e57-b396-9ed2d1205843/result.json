@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "run_id": "a212daff-9ff9-4e57-b396-9ed2d1205843",
+  "runner_run_id": "runner-1775997720075",
+  "base_url_used": "https://www.apple.com/store",
+  "status": "done",
+  "summary": {
+    "passed": 0,
+    "failed": 1,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 7,
+      "status": "failed",
+      "attempt": 1,
+      "duration_ms": 42605,
+      "error_type": "assertion_failed",
+      "error_message": "Expected visible but selector was not visible: testid=projects-table (TimeoutError: locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('projects-table') to be visible\u001b[22m\n)",
+      "artifacts": {
+        "trace_path": "artifacts/7/trace.zip",
+        "screenshot_path": "artifacts/7/fail.png",
+        "video_path": "artifacts/7/video.webm"
+      }
+    }
+  ]
+}

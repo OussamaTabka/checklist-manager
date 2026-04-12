@@ -1,8 +1,8 @@
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { CheckCircle2, ClipboardList, FilePenLine, MessageCircle, Paperclip } from 'lucide-vue-next'
-import { API_BASE_URL, apiRequest } from '@/lib/api'
+import { API_BASE_URL, apiRequest, ensureCsrfCookie } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -26,6 +26,21 @@ const newCommentFile = ref(null)
 const itemHistory = ref([])
 const historyLoading = ref(false)
 const showHistory = ref(false)
+const runModalOpen = ref(false)
+const runSubmitBusy = ref(false)
+const runModalError = ref('')
+const runtimeStateByItemId = ref({})
+const pollingItemIds = ref([])
+const pollingTimer = ref(null)
+const RUN_MODAL_BASE_URL_STORAGE_KEY = 'single_test_run_base_url'
+const runForm = reactive({
+  itemId: null,
+  baseUrl: '',
+  environmentName: '',
+  notes: '',
+  useAuth: true,
+  watchMode: true,
+})
 const versionForm = reactive({
   checklist_id: '',
 })
@@ -60,6 +75,288 @@ const selectedVersion = computed(() => {
   return project.value.versions.find((version) => version.id === targetId) || null
 })
 
+function mapStatusToExecutionState(status) {
+  switch (status) {
+    case 'Passed':
+      return 'passed'
+    case 'Failed':
+      return 'failed'
+    case 'Blocked':
+      return 'blocked'
+    default:
+      return 'idle'
+  }
+}
+
+function executionStateLabel(state) {
+  switch (state) {
+    case 'queued':
+      return 'Queued'
+    case 'running':
+      return 'Running'
+    case 'passed':
+      return 'Passed'
+    case 'failed':
+      return 'Failed'
+    case 'blocked':
+      return 'Blocked'
+    default:
+      return 'Idle'
+  }
+}
+
+function executionStateClass(state) {
+  return `run-chip run-chip-${state}`
+}
+
+function isRunInFlight(item) {
+  const state = stateForItem(item).execution_state
+  return state === 'queued' || state === 'running'
+}
+
+function runButtonLabel(item) {
+  const state = stateForItem(item).execution_state
+  if (state === 'queued') {
+    return 'Queuing...'
+  }
+  if (state === 'running') {
+    return 'Running...'
+  }
+  return 'Run'
+}
+
+function normalizeBaseUrl(url) {
+  return url.replace(/\/$/, '')
+}
+
+function isValidHttpUrl(url) {
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function readPersistedRunBaseUrl() {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+
+  const persisted = window.localStorage.getItem(RUN_MODAL_BASE_URL_STORAGE_KEY) || ''
+  const normalized = normalizeBaseUrl(persisted.trim())
+  return isValidHttpUrl(normalized) ? normalized : ''
+}
+
+function persistRunBaseUrl(url) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  window.localStorage.setItem(RUN_MODAL_BASE_URL_STORAGE_KEY, url)
+}
+
+function seedRuntimeStateFromVersion(version) {
+  if (!version?.items) {
+    return
+  }
+
+  const next = { ...runtimeStateByItemId.value }
+  for (const item of version.items) {
+    if (!next[item.id]) {
+      next[item.id] = {
+        execution_state: mapStatusToExecutionState(item.status),
+        last_run_id: null,
+        last_run_status: null,
+        last_error_message: null,
+        execution_trace: [],
+        artifacts: {
+          trace: [],
+          screenshot: [],
+          video: [],
+        },
+      }
+    }
+  }
+
+  runtimeStateByItemId.value = next
+}
+
+function stateForItem(item) {
+  return (
+    runtimeStateByItemId.value[item.id] || {
+      execution_state: mapStatusToExecutionState(item.status),
+      last_run_id: null,
+      last_run_status: null,
+      last_error_message: null,
+      execution_trace: [],
+      artifacts: {
+        trace: [],
+        screenshot: [],
+        video: [],
+      },
+    }
+  )
+}
+
+function getArtifactUrl(item) {
+  const runtime = stateForItem(item)
+  const traces = Array.isArray(runtime.artifacts?.trace) ? runtime.artifacts.trace : []
+  const screenshots = Array.isArray(runtime.artifacts?.screenshot) ? runtime.artifacts.screenshot : []
+  const videos = Array.isArray(runtime.artifacts?.video) ? runtime.artifacts.video : []
+  const candidates = [...traces, ...screenshots, ...videos]
+  const first = candidates.find((value) => typeof value === 'string' && /^https?:\/\//.test(value))
+  return first || null
+}
+
+function ensurePollingStarted() {
+  if (pollingTimer.value || pollingItemIds.value.length === 0) {
+    return
+  }
+
+  pollingTimer.value = setInterval(async () => {
+    const ids = [...pollingItemIds.value]
+    for (const itemId of ids) {
+      await refreshTestCaseState(itemId)
+    }
+  }, 3000)
+}
+
+function stopPollingIfIdle() {
+  if (pollingItemIds.value.length === 0 && pollingTimer.value) {
+    clearInterval(pollingTimer.value)
+    pollingTimer.value = null
+  }
+}
+
+function addPollingItem(itemId) {
+  if (!pollingItemIds.value.includes(itemId)) {
+    pollingItemIds.value = [...pollingItemIds.value, itemId]
+  }
+  ensurePollingStarted()
+}
+
+function removePollingItem(itemId) {
+  pollingItemIds.value = pollingItemIds.value.filter((id) => id !== itemId)
+  stopPollingIfIdle()
+}
+
+async function refreshTestCaseState(itemId) {
+  try {
+    const data = await apiRequest(`/test-cases/${itemId}`, {}, auth.token)
+
+    runtimeStateByItemId.value = {
+      ...runtimeStateByItemId.value,
+      [itemId]: {
+        execution_state: data.execution_state || 'idle',
+        last_run_id: data.last_run_id || null,
+        last_run_status: data.last_run_status || null,
+        last_error_message: data.last_error_message || null,
+        execution_trace: Array.isArray(data.execution_trace) ? data.execution_trace : [],
+        artifacts: {
+          trace: Array.isArray(data.artifacts?.trace) ? data.artifacts.trace : [],
+          screenshot: Array.isArray(data.artifacts?.screenshot) ? data.artifacts.screenshot : [],
+          video: Array.isArray(data.artifacts?.video) ? data.artifacts.video : [],
+        },
+      },
+    }
+
+    if (!['queued', 'running'].includes(data.execution_state)) {
+      removePollingItem(itemId)
+      await loadProject()
+      if (selectedVersionId.value) {
+        await loadProgress(selectedVersionId.value)
+      }
+    }
+  } catch {
+    // keep polling on transient errors
+  }
+}
+
+function openRunModal(item) {
+  runForm.itemId = item.id
+  const persistedBaseUrl = readPersistedRunBaseUrl()
+  if (persistedBaseUrl) {
+    runForm.baseUrl = persistedBaseUrl
+  } else {
+    runForm.baseUrl = project.value?.app_url ? normalizeBaseUrl(project.value.app_url) : 'http://localhost:5173'
+  }
+  runForm.environmentName = ''
+  runForm.notes = ''
+  runForm.useAuth = true
+  runForm.watchMode = true
+  runModalError.value = ''
+  runSubmitBusy.value = false
+  runModalOpen.value = true
+}
+
+function closeRunModal() {
+  if (runSubmitBusy.value) {
+    return
+  }
+  runModalOpen.value = false
+}
+
+async function submitRunModal() {
+  runModalError.value = ''
+
+  if (!runForm.itemId) {
+    runModalError.value = 'No test case selected.'
+    return
+  }
+
+  const normalizedBaseUrl = normalizeBaseUrl(runForm.baseUrl.trim())
+  if (!isValidHttpUrl(normalizedBaseUrl)) {
+    runModalError.value = 'Base URL must be a valid http/https URL.'
+    return
+  }
+
+  runSubmitBusy.value = true
+  persistRunBaseUrl(normalizedBaseUrl)
+
+  try {
+    await ensureCsrfCookie()
+
+    const response = await apiRequest(
+      `/test-cases/${runForm.itemId}/runs`,
+      {
+        method: 'POST',
+        body: {
+          base_url: normalizedBaseUrl,
+          use_auth: !!runForm.useAuth,
+          watch_mode: !!runForm.watchMode,
+          environment_name: runForm.environmentName.trim() || null,
+          notes: runForm.notes.trim() || null,
+        },
+      },
+      auth.token,
+    )
+
+    runtimeStateByItemId.value = {
+      ...runtimeStateByItemId.value,
+      [runForm.itemId]: {
+        execution_state: response.status === 'started' ? 'running' : 'queued',
+        last_run_id: response.run_id || null,
+        last_run_status: response.status || 'queued',
+        last_error_message: null,
+        execution_trace: [],
+        artifacts: {
+          trace: [],
+          screenshot: [],
+          video: [],
+        },
+      },
+    }
+
+    addPollingItem(runForm.itemId)
+    runModalOpen.value = false
+  } catch (error) {
+    runModalError.value = error.data?.message || error.message || 'Failed to queue run.'
+  } finally {
+    runSubmitBusy.value = false
+  }
+}
+
 async function loadProject() {
   loading.value = true
   pageError.value = ''
@@ -71,6 +368,7 @@ async function loadProject() {
     if (data.versions?.length) {
       selectedVersionId.value = String(data.versions[0].id)
       await loadProgress(data.versions[0].id)
+      seedRuntimeStateFromVersion(data.versions[0])
     } else {
       selectedVersionId.value = ''
       progress.value = null
@@ -121,6 +419,7 @@ function getEventBorderColor(eventType) {
     'change': 'background: #f0f9ff; border-left-color: #3b82f6;',
     'comment': 'background: #fdf2f8; border-left-color: #7c3aed;',
     'test': 'background: #f0fdf4; border-left-color: #059669;',
+    'execution': 'background: #fff7ed; border-left-color: #ea580c;',
   }
   return colors[eventType] || 'background: #f3f4f6; border-left-color: #6b7280;'
 }
@@ -209,10 +508,21 @@ function closeChecklistEditor() {
 }
 
 async function loadAvailableItems() {
+  if (!auth.canManageChecklists) {
+    availableItems.value = []
+    return
+  }
+
   try {
     const data = await apiRequest('/checklists/items/available', {}, auth.token)
     availableItems.value = data || []
   } catch (error) {
+    // Expected for roles without checklist privileges when stale calls happen.
+    if (error?.status === 403) {
+      availableItems.value = []
+      return
+    }
+
     console.log('Could not load available items:', error.message)
   }
 }
@@ -504,11 +814,24 @@ async function downloadExportFile(endpoint, fallbackFilename) {
 watch(selectedVersionId, async (value) => {
   if (value) {
     await loadProgress(value)
+    seedRuntimeStateFromVersion(selectedVersion.value)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (pollingTimer.value) {
+    clearInterval(pollingTimer.value)
+    pollingTimer.value = null
   }
 })
 
 onMounted(async () => {
-  await Promise.all([loadProject(), loadChecklists(), loadAvailableItems()])
+  if (auth.canManageChecklists) {
+    await Promise.all([loadProject(), loadChecklists(), loadAvailableItems()])
+    return
+  }
+
+  await Promise.all([loadProject(), loadChecklists()])
 })
 </script>
 
@@ -807,6 +1130,7 @@ onMounted(async () => {
                 <th>Priority</th>
                 <th>Criticality</th>
                 <th>Status</th>
+                <th>Run</th>
               </tr>
             </thead>
             <tbody>
@@ -834,9 +1158,44 @@ onMounted(async () => {
                       <option>Blocked</option>
                     </select>
                   </td>
+                  <td>
+                    <div class="stack" style="gap: 0.4rem">
+                      <span :class="executionStateClass(stateForItem(item).execution_state)">
+                        {{ executionStateLabel(stateForItem(item).execution_state) }}
+                      </span>
+
+                      <button class="btn btn-secondary btn-sm" :disabled="!auth.canTest || isRunInFlight(item)" @click="openRunModal(item)">
+                        {{ runButtonLabel(item) }}
+                      </button>
+
+                      <a
+                        v-if="getArtifactUrl(item)"
+                        :href="getArtifactUrl(item)"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="muted"
+                        style="font-size: 0.8rem; text-decoration: underline"
+                      >
+                        View artifacts
+                      </a>
+
+                      <span v-if="stateForItem(item).last_error_message" class="error" style="padding: 0.5rem; font-size: 0.75rem; margin: 0">
+                        {{ stateForItem(item).last_error_message }}
+                      </span>
+
+                      <details v-if="stateForItem(item).execution_trace?.length" style="font-size: 0.78rem">
+                        <summary class="muted" style="cursor: pointer">Execution trace ({{ stateForItem(item).execution_trace.length }})</summary>
+                        <ol style="margin: 0.35rem 0 0; padding-left: 1.1rem; max-height: 12rem; overflow: auto">
+                          <li v-for="(line, index) in stateForItem(item).execution_trace" :key="`${item.id}-trace-${index}`" style="margin-bottom: 0.2rem">
+                            {{ line }}
+                          </li>
+                        </ol>
+                      </details>
+                    </div>
+                  </td>
                 </tr>
                 <tr v-if="selectedItemId === item.id">
-                  <td colspan="6" style="padding: 1.5rem">
+                  <td colspan="7" style="padding: 1.5rem">
                     <div class="card stack">
                       <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0;">
                         <button 
@@ -993,6 +1352,31 @@ onMounted(async () => {
                                   <small class="muted">Tested by: <strong>{{ event.user_name }}</strong></small>
                                 </div>
                               </template>
+
+                              <!-- Execution Failure Event -->
+                              <template v-if="event.type === 'execution'">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                  <div>
+                                    <strong style="font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                                      <ClipboardList :size="16" />
+                                      <span>Execution Failed</span>
+                                    </strong>
+                                    <div class="muted" style="font-size: 0.85rem; margin-top: 0.25rem;">
+                                      <span v-if="event.run_id">Run: <strong>{{ event.run_id }}</strong></span>
+                                      <span v-if="event.error_type"> • Type: <strong>{{ event.error_type }}</strong></span>
+                                    </div>
+                                  </div>
+                                  <small class="muted">{{ new Date(event.timestamp).toLocaleString() }}</small>
+                                </div>
+
+                                <p style="margin: 0.75rem 0; padding: 0.75rem; background: #fff; border-radius: 0.375rem; border-left: 2px solid #ea580c; white-space: pre-wrap;">
+                                  {{ event.error_message || 'Execution failed without an explicit error message.' }}
+                                </p>
+
+                                <div style="margin-top: 0.5rem;">
+                                  <small class="muted" v-if="event.user_name">Requested by: <strong>{{ event.user_name }}</strong></small>
+                                </div>
+                              </template>
                             </div>
                           </div>
                         </div>
@@ -1003,6 +1387,65 @@ onMounted(async () => {
               </template>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <div
+        v-if="runModalOpen"
+        style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); z-index: 60; display: grid; place-items: center; padding: 1rem"
+      >
+        <div class="card stack" style="width: min(620px, 96vw)">
+          <div class="section-header" style="margin-bottom: 0">
+            <h3>Run Test Case</h3>
+          </div>
+
+          <p class="muted" style="margin-top: 0">
+            Provide target website info for this run.
+          </p>
+
+          <p v-if="runModalError" class="error">{{ runModalError }}</p>
+
+          <form class="stack" @submit.prevent="submitRunModal">
+            <div class="field">
+              <label>Base URL (required)</label>
+              <input v-model="runForm.baseUrl" placeholder="https://example.com" :disabled="runSubmitBusy" required />
+            </div>
+
+            <div class="grid">
+              <div class="field">
+                <label>Environment name (optional)</label>
+                <input v-model="runForm.environmentName" placeholder="staging" :disabled="runSubmitBusy" />
+              </div>
+
+              <div class="field" style="justify-content: end">
+                <label style="text-transform: none; letter-spacing: normal; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem">
+                  <input type="checkbox" v-model="runForm.useAuth" :disabled="runSubmitBusy" />
+                  <span>Use authenticated flow</span>
+                </label>
+                <p class="muted" style="margin: 0; font-size: 0.8rem">Uncheck to run unauthenticated.</p>
+
+                <label style="margin-top: 0.5rem; text-transform: none; letter-spacing: normal; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem">
+                  <input type="checkbox" v-model="runForm.watchMode" :disabled="runSubmitBusy" />
+                  <span>Watch mode (open browser window)</span>
+                </label>
+                <p class="muted" style="margin: 0; font-size: 0.8rem">Keep enabled to watch the test live in an external browser.</p>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Notes / constraints (optional)</label>
+              <textarea v-model="runForm.notes" rows="3" :disabled="runSubmitBusy" />
+            </div>
+
+            <div class="actions">
+              <button class="btn btn-primary" type="submit" :disabled="runSubmitBusy">
+                {{ runSubmitBusy ? 'Queuing...' : 'Run now' }}
+              </button>
+              <button class="btn btn-secondary" type="button" :disabled="runSubmitBusy" @click="closeRunModal">
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </template>

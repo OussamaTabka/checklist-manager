@@ -1,0 +1,19 @@
+{
+  "name": "playwright-orchestrator",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "run:smoke": "npm run build && node dist/index.js",
+    "run:from-dsl": "npm run build && node dist/cli/fromDsl.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "typescript": "^5.8.3"
+  }
+}

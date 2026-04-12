@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "run_id": "acc3b124-c3da-4690-9fdd-9e4659f9f1cf",
+  "target": {
+    "base_url": "http://localhost:5173"
+  },
+  "runtime": {
+    "headless": true,
+    "timeout_ms": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "trace": "retain-on-failure",
+    "video": "retain-on-failure",
+    "screenshot": "only-on-failure"
+  },
+  "cases": [
+    {
+      "external_id": 28,
+      "title": "Responsive Design",
+      "severity": "critical",
+      "use_auth": true,
+      "steps": [
+        {
+          "action": "goto",
+          "url": "/projects"
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_visible",
+          "selector": {
+            "by": "testid",
+            "id": "projects-table"
+          }
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "mode": "api",
+    "csrf_cookie_url": "http://host.docker.internal:8000/sanctum/csrf-cookie",
+    "login_url": "http://host.docker.internal:8000/api/login",
+    "verify_url": "http://host.docker.internal:8000/api/me",
+    "username_env": "E2E_EMAIL",
+    "password_env": "E2E_PASSWORD",
+    "username_field": "email",
+    "password_field": "password",
+    "body_format": "json"
+  }
+}

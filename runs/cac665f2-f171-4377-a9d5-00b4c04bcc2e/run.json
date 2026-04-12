@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0",
+  "run_id": "cac665f2-f171-4377-a9d5-00b4c04bcc2e",
+  "target": {
+    "base_url": "http://localhost:5173"
+  },
+  "runtime": {
+    "headless": true,
+    "timeout_ms": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "trace": "retain-on-failure",
+    "video": "retain-on-failure",
+    "screenshot": "only-on-failure"
+  },
+  "cases": [
+    {
+      "external_id": 7,
+      "title": "Request/Response Validation",
+      "severity": "critical",
+      "use_auth": true,
+      "steps": [
+        {
+          "action": "goto",
+          "url": "/"
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_url_contains",
+          "value": "__agent_unknown_scenario__"
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "mode": "api",
+    "csrf_cookie_url": "http://host.docker.internal:8000/sanctum/csrf-cookie",
+    "login_url": "http://host.docker.internal:8000/api/login",
+    "verify_url": "http://host.docker.internal:8000/api/me",
+    "username_env": "E2E_EMAIL",
+    "password_env": "E2E_PASSWORD",
+    "username_field": "email",
+    "password_field": "password",
+    "body_format": "json"
+  }
+}

@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Verify rate limit enforcement",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  9,
+    "test_case_title":  "Rate Limiting",
+    "use_auth":  false,
+    "test_case_text":  "Rate Limiting Verify rate limit enforcement",
+    "run_id":  "coverage-9"
+}

@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "run_id": "be8a1009-bc5a-4736-952a-6059ccbcebe4",
+  "target": {
+    "base_url": "http://localhost:5173"
+  },
+  "runtime": {
+    "headless": true,
+    "timeout_ms": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "trace": "retain-on-failure",
+    "video": "retain-on-failure",
+    "screenshot": "only-on-failure"
+  },
+  "cases": [
+    {
+      "external_id": 37,
+      "title": "[FORCED-FAIL] Dashboard panel should render",
+      "severity": "critical",
+      "use_auth": false,
+      "steps": [
+        {
+          "action": "goto",
+          "url": "/dashboard"
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_visible",
+          "selector": {
+            "by": "testid",
+            "id": "dashboard-stats"
+          }
+        }
+      ]
+    }
+  ]
+}

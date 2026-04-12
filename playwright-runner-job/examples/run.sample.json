@@ -1,0 +1,85 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-20260410-0001",
+  "target": {
+    "base_url": "http://host.docker.internal:5173"
+  },
+  "runtime": {
+    "headless": true,
+    "timeout_ms": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "trace": "retain-on-failure",
+    "video": "retain-on-failure",
+    "screenshot": "only-on-failure"
+  },
+  "cases": [
+    {
+      "external_id": 7101,
+      "title": "Login with valid credentials",
+      "severity": "critical",
+      "steps": [
+        { "action": "goto", "url": "/login" },
+        {
+          "action": "fill",
+          "selector": { "by": "testid", "id": "auth-login-email-input" },
+          "value": "${E2E_EMAIL}"
+        },
+        {
+          "action": "fill",
+          "selector": { "by": "testid", "id": "auth-login-password-input" },
+          "value": "${E2E_PASSWORD}"
+        },
+        {
+          "action": "click",
+          "selector": { "by": "testid", "id": "auth-login-submit-btn" }
+        },
+        {
+          "action": "wait_for_url",
+          "contains": "/dashboard",
+          "timeout_ms": 15000
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_visible",
+          "selector": { "by": "testid", "id": "dashboard-page" }
+        },
+        {
+          "type": "expect_url_contains",
+          "value": "/dashboard"
+        }
+      ]
+    },
+    {
+      "external_id": 7102,
+      "title": "Open forgot password page",
+      "severity": "major",
+      "steps": [
+        { "action": "goto", "url": "/login" },
+        {
+          "action": "click",
+          "selector": {
+            "by": "role",
+            "role": "link",
+            "name": "Forgot password?",
+            "exact": true
+          }
+        },
+        {
+          "action": "wait_for_url",
+          "contains": "/forgot-password",
+          "timeout_ms": 15000
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_title",
+          "value": "Checklist Manager"
+        }
+      ]
+    }
+  ]
+}

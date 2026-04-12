@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "run_id": "32397d55-d8e2-4f41-abe1-6065606979bb",
+  "runner_run_id": "runner-1775998009990",
+  "base_url_used": "http://localhost:5173",
+  "status": "done",
+  "summary": {
+    "passed": 0,
+    "failed": 1,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 27,
+      "status": "failed",
+      "attempt": 1,
+      "duration_ms": 2817,
+      "error_type": "unexpected_error",
+      "error_message": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/checklists\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/checklists\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "artifacts": {
+        "trace_path": "artifacts/27/trace.zip",
+        "screenshot_path": "artifacts/27/fail.png",
+        "video_path": "artifacts/27/video.webm"
+      }
+    }
+  ]
+}

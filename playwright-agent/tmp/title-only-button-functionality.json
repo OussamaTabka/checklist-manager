@@ -1,0 +1,9 @@
+{
+  "run_id": "title-only-button-functionality",
+  "external_id": 3,
+  "test_case_title": "Button Functionality",
+  "test_case_description": "Test all interactive buttons",
+  "test_case_text": "Button Functionality Test all interactive buttons",
+  "base_url": "https://www.apple.com/tn/buy",
+  "use_auth": false
+}

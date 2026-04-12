@@ -1,0 +1,9 @@
+{
+  "run_id": "instruction-driven-check",
+  "external_id": 1,
+  "test_case_title": "Positive LogIn test",
+  "test_case_description": "",
+  "test_case_text": "Open page https://practicetestautomation.com/practice-test-login/\nType username student into Username field\nType password Password123 into Password field\nPush Submit button\nVerify new page URL contains practicetestautomation.com/logged-in-successfully/\nVerify new page contains expected text ('Congratulations' or 'successfully logged in')\nVerify button Log out is displayed on the new page",
+  "base_url": "https://practicetestautomation.com/practice-test-login/",
+  "use_auth": false
+}

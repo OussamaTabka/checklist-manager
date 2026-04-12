@@ -1,0 +1,15 @@
+{
+    "run_id": "715b8ef3-ce4c-447f-bac5-008bb3896da3",
+    "external_id": 22,
+    "test_case_title": "Responsive Design",
+    "test_case_description": "Test on mobile, tablet, desktop",
+    "test_case_text": "Responsive Design\nTest on mobile, tablet, desktop",
+    "base_url": "http://localhost:5173",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "High",
+    "criticality": "Major",
+    "current_status": "Passed",
+    "project_version_id": 5
+}

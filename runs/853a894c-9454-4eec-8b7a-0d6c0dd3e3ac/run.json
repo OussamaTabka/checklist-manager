@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "run_id": "853a894c-9454-4eec-8b7a-0d6c0dd3e3ac",
+  "target": {
+    "base_url": "http://host.docker.internal:5173"
+  },
+  "runtime": {
+    "headless": true,
+    "timeout_ms": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "trace": "retain-on-failure",
+    "video": "retain-on-failure",
+    "screenshot": "only-on-failure"
+  },
+  "cases": [
+    {
+      "external_id": 1,
+      "title": "Agent classified: dashboard",
+      "severity": "critical",
+      "use_auth": true,
+      "steps": [
+        {
+          "action": "goto",
+          "url": "/dashboard"
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_visible",
+          "selector": {
+            "by": "testid",
+            "id": "dashboard-stats"
+          }
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "mode": "api",
+    "csrf_cookie_url": "http://host.docker.internal:8000/sanctum/csrf-cookie",
+    "login_url": "http://host.docker.internal:8000/api/login",
+    "verify_url": "http://host.docker.internal:8000/api/me",
+    "username_env": "E2E_EMAIL",
+    "password_env": "E2E_PASSWORD",
+    "username_field": "email",
+    "password_field": "password",
+    "body_format": "json"
+  }
+}

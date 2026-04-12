@@ -1,0 +1,15 @@
+{
+    "run_id": "e0d1cfbb-1305-4634-8356-b530ab850611",
+    "external_id": 42,
+    "test_case_title": "Responsive Design",
+    "test_case_description": "Test on mobile, tablet, desktop",
+    "test_case_text": "Responsive Design\nTest on mobile, tablet, desktop",
+    "base_url": "https://www.apple.com/tn/buy",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "High",
+    "criticality": "Major",
+    "current_status": "Passed",
+    "project_version_id": 12
+}

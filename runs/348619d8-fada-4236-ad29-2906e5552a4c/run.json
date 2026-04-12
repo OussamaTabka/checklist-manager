@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "run_id": "348619d8-fada-4236-ad29-2906e5552a4c",
+  "target": {
+    "base_url": "http://localhost:5173"
+  },
+  "runtime": {
+    "headless": true,
+    "timeout_ms": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "trace": "retain-on-failure",
+    "video": "retain-on-failure",
+    "screenshot": "only-on-failure"
+  },
+  "cases": [
+    {
+      "external_id": 37,
+      "title": "[FORCED-FAIL] Users table should render",
+      "severity": "critical",
+      "use_auth": false,
+      "steps": [
+        {
+          "action": "goto",
+          "url": "/"
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_visible",
+          "selector": {
+            "by": "css",
+            "value": "body"
+          }
+        }
+      ]
+    }
+  ]
+}

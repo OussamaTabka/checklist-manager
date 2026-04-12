@@ -77,7 +77,11 @@ router.beforeEach(async (to) => {
   const auth = useAuthStore()
   auth.hydrate()
 
-  if ((to.meta.requiresAuth || to.meta.guestOnly) && !auth.user) {
+  const shouldAttemptRestore =
+    (to.meta.requiresAuth && Boolean(auth.token)) ||
+    (to.meta.guestOnly && !auth.user && Boolean(auth.token))
+
+  if (shouldAttemptRestore) {
     await auth.fetchMe()
   }
 

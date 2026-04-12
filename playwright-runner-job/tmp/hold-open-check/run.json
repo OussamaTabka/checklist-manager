@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "run_id": "hold-open-check",
+  "target": { "base_url": "https://example.com" },
+  "runtime": {
+    "headless": false,
+    "slow_mo_ms": 0,
+    "hold_open_ms": 5000,
+    "timeout_ms": 30000,
+    "viewport": { "width": 1280, "height": 720 },
+    "trace": "off",
+    "video": "off",
+    "screenshot": "off"
+  },
+  "cases": [
+    {
+      "external_id": 1,
+      "title": "hold test",
+      "use_auth": false,
+      "steps": [
+        { "action": "goto", "url": "https://example.com" }
+      ],
+      "asserts": [
+        { "type": "expect_visible", "selector": { "by": "css", "value": "body" } }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+    "schema_version": "1.0",
+    "run_id": "75704b91-a97f-497d-8a14-e004a5bb7a2e",
+    "target": {
+        "base_url": "http://localhost:5173"
+    },
+    "runtime": {
+        "headless": true,
+        "timeout_ms": 30000,
+        "viewport": {
+            "width": 1280,
+            "height": 720
+        },
+        "trace": "retain-on-failure",
+        "video": "retain-on-failure",
+        "screenshot": "only-on-failure"
+    },
+    "cases": [
+        {
+            "external_id": 40,
+            "title": "Accessibility (WCAG)",
+            "severity": "critical",
+            "use_auth": true,
+            "steps": [
+                {
+                    "action": "goto",
+                    "url": "http://localhost:5173"
+                }
+            ],
+            "asserts": [
+                {
+                    "type": "expect_visible",
+                    "selector": {
+                        "by": "css",
+                        "value": "body"
+                    }
+                },
+                {
+                    "type": "expect_url_contains",
+                    "value": "localhost"
+                }
+            ]
+        }
+    ]
+}

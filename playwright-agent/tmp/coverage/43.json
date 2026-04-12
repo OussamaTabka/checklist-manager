@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Check WCAG 2.1 compliance",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  43,
+    "test_case_title":  "Accessibility (WCAG)",
+    "use_auth":  false,
+    "test_case_text":  "Accessibility (WCAG) Check WCAG 2.1 compliance",
+    "run_id":  "coverage-43"
+}

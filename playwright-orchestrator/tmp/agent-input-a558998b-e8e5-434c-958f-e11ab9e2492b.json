@@ -1,0 +1,15 @@
+{
+    "run_id": "a558998b-e8e5-434c-958f-e11ab9e2492b",
+    "external_id": 9,
+    "test_case_title": "Rate Limiting",
+    "test_case_description": "Verify rate limit enforcement",
+    "test_case_text": "Rate Limiting\nVerify rate limit enforcement",
+    "base_url": "http://localhost:5173",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "rate limite should be from 0 to 10",
+    "priority": "Medium",
+    "criticality": "Major",
+    "current_status": "Failed",
+    "project_version_id": 2
+}

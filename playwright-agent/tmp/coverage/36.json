@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Projects scenario: projects page must display projects-table test id.",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  36,
+    "test_case_title":  "[FORCED-FAIL] Projects table should render",
+    "use_auth":  false,
+    "test_case_text":  "[FORCED-FAIL] Projects table should render Projects scenario: projects page must display projects-table test id.",
+    "run_id":  "coverage-36"
+}

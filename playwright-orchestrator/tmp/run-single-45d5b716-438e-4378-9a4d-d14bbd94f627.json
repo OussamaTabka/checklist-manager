@@ -1,0 +1,53 @@
+{
+    "schema_version": "1.0",
+    "run_id": "45d5b716-438e-4378-9a4d-d14bbd94f627",
+    "target": {
+        "base_url": "https://practicetestautomation.com/practice-test-login"
+    },
+    "runtime": {
+        "headless": false,
+        "slow_mo_ms": 700,
+        "hold_open_ms": 12000,
+        "timeout_ms": 30000,
+        "viewport": {
+            "width": 1280,
+            "height": 720
+        },
+        "trace": "retain-on-failure",
+        "video": "retain-on-failure",
+        "screenshot": "only-on-failure"
+    },
+    "cases": [
+        {
+            "external_id": 44,
+            "title": "Form Validation",
+            "severity": "critical",
+            "use_auth": true,
+            "steps": [
+                {
+                    "action": "goto",
+                    "url": "https://practicetestautomation.com/practice-test-login"
+                },
+                {
+                    "action": "click",
+                    "selector": {
+                        "by": "role",
+                        "role": "button",
+                        "name": "Submit",
+                        "exact": false
+                    }
+                }
+            ],
+            "asserts": [
+                {
+                    "type": "expect_visible",
+                    "selector": {
+                        "by": "text",
+                        "text": "required",
+                        "exact": false
+                    }
+                }
+            ]
+        }
+    ]
+}

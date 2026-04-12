@@ -1,0 +1,51 @@
+{
+  "cookies": [
+    {
+      "name": "XSRF-TOKEN",
+      "value": "eyJpdiI6IjNicDJLMkZqSy9pYXZEd2VxUGE5NVE9PSIsInZhbHVlIjoiTFhxSHZxTTRXNDF3dzM2SUJldGpoQUlubEwxN3djOW1HWWtyWmlaeUU4V3A2ZVhueXh1enpKNkpuNnpGTExJMjRtSGZ6SUE5eXg0NDhPeWNXUmtKY0hsQ3dqRDJPUFVlUXlFQStsbk52bmRXQldMT2MwQzgxRXRyc0VKODFMZTIiLCJtYWMiOiI0Mjg5ZThhYzRlMjNlZTI5NTk2ZDM2MzNkZTI4MTZlZDZhNWFhMjJlYjk5YjVlMDQ3MGZjYjNjY2YzMTBiODE4IiwidGFnIjoiIn0%3D",
+      "domain": "host.docker.internal",
+      "path": "/",
+      "expires": 1775932295.965,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "laravel-session",
+      "value": "JNxvDKiiFWFlzlQJngTxp2LNakZ1xClocQWyGel4",
+      "domain": "host.docker.internal",
+      "path": "/",
+      "expires": 1775932298.06,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://host.docker.internal:5173",
+      "localStorage": [
+        {
+          "name": "__VUE_DEVTOOLS_NEXT_PLUGIN_SETTINGS__dev.esm.pinia__",
+          "value": "{\"logStoreChanges\":true}"
+        },
+        {
+          "name": "auth_token",
+          "value": "35|sWxxxc9FS8cy0K80djy2VFmFKXptrVmtyGUg3n4852bbff70"
+        },
+        {
+          "name": "__vue-devtools-frame-state__",
+          "value": "{\"width\":80,\"height\":60,\"top\":0,\"left\":50,\"open\":false,\"route\":\"/\",\"position\":\"bottom\",\"isFirstVisit\":true,\"closeOnOutsideClick\":false,\"minimizePanelInactive\":5000,\"preferShowFloatingPanel\":true,\"reduceMotion\":false}"
+        },
+        {
+          "name": "__vue-devtools-theme__",
+          "value": "auto"
+        },
+        {
+          "name": "auth_user",
+          "value": "{\"user\":{\"id\":2,\"name\":\"Chef de Projet\",\"email\":\"chef@test.com\",\"email_verified_at\":null,\"account_status\":\"active\",\"invited_by\":null,\"invited_at\":null,\"activated_at\":null,\"created_at\":\"2026-04-04T15:19:41.000000Z\",\"updated_at\":\"2026-04-04T15:19:41.000000Z\",\"roles\":[{\"id\":2,\"name\":\"chef\",\"guard_name\":\"web\",\"created_at\":\"2026-04-04T15:19:41.000000Z\",\"updated_at\":\"2026-04-04T15:19:41.000000Z\",\"pivot\":{\"model_type\":\"App\\\\Models\\\\User\",\"model_id\":2,\"role_id\":2}}]},\"roles\":[\"chef\"]}"
+        }
+      ]
+    }
+  ]
+}

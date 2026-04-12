@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Test error codes and messages",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  8,
+    "test_case_title":  "Error Handling Tests",
+    "use_auth":  false,
+    "test_case_text":  "Error Handling Tests Test error codes and messages",
+    "run_id":  "coverage-8"
+}

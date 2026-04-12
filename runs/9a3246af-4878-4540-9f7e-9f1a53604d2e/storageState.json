@@ -1,0 +1,43 @@
+{
+  "cookies": [
+    {
+      "name": "XSRF-TOKEN",
+      "value": "eyJpdiI6IlAxQXdTbkFXWEVTTGZzMkphV2IvYlE9PSIsInZhbHVlIjoiMVNpM3VsOWpiUTRscGlsNWNpOUtwdHZhQmhRU3RteXZkSXlRYm9YUkFwTE52R3pnVHdjR2Rta215Zk1iaDE3K1JucE1RY1RqdElSejRPN2FwQW4zZ28xU01ORXpGbXFrNStVeEM0SVl4ZFN6VDZoV0JDRExIY2RsdlBXa1R4TTEiLCJtYWMiOiJiZjA3NjE3ZWVjMGNiZDY0YTU4ZGExNGU3NTU4ZGMxODE0MTg1MDk3YmM3Y2VlYjE0ZTcyMGI1MmNjMTM2MzY5IiwidGFnIjoiIn0%3D",
+      "domain": "host.docker.internal",
+      "path": "/",
+      "expires": 1775849027.309,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "laravel-session",
+      "value": "IQmsp6jXJVbEdwFPb5VEQgXaKF75mI8JOTkADYzu",
+      "domain": "host.docker.internal",
+      "path": "/",
+      "expires": 1775849029.044,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://172.25.64.1:5173",
+      "localStorage": [
+        {
+          "name": "__VUE_DEVTOOLS_NEXT_PLUGIN_SETTINGS__dev.esm.pinia__",
+          "value": "{\"logStoreChanges\":true}"
+        },
+        {
+          "name": "auth_token",
+          "value": "28|WT8h2YAkGe0KVsLMD2YRWTXDudmggbCzSHDyWNzd15600691"
+        },
+        {
+          "name": "auth_user",
+          "value": "{\"user\":{\"id\":4,\"name\":\"Testeur\",\"email\":\"testeur@test.com\",\"email_verified_at\":null,\"account_status\":\"active\",\"invited_by\":null,\"invited_at\":null,\"activated_at\":null,\"created_at\":\"2026-04-04T15:19:42.000000Z\",\"updated_at\":\"2026-04-04T15:19:42.000000Z\",\"roles\":[{\"id\":3,\"name\":\"testeur\",\"guard_name\":\"web\",\"created_at\":\"2026-04-04T15:19:41.000000Z\",\"updated_at\":\"2026-04-04T15:19:41.000000Z\",\"pivot\":{\"model_type\":\"App\\\\Models\\\\User\",\"model_id\":4,\"role_id\":3}}]},\"roles\":[\"testeur\"]}"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+    "schema_version": "1.0",
+    "run_id": "50bb6b1b-583d-46de-abad-0bc8898d2f7d",
+    "target": {
+        "base_url": "http://localhost:5173"
+    },
+    "runtime": {
+        "headless": true,
+        "timeout_ms": 30000,
+        "viewport": {
+            "width": 1280,
+            "height": 720
+        },
+        "trace": "retain-on-failure",
+        "video": "retain-on-failure",
+        "screenshot": "only-on-failure"
+    },
+    "cases": [
+        {
+            "external_id": 37,
+            "title": "[FORCED-FAIL] dashboard widget should render",
+            "severity": "critical",
+            "use_auth": true,
+            "steps": [
+                {
+                    "action": "goto",
+                    "url": "/dashboard"
+                }
+            ],
+            "asserts": [
+                {
+                    "type": "expect_visible",
+                    "selector": {
+                        "by": "testid",
+                        "id": "dashboard-stats"
+                    }
+                }
+            ]
+        }
+    ]
+}

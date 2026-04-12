@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "run_id": "d540bade-2442-4c56-ade8-9e4ca3788260",
+  "status": "done",
+  "updated_at": "2026-04-12T18:31:36.773Z",
+  "cases": [
+    {
+      "external_id": 43,
+      "title": "Accessibility (WCAG)",
+      "status": "passed",
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://practicetestautomation.com/practice-test-login -> ok (2446ms)",
+        "[chrome] Step 2: wait_for_selector css=body state=visible -> ok (36ms)",
+        "[chrome] Step 3: screenshot accessibility-baseline -> ok (140ms)",
+        "[chrome] Assert 1: expect_visible css=body -> ok (13ms)",
+        "[chrome] Assert 2: expect_url_contains 'practicetestautomation.com' -> ok (0ms)",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

@@ -7,10 +7,16 @@
   "version": "1.0.0",
   "main": "index.js",
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.1",
     "@playwright/test": "^1.59.1"
   },
   "scripts": {
-    "test": "playwright test"
+    "test": "playwright test",
+    "dev:backend": "cd backend && php artisan serve --port=8000",
+    "dev:queue": "cd backend && php artisan queue:work --timeout=3600",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:mail": "npx --yes maildev --smtp 2525 --web 8025",
+    "dev": "npx --yes concurrently -k -n backend,queue,frontend,mail -c green,blue,magenta,yellow \"npm run dev:backend\" \"npm run dev:queue\" \"npm run dev:frontend\" \"npm run dev:mail\""
   },
   "repository": {
     "type": "git",
