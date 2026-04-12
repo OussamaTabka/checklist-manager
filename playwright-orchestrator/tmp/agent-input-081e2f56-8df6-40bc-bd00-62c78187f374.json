@@ -1,0 +1,15 @@
+{
+    "run_id": "081e2f56-8df6-40bc-bd00-62c78187f374",
+    "external_id": 44,
+    "test_case_title": "Form Validation",
+    "test_case_description": "Test all form input validations",
+    "test_case_text": "Form Validation\nTest all form input validations",
+    "base_url": "https://practicetestautomation.com/practice-test-login",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "High",
+    "criticality": "Major",
+    "current_status": "Passed",
+    "project_version_id": 12
+}

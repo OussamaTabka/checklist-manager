@@ -1,0 +1,15 @@
+{
+    "run_id": "7639a391-518c-487f-8ec1-6a545ab2c868",
+    "external_id": 42,
+    "test_case_title": "Responsive Design",
+    "test_case_description": "Test on mobile, tablet, desktop",
+    "test_case_text": "Responsive Design\nTest on mobile, tablet, desktop",
+    "base_url": "https://practicetestautomation.com/practice-test-login",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "High",
+    "criticality": "Major",
+    "current_status": "Passed",
+    "project_version_id": 12
+}

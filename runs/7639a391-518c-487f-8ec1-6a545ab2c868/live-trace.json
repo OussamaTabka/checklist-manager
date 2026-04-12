@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "7639a391-518c-487f-8ec1-6a545ab2c868",
+  "status": "done",
+  "updated_at": "2026-04-12T17:40:43.294Z",
+  "cases": [
+    {
+      "external_id": 42,
+      "title": "Responsive Design",
+      "status": "passed",
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://practicetestautomation.com/practice-test-login -> ok (2670ms)",
+        "[chrome] Assert 1: expect_visible css=body -> ok (34ms)",
+        "[chrome] Assert 2: expect_url_contains 'practicetestautomation.com' -> ok (0ms)",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

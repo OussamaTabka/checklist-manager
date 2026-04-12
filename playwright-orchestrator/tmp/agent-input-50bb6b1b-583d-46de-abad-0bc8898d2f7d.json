@@ -1,0 +1,15 @@
+{
+    "run_id": "50bb6b1b-583d-46de-abad-0bc8898d2f7d",
+    "external_id": 37,
+    "test_case_title": "[FORCED-FAIL] dashboard widget should render",
+    "test_case_description": "dashboard scenario: dashboard page must display dashboard-stats test id.",
+    "test_case_text": "[FORCED-FAIL] dashboard widget should render\ndashboard scenario: dashboard page must display dashboard-stats test id.",
+    "base_url": "http://localhost:5173",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "Medium",
+    "criticality": "Major",
+    "current_status": "Failed",
+    "project_version_id": 8
+}

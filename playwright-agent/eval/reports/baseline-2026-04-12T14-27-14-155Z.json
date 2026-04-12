@@ -1,0 +1,349 @@
+{
+  "generated_at": "2026-04-12T14:27:14.153Z",
+  "input": "C:\\Users\\Yahia Ghoufa\\Desktop\\checklist-manager\\playwright-agent\\eval\\labeled.seed.jsonl",
+  "threshold": 0.6,
+  "low_confidence_routed_to_unknown": 0,
+  "metrics": {
+    "total": 25,
+    "correct": 15,
+    "accuracy": 0.6,
+    "macro": {
+      "precision": 0.48333333333333334,
+      "recall": 0.5625,
+      "f1": 0.47741147741147744
+    },
+    "perClass": {
+      "dashboard": {
+        "precision": 1,
+        "recall": 0.625,
+        "f1": 0.7692307692307693,
+        "support": 8,
+        "tp": 5,
+        "fp": 0,
+        "fn": 3
+      },
+      "checklists": {
+        "precision": 1,
+        "recall": 0.75,
+        "f1": 0.8571428571428571,
+        "support": 4,
+        "tp": 3,
+        "fp": 0,
+        "fn": 1
+      },
+      "projects": {
+        "precision": 0,
+        "recall": 0,
+        "f1": 0,
+        "support": 3,
+        "tp": 0,
+        "fp": 0,
+        "fn": 3
+      },
+      "users": {
+        "precision": 0.5,
+        "recall": 1,
+        "f1": 0.6666666666666666,
+        "support": 1,
+        "tp": 1,
+        "fp": 1,
+        "fn": 0
+      },
+      "login": {
+        "precision": 0,
+        "recall": 0,
+        "f1": 0,
+        "support": 3,
+        "tp": 0,
+        "fp": 0,
+        "fn": 3
+      },
+      "unknown": {
+        "precision": 0.4,
+        "recall": 1,
+        "f1": 0.5714285714285715,
+        "support": 6,
+        "tp": 6,
+        "fp": 9,
+        "fn": 0
+      }
+    }
+  },
+  "matrix": {
+    "dashboard": {
+      "dashboard": 5,
+      "checklists": 0,
+      "projects": 0,
+      "users": 0,
+      "login": 0,
+      "unknown": 3
+    },
+    "checklists": {
+      "dashboard": 0,
+      "checklists": 3,
+      "projects": 0,
+      "users": 0,
+      "login": 0,
+      "unknown": 1
+    },
+    "projects": {
+      "dashboard": 0,
+      "checklists": 0,
+      "projects": 0,
+      "users": 0,
+      "login": 0,
+      "unknown": 3
+    },
+    "users": {
+      "dashboard": 0,
+      "checklists": 0,
+      "projects": 0,
+      "users": 1,
+      "login": 0,
+      "unknown": 0
+    },
+    "login": {
+      "dashboard": 0,
+      "checklists": 0,
+      "projects": 0,
+      "users": 1,
+      "login": 0,
+      "unknown": 2
+    },
+    "unknown": {
+      "dashboard": 0,
+      "checklists": 0,
+      "projects": 0,
+      "users": 0,
+      "login": 0,
+      "unknown": 6
+    }
+  },
+  "samples": [
+    {
+      "id": "38",
+      "title": "[FORCED-FAIL 20260412-130602] Checklists table should load",
+      "expected": "checklists",
+      "predicted": "checklists",
+      "confidence": 1,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "checklists"
+    },
+    {
+      "id": "28",
+      "title": "Responsive Design",
+      "expected": "unknown",
+      "predicted": "unknown",
+      "confidence": 1,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "unknown"
+    },
+    {
+      "id": "35",
+      "title": "[FORCED-FAIL] Dashboard stats should render",
+      "expected": "dashboard",
+      "predicted": "dashboard",
+      "confidence": 1,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "dashboard"
+    },
+    {
+      "id": "14",
+      "title": "Rate Limiting",
+      "expected": "unknown",
+      "predicted": "unknown",
+      "confidence": 0,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "unknown"
+    },
+    {
+      "id": "38",
+      "title": "[FORCED-FAIL] Checklists table should render",
+      "expected": "checklists",
+      "predicted": "checklists",
+      "confidence": 1,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "checklists"
+    },
+    {
+      "id": "38",
+      "title": "[FORCED-FAIL] dashboard panel should render",
+      "expected": "dashboard",
+      "predicted": "unknown",
+      "confidence": 0,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "unknown"
+    },
+    {
+      "id": "27",
+      "title": "Cross-Browser Compatibility",
+      "expected": "checklists",
+      "predicted": "unknown",
+      "confidence": 0,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "unknown"
+    },
+    {
+      "id": "1",
+      "title": "Dashboard loads",
+      "expected": "dashboard",
+      "predicted": "dashboard",
+      "confidence": 1,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "dashboard"
+    },
+    {
+      "id": "1",
+      "title": "Agent classified: dashboard",
+      "expected": "dashboard",
+      "predicted": "unknown",
+      "confidence": 0,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "unknown"
+    },
+    {
+      "id": "1",
+      "title": "SQL Injection Testing",
+      "expected": "unknown",
+      "predicted": "unknown",
+      "confidence": 0,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "unknown"
+    },
+    {
+      "id": "35",
+      "title": "[FORCED-FAIL 20260412-130602] Dashboard stats panel should be visible",
+      "expected": "dashboard",
+      "predicted": "dashboard",
+      "confidence": 1,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "dashboard"
+    },
+    {
+      "id": "1",
+      "title": "Smoke Authenticated Dashboard",
+      "expected": "dashboard",
+      "predicted": "dashboard",
+      "confidence": 1,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "dashboard"
+    },
+    {
+      "id": "2",
+      "title": "Smoke UI Login",
+      "expected": "dashboard",
+      "predicted": "unknown",
+      "confidence": 0,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "unknown"
+    },
+    {
+      "id": "12",
+      "title": "Request/Response Validation",
+      "expected": "unknown",
+      "predicted": "unknown",
+      "confidence": 0,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "unknown"
+    },
+    {
+      "id": "36",
+      "title": "[FORCED-FAIL] Projects table should render",
+      "expected": "projects",
+      "predicted": "unknown",
+      "confidence": 0,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "unknown"
+    },
+    {
+      "id": "1",
+      "title": "Smoke Login",
+      "expected": "login",
+      "predicted": "unknown",
+      "confidence": 0,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "unknown"
+    },
+    {
+      "id": "34",
+      "title": "Cross-Browser Compatibility - Test on Chrome, Firefox, Safari, Edge",
+      "expected": "unknown",
+      "predicted": "unknown",
+      "confidence": 0,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "unknown"
+    },
+    {
+      "id": "31",
+      "title": "Navigation Testing",
+      "expected": "unknown",
+      "predicted": "unknown",
+      "confidence": 0,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "unknown"
+    },
+    {
+      "id": "38",
+      "title": "[FORCED-FAIL] Projects grid should render",
+      "expected": "projects",
+      "predicted": "unknown",
+      "confidence": 0,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "unknown"
+    },
+    {
+      "id": "37",
+      "title": "[FORCED-FAIL 20260412-130602] Users table should load",
+      "expected": "login",
+      "predicted": "users",
+      "confidence": 1,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "users"
+    },
+    {
+      "id": "37",
+      "title": "[FORCED-FAIL] dashboard widget should render",
+      "expected": "dashboard",
+      "predicted": "dashboard",
+      "confidence": 1,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "dashboard"
+    },
+    {
+      "id": "36",
+      "title": "[FORCED-FAIL 20260412-130602] Projects table should load",
+      "expected": "login",
+      "predicted": "unknown",
+      "confidence": 0,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "unknown"
+    },
+    {
+      "id": "37",
+      "title": "[FORCED-FAIL] Users table should render",
+      "expected": "users",
+      "predicted": "users",
+      "confidence": 1,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "users"
+    },
+    {
+      "id": "2",
+      "title": "Checklists loads",
+      "expected": "checklists",
+      "predicted": "checklists",
+      "confidence": 1,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "checklists"
+    },
+    {
+      "id": "3",
+      "title": "Projects loads",
+      "expected": "projects",
+      "predicted": "unknown",
+      "confidence": 0,
+      "threshold_routed_to_unknown": false,
+      "raw_model_scenario": "unknown"
+    }
+  ]
+}

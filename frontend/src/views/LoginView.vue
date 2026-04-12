@@ -37,24 +37,41 @@ async function onSubmit() {
         <p class="muted">Use your account credentials to access Checklist Manager.</p>
       </div>
 
-      <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
+      <p v-if="errorMessage" class="error" data-testid="login-msg-error">{{ errorMessage }}</p>
 
       <form class="stack" @submit.prevent="onSubmit">
         <div class="field">
           <label>Email</label>
-          <input v-model="form.email" type="email" required autocomplete="email" />
+          <input
+            v-model="form.email"
+            type="email"
+            required
+            autocomplete="email"
+            data-testid="login-input-email"
+          />
         </div>
 
         <div class="field">
           <label>Password</label>
-          <input v-model="form.password" type="password" required autocomplete="current-password" />
+          <input
+            v-model="form.password"
+            type="password"
+            required
+            autocomplete="current-password"
+            data-testid="login-input-password"
+          />
         </div>
 
         <div style="display: flex; justify-content: flex-end">
           <RouterLink :to="{ name: 'forgot-password' }" class="muted">Forgot password?</RouterLink>
         </div>
 
-        <button class="btn btn-primary" type="submit" :disabled="isSubmitting">
+        <button
+          class="btn btn-primary"
+          type="submit"
+          :disabled="isSubmitting"
+          data-testid="login-btn-submit"
+        >
           {{ isSubmitting ? 'Signing in...' : 'Sign in' }}
         </button>
       </form>

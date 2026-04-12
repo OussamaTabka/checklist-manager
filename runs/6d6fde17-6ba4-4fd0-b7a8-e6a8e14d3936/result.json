@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "run_id": "6d6fde17-6ba4-4fd0-b7a8-e6a8e14d3936",
+  "runner_run_id": "runner-1776016531798",
+  "base_url_used": "https://www.apple.com/tn/buy",
+  "status": "done",
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 46,
+      "status": "passed",
+      "attempt": 1,
+      "duration_ms": 14507,
+      "error_type": null,
+      "error_message": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      },
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://www.apple.com/tn/buy -> ok (1492ms)",
+        "[chrome] Assert 1: expect_visible css=body -> ok (48ms)",
+        "[chrome] Assert 2: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

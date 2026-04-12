@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "run_id": "47cef947-6641-418a-ae59-bc8b4f9cbc94",
+  "target": {
+    "base_url": "http://localhost:5173"
+  },
+  "runtime": {
+    "headless": true,
+    "timeout_ms": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "trace": "retain-on-failure",
+    "video": "retain-on-failure",
+    "screenshot": "only-on-failure"
+  },
+  "cases": [
+    {
+      "external_id": 36,
+      "title": "[FORCED-FAIL 20260412-130602] Projects table should load",
+      "severity": "critical",
+      "use_auth": false,
+      "steps": [
+        {
+          "action": "goto",
+          "url": "/login"
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_visible",
+          "selector": {
+            "by": "testid",
+            "id": "login-btn-submit"
+          }
+        }
+      ]
+    }
+  ]
+}

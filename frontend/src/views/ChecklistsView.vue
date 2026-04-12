@@ -229,10 +229,10 @@ onMounted(async () => {
     <div v-if="auth.canManageChecklists" class="card stack">
       <h2>{{ form.id ? `Edit checklist #${form.id}` : 'Create checklist' }}</h2>
 
-      <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
-      <p v-if="successMessage" class="success">{{ successMessage }}</p>
+      <p v-if="errorMessage" class="error" data-testid="checklists-msg-error">{{ errorMessage }}</p>
+      <p v-if="successMessage" class="success" data-testid="checklists-msg-success">{{ successMessage }}</p>
 
-      <form class="stack" @submit.prevent="submitChecklist">
+      <form class="stack" @submit.prevent="submitChecklist" data-testid="checklists-form">
         <div class="grid">
           <div class="field">
             <label>Name</label>
@@ -260,7 +260,14 @@ onMounted(async () => {
         <div class="stack">
           <div class="section-header">
             <h3>Items</h3>
-            <button type="button" class="btn btn-secondary btn-sm" @click="addItem">Add item</button>
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              @click="addItem"
+              data-testid="checklists-btn-add-item"
+            >
+              Add item
+            </button>
           </div>
 
           <div class="card stack">
@@ -363,7 +370,7 @@ onMounted(async () => {
         </div>
 
         <div class="actions">
-          <button class="btn btn-primary" type="submit" :disabled="submitting">
+          <button class="btn btn-primary" type="submit" :disabled="submitting" data-testid="checklists-btn-submit">
             {{ submitting ? 'Saving...' : form.id ? 'Update checklist' : 'Create checklist' }}
           </button>
           <button type="button" class="btn btn-secondary" @click="resetForm">Reset</button>
@@ -376,7 +383,7 @@ onMounted(async () => {
       <p v-if="loading" class="muted">Loading checklists...</p>
 
       <div class="table-wrap" v-if="!loading">
-        <table>
+        <table data-testid="checklists-table">
           <thead>
             <tr>
               <th>ID</th>

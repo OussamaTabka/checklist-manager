@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "run_id": "6869bfcb-dbd5-49ad-9123-4418989be94d",
+  "status": "done",
+  "updated_at": "2026-04-12T18:41:14.145Z",
+  "cases": [
+    {
+      "external_id": 44,
+      "title": "Form Validation",
+      "status": "blocked",
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://practicetestautomation.com/practice-test-login -> ok (2630ms)",
+        "[chrome] Step 2: click role=button, name=Submit -> ok (793ms)",
+        "[chrome] Assert 1: expect_visible text=required -> failed (Expected visible but selector was not visible: text=required (Error: locator.waitFor: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for getByText('required') to be visible\u001b[22m\n))",
+        "[chrome] Run failed: Expected visible but selector was not visible: text=required (Error: locator.waitFor: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for getByText('required') to be visible\u001b[22m\n)",
+        "[chrome] Browser launch failed: page.screenshot: Target page, context or browser has been closed"
+      ]
+    }
+  ]
+}

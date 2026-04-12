@@ -1,0 +1,15 @@
+{
+    "run_id": "7b060cc2-d79b-445e-b28f-b88a8ee42abe",
+    "external_id": 45,
+    "test_case_title": "Navigation Testing",
+    "test_case_description": "Verify all navigation links work",
+    "test_case_text": "Navigation Testing\nVerify all navigation links work",
+    "base_url": "http://localhost:5173/projects/1",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "Medium",
+    "criticality": "Minor",
+    "current_status": "Not Tested",
+    "project_version_id": 12
+}

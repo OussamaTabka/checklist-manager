@@ -1,0 +1,22 @@
+{
+  "input": "c:\\Users\\Yahia Ghoufa\\Downloads\\archive (2)\\Test_cases.csv",
+  "total_rows": 185,
+  "high_quality_rows": 24,
+  "review_required_rows": 161,
+  "train_rows": 21,
+  "valid_rows": 3,
+  "labels": {
+    "dashboard": 0,
+    "checklists": 43,
+    "projects": 0,
+    "users": 16,
+    "login": 7,
+    "unknown": 119
+  },
+  "files": {
+    "auto_labeled": "C:\\Users\\Yahia Ghoufa\\Desktop\\checklist-manager\\playwright-agent\\finetune\\data\\auto_labeled.jsonl",
+    "review_queue": "C:\\Users\\Yahia Ghoufa\\Desktop\\checklist-manager\\playwright-agent\\finetune\\data\\review_queue.csv",
+    "train": "C:\\Users\\Yahia Ghoufa\\Desktop\\checklist-manager\\playwright-agent\\finetune\\data\\train.jsonl",
+    "valid": "C:\\Users\\Yahia Ghoufa\\Desktop\\checklist-manager\\playwright-agent\\finetune\\data\\valid.jsonl"
+  }
+}

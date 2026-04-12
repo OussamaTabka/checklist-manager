@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Validate JSON schema compliance",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  12,
+    "test_case_title":  "Request/Response Validation",
+    "use_auth":  false,
+    "test_case_text":  "Request/Response Validation Validate JSON schema compliance",
+    "run_id":  "coverage-12"
+}

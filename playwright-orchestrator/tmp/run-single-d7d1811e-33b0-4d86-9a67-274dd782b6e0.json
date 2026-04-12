@@ -1,0 +1,67 @@
+{
+    "schema_version": "1.0",
+    "run_id": "d7d1811e-33b0-4d86-9a67-274dd782b6e0",
+    "target": {
+        "base_url": "https://www.apple.com/tn/buy"
+    },
+    "runtime": {
+        "headless": false,
+        "slow_mo_ms": 700,
+        "hold_open_ms": 12000,
+        "timeout_ms": 30000,
+        "viewport": {
+            "width": 1280,
+            "height": 720
+        },
+        "trace": "retain-on-failure",
+        "video": "retain-on-failure",
+        "screenshot": "only-on-failure"
+    },
+    "cases": [
+        {
+            "external_id": 46,
+            "title": "Button Functionality",
+            "severity": "critical",
+            "use_auth": true,
+            "steps": [
+                {
+                    "action": "goto",
+                    "url": "https://www.apple.com/tn/buy"
+                },
+                {
+                    "action": "wait_for_selector",
+                    "selector": {
+                        "by": "css",
+                        "value": "button, [role=\"button\"], input[type=\"button\"], input[type=\"submit\"], a[role=\"button\"]"
+                    },
+                    "state": "visible",
+                    "timeout_ms": 20000
+                },
+                {
+                    "action": "click",
+                    "selector": {
+                        "by": "css",
+                        "value": "button, [role=\"button\"], input[type=\"button\"], input[type=\"submit\"], a[role=\"button\"]"
+                    }
+                },
+                {
+                    "action": "screenshot",
+                    "name": "button-functionality-after-click"
+                }
+            ],
+            "asserts": [
+                {
+                    "type": "expect_visible",
+                    "selector": {
+                        "by": "css",
+                        "value": "button, [role=\"button\"], input[type=\"button\"], input[type=\"submit\"], a[role=\"button\"]"
+                    }
+                },
+                {
+                    "type": "expect_url_contains",
+                    "value": "www.apple.com"
+                }
+            ]
+        }
+    ]
+}

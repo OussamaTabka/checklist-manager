@@ -1,0 +1,41 @@
+{
+    "schema_version": "1.0",
+    "run_id": "9644e4a6-40cb-47ef-b448-053771b92d24",
+    "target": {
+        "base_url": "https://www.apple.com/tn"
+    },
+    "runtime": {
+        "headless": true,
+        "timeout_ms": 30000,
+        "viewport": {
+            "width": 1280,
+            "height": 720
+        },
+        "trace": "retain-on-failure",
+        "video": "retain-on-failure",
+        "screenshot": "only-on-failure"
+    },
+    "cases": [
+        {
+            "external_id": 36,
+            "title": "[FORCED-FAIL] Projects table should render",
+            "severity": "critical",
+            "use_auth": true,
+            "steps": [
+                {
+                    "action": "goto",
+                    "url": "/projects"
+                }
+            ],
+            "asserts": [
+                {
+                    "type": "expect_visible",
+                    "selector": {
+                        "by": "testid",
+                        "id": "projects-table"
+                    }
+                }
+            ]
+        }
+    ]
+}

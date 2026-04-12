@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Measure page load under normal conditions",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  17,
+    "test_case_title":  "Page Load Time",
+    "use_auth":  false,
+    "test_case_text":  "Page Load Time Measure page load under normal conditions",
+    "run_id":  "coverage-17"
+}

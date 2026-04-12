@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Dashboard scenario: dashboard page must display dashboard-stats test id.",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  35,
+    "test_case_title":  "[FORCED-FAIL] Dashboard stats should render",
+    "use_auth":  false,
+    "test_case_text":  "[FORCED-FAIL] Dashboard stats should render Dashboard scenario: dashboard page must display dashboard-stats test id.",
+    "run_id":  "coverage-35"
+}

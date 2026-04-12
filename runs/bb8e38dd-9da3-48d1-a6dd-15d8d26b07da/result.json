@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "run_id": "bb8e38dd-9da3-48d1-a6dd-15d8d26b07da",
+  "runner_run_id": "runner-1775841509990",
+  "status": "runner_error",
+  "summary": {
+    "passed": 0,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": []
+}

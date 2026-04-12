@@ -1,0 +1,15 @@
+{
+    "run_id": "5926c2a4-bddd-41a5-8da9-291304973911",
+    "external_id": 29,
+    "test_case_title": "Accessibility (WCAG)",
+    "test_case_description": "Check WCAG 2.1 compliance",
+    "test_case_text": "Accessibility (WCAG)\nCheck WCAG 2.1 compliance",
+    "base_url": "https://www.apple.com/tn",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "Medium",
+    "criticality": "Major",
+    "current_status": "Blocked",
+    "project_version_id": 6
+}

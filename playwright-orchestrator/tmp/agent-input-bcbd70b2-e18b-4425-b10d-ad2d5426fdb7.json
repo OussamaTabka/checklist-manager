@@ -1,0 +1,15 @@
+{
+    "run_id": "bcbd70b2-e18b-4425-b10d-ad2d5426fdb7",
+    "external_id": 8,
+    "test_case_title": "Error Handling Tests",
+    "test_case_description": "Test error codes and messages",
+    "test_case_text": "Error Handling Tests\nTest error codes and messages",
+    "base_url": "https://www.apple.com/tn",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "High",
+    "criticality": "Major",
+    "current_status": "Failed",
+    "project_version_id": 2
+}

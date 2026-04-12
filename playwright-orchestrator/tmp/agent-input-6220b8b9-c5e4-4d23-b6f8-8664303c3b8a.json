@@ -1,0 +1,15 @@
+{
+    "run_id": "6220b8b9-c5e4-4d23-b6f8-8664303c3b8a",
+    "external_id": 35,
+    "test_case_title": "[FORCED-FAIL] Dashboard stats should render",
+    "test_case_description": "Dashboard scenario: dashboard page must display dashboard-stats test id.",
+    "test_case_text": "[FORCED-FAIL] Dashboard stats should render\nDashboard scenario: dashboard page must display dashboard-stats test id.",
+    "base_url": "https://www.apple.com/tn",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "High",
+    "criticality": "Critical",
+    "current_status": "Failed",
+    "project_version_id": 8
+}

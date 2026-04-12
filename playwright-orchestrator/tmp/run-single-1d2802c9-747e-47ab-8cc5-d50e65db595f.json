@@ -1,0 +1,41 @@
+{
+    "schema_version": "1.0",
+    "run_id": "1d2802c9-747e-47ab-8cc5-d50e65db595f",
+    "target": {
+        "base_url": "http://localhost:5173"
+    },
+    "runtime": {
+        "headless": true,
+        "timeout_ms": 30000,
+        "viewport": {
+            "width": 1280,
+            "height": 720
+        },
+        "trace": "retain-on-failure",
+        "video": "retain-on-failure",
+        "screenshot": "only-on-failure"
+    },
+    "cases": [
+        {
+            "external_id": 11,
+            "title": "CORS Configuration",
+            "severity": "critical",
+            "use_auth": true,
+            "steps": [
+                {
+                    "action": "goto",
+                    "url": "/checklists"
+                }
+            ],
+            "asserts": [
+                {
+                    "type": "expect_visible",
+                    "selector": {
+                        "by": "testid",
+                        "id": "checklists-table"
+                    }
+                }
+            ]
+        }
+    ]
+}

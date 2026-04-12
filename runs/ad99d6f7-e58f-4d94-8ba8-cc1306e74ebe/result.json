@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "run_id": "ad99d6f7-e58f-4d94-8ba8-cc1306e74ebe",
+  "runner_run_id": "runner-1775996983639",
+  "base_url_used": "https://www.apple.com/store",
+  "status": "done",
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 27,
+      "status": "passed",
+      "attempt": 1,
+      "duration_ms": 1244,
+      "error_type": null,
+      "error_message": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      }
+    }
+  ]
+}

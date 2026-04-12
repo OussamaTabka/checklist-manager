@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Verify CORS headers",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  11,
+    "test_case_title":  "CORS Configuration",
+    "use_auth":  false,
+    "test_case_text":  "CORS Configuration Verify CORS headers",
+    "run_id":  "coverage-11"
+}

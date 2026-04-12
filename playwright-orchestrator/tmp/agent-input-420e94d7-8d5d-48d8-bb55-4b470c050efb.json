@@ -1,0 +1,15 @@
+{
+    "run_id": "420e94d7-8d5d-48d8-bb55-4b470c050efb",
+    "external_id": 8,
+    "test_case_title": "Error Handling Tests",
+    "test_case_description": "Test error codes and messages",
+    "test_case_text": "Error Handling Tests\nTest error codes and messages",
+    "base_url": "http://localhost:5173",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "High",
+    "criticality": "Major",
+    "current_status": "Failed",
+    "project_version_id": 2
+}

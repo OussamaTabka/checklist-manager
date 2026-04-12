@@ -1,0 +1,15 @@
+{
+    "run_id": "d5e1ded3-4166-4f9a-8688-310a83afcf00",
+    "external_id": 41,
+    "test_case_title": "Cross-Browser Compatibility",
+    "test_case_description": "Test on Chrome, Firefox, Safari, Edge",
+    "test_case_text": "Cross-Browser Compatibility\nTest on Chrome, Firefox, Safari, Edge",
+    "base_url": "https://practicetestautomation.com/practice-test-login",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "High",
+    "criticality": "Major",
+    "current_status": "Passed",
+    "project_version_id": 12
+}

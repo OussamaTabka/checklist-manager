@@ -1,0 +1,15 @@
+{
+    "run_id": "9644e4a6-40cb-47ef-b448-053771b92d24",
+    "external_id": 36,
+    "test_case_title": "[FORCED-FAIL] Projects table should render",
+    "test_case_description": "Projects scenario: projects page must display projects-table test id.",
+    "test_case_text": "[FORCED-FAIL] Projects table should render\nProjects scenario: projects page must display projects-table test id.",
+    "base_url": "https://www.apple.com/tn",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "High",
+    "criticality": "Major",
+    "current_status": "Failed",
+    "project_version_id": 8
+}

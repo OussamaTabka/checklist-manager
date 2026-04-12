@@ -1,0 +1,9 @@
+{
+  "run_id": "title-all-cross",
+  "external_id": 104,
+  "test_case_title": "Cross-Browser Compatibility - Test on Chrome, Firefox, Safari, Edge",
+  "test_case_description": "Run same flow across major browsers",
+  "test_case_text": "Cross-Browser Compatibility - Test on Chrome, Firefox, Safari, Edge",
+  "base_url": "https://www.apple.com/tn/buy",
+  "use_auth": false
+}

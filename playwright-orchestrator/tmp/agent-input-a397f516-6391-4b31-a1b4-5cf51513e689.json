@@ -1,0 +1,15 @@
+{
+    "run_id": "a397f516-6391-4b31-a1b4-5cf51513e689",
+    "external_id": 9,
+    "test_case_title": "Rate Limiting",
+    "test_case_description": "Verify rate limit enforcement",
+    "test_case_text": "Rate Limiting\nVerify rate limit enforcement",
+    "base_url": "https://www.apple.com/tn",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "Medium",
+    "criticality": "Major",
+    "current_status": "Not Tested",
+    "project_version_id": 2
+}

@@ -1,0 +1,9 @@
+{
+  "run_id": "title-only-cross-browser",
+  "external_id": 1,
+  "test_case_title": "Cross-Browser Compatibility",
+  "test_case_description": "",
+  "test_case_text": "Cross-Browser Compatibility",
+  "base_url": "https://practicetestautomation.com/practice-test-login/",
+  "use_auth": false
+}

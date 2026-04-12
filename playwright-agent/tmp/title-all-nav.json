@@ -1,0 +1,9 @@
+{
+  "run_id": "title-all-nav",
+  "external_id": 101,
+  "test_case_title": "Navigation Testing",
+  "test_case_description": "Verify all navigation links work",
+  "test_case_text": "Navigation Testing Verify all navigation links work",
+  "base_url": "https://www.apple.com/tn/buy",
+  "use_auth": false
+}

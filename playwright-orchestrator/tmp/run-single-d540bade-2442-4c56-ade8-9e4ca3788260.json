@@ -1,0 +1,60 @@
+{
+    "schema_version": "1.0",
+    "run_id": "d540bade-2442-4c56-ade8-9e4ca3788260",
+    "target": {
+        "base_url": "https://practicetestautomation.com/practice-test-login"
+    },
+    "runtime": {
+        "headless": false,
+        "slow_mo_ms": 700,
+        "hold_open_ms": 12000,
+        "timeout_ms": 30000,
+        "viewport": {
+            "width": 1280,
+            "height": 720
+        },
+        "trace": "retain-on-failure",
+        "video": "retain-on-failure",
+        "screenshot": "only-on-failure"
+    },
+    "cases": [
+        {
+            "external_id": 43,
+            "title": "Accessibility (WCAG)",
+            "severity": "critical",
+            "use_auth": true,
+            "steps": [
+                {
+                    "action": "goto",
+                    "url": "https://practicetestautomation.com/practice-test-login"
+                },
+                {
+                    "action": "wait_for_selector",
+                    "selector": {
+                        "by": "css",
+                        "value": "body"
+                    },
+                    "state": "visible",
+                    "timeout_ms": 20000
+                },
+                {
+                    "action": "screenshot",
+                    "name": "accessibility-baseline"
+                }
+            ],
+            "asserts": [
+                {
+                    "type": "expect_visible",
+                    "selector": {
+                        "by": "css",
+                        "value": "body"
+                    }
+                },
+                {
+                    "type": "expect_url_contains",
+                    "value": "practicetestautomation.com"
+                }
+            ]
+        }
+    ]
+}

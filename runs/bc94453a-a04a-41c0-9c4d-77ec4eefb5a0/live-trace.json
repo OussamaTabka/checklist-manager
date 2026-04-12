@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "run_id": "bc94453a-a04a-41c0-9c4d-77ec4eefb5a0",
+  "status": "done",
+  "updated_at": "2026-04-12T17:38:58.416Z",
+  "cases": [
+    {
+      "external_id": 41,
+      "title": "Cross-Browser Compatibility",
+      "status": "passed",
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://practicetestautomation.com/practice-test-login -> ok (2910ms)",
+        "[chrome] Assert 1: expect_visible css=body -> ok (38ms)",
+        "[chrome] Assert 2: expect_url_contains 'practicetestautomation.com' -> ok (0ms)",
+        "[chrome] Run completed successfully",
+        "[firefox] Browser context started",
+        "[firefox] Step 1: goto https://practicetestautomation.com/practice-test-login -> ok (2472ms)",
+        "[firefox] Assert 1: expect_visible css=body -> ok (82ms)",
+        "[firefox] Assert 2: expect_url_contains 'practicetestautomation.com' -> ok (0ms)",
+        "[firefox] Run completed successfully",
+        "[safari] Browser context started",
+        "[safari] Step 1: goto https://practicetestautomation.com/practice-test-login -> ok (3372ms)",
+        "[safari] Assert 1: expect_visible css=body -> ok (39ms)",
+        "[safari] Assert 2: expect_url_contains 'practicetestautomation.com' -> ok (0ms)",
+        "[safari] Run completed successfully",
+        "[edge] Browser context started",
+        "[edge] Step 1: goto https://practicetestautomation.com/practice-test-login -> ok (2564ms)",
+        "[edge] Assert 1: expect_visible css=body -> ok (27ms)",
+        "[edge] Assert 2: expect_url_contains 'practicetestautomation.com' -> ok (0ms)",
+        "[edge] Run completed successfully"
+      ]
+    }
+  ]
+}

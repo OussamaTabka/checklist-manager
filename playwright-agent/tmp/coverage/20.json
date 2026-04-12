@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Optimize slow queries",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  20,
+    "test_case_title":  "Database Query Performance",
+    "use_auth":  false,
+    "test_case_text":  "Database Query Performance Optimize slow queries",
+    "run_id":  "coverage-20"
+}

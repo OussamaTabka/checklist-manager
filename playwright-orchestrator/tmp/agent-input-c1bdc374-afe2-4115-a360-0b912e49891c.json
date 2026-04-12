@@ -1,0 +1,15 @@
+{
+    "run_id": "c1bdc374-afe2-4115-a360-0b912e49891c",
+    "external_id": 44,
+    "test_case_title": "Form Validation",
+    "test_case_description": "Test all form input validations",
+    "test_case_text": "Form Validation\nTest all form input validations",
+    "base_url": "https://practicetestautomation.com/practice-test-login",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "Test case 1: Positive LogIn test\nOpen page\nType username student into Username field\nType password Password123 into Password field\nPush Submit button\nVerify new page URL contains practicetestautomation.com/logged-in-successfully/\nVerify new page contains expected text ('Congratulations' or 'successfully logged in')\nVerify button Log out is displayed on the new page",
+    "priority": "High",
+    "criticality": "Major",
+    "current_status": "Passed",
+    "project_version_id": 12
+}

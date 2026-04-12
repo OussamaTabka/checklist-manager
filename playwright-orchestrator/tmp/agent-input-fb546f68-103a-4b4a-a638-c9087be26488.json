@@ -1,0 +1,15 @@
+{
+    "run_id": "fb546f68-103a-4b4a-a638-c9087be26488",
+    "external_id": 39,
+    "test_case_title": "Error Handling Tests",
+    "test_case_description": "Test error codes and messages",
+    "test_case_text": "Error Handling Tests\nTest error codes and messages",
+    "base_url": "https://practicetestautomation.com/practice-test-login",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "High",
+    "criticality": "Major",
+    "current_status": "Not Tested",
+    "project_version_id": 11
+}

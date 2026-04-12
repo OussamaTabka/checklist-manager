@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "run_id": "9ecf4285-cf72-40da-8347-84a30fa34594",
+  "runner_run_id": "runner-1775935518537",
+  "base_url_used": "http://host.docker.internal:5174",
+  "status": "done",
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 1,
+      "status": "passed",
+      "attempt": 1,
+      "duration_ms": 3581,
+      "error_type": null,
+      "error_message": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      }
+    }
+  ]
+}

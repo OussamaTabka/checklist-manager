@@ -1,0 +1,9 @@
+{
+  "run_id": "title-all-perf",
+  "external_id": 107,
+  "test_case_title": "Database Query Performance",
+  "test_case_description": "Check performance baseline",
+  "test_case_text": "Database Query Performance",
+  "base_url": "https://www.apple.com/tn/buy",
+  "use_auth": false
+}

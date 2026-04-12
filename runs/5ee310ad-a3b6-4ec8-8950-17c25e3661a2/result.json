@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "run_id": "5ee310ad-a3b6-4ec8-8950-17c25e3661a2",
+  "runner_run_id": "runner-1776009331555",
+  "base_url_used": "http://localhost:5173",
+  "status": "done",
+  "summary": {
+    "passed": 0,
+    "failed": 1,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 27,
+      "status": "failed",
+      "attempt": 1,
+      "duration_ms": 337,
+      "error_type": "assertion_failed",
+      "error_message": "Unknown scenario guard triggered: classifier returned unknown or low-confidence, so this case is intentionally failed. Current URL: 'about:blank'.",
+      "artifacts": {
+        "trace_path": "artifacts/27/trace.zip",
+        "screenshot_path": "artifacts/27/fail.png",
+        "video_path": "artifacts/27/video.webm"
+      }
+    }
+  ]
+}

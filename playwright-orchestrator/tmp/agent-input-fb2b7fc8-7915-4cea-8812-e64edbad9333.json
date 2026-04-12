@@ -1,0 +1,15 @@
+{
+    "run_id": "fb2b7fc8-7915-4cea-8812-e64edbad9333",
+    "external_id": 44,
+    "test_case_title": "Form Validation",
+    "test_case_description": "Test all form input validations",
+    "test_case_text": "Form Validation\nTest all form input validations",
+    "base_url": "https://practicetestautomation.com/practice-test-login",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "Username=yahia\nPassword =passs123",
+    "priority": "High",
+    "criticality": "Major",
+    "current_status": "Passed",
+    "project_version_id": 12
+}

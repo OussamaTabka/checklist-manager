@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "run_id": "hold-open-check",
+  "runner_run_id": "runner-1776011934227",
+  "base_url_used": "https://example.com",
+  "status": "done",
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 1,
+      "status": "passed",
+      "attempt": 1,
+      "duration_ms": 5907,
+      "error_type": null,
+      "error_message": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      }
+    }
+  ]
+}

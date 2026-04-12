@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0",
+  "run_id": "47e418a3-695e-46fa-b1ab-6a41b74b1656",
+  "target": {
+    "base_url": "http://172.25.64.1:5173"
+  },
+  "runtime": {
+    "headless": true,
+    "timeout_ms": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "trace": "retain-on-failure",
+    "video": "retain-on-failure",
+    "screenshot": "only-on-failure"
+  },
+  "cases": [
+    {
+      "external_id": 1,
+      "title": "Smoke Login",
+      "severity": "critical",
+      "steps": [
+        {
+          "action": "goto",
+          "url": "/login"
+        },
+        {
+          "action": "fill",
+          "selector": {
+            "by": "label",
+            "text": "Email"
+          },
+          "value": "${E2E_EMAIL}"
+        },
+        {
+          "action": "fill",
+          "selector": {
+            "by": "label",
+            "text": "Password"
+          },
+          "value": "${E2E_PASSWORD}"
+        },
+        {
+          "action": "click",
+          "selector": {
+            "by": "role",
+            "role": "button",
+            "name": "Sign in",
+            "exact": true
+          }
+        },
+        {
+          "action": "wait_for_url",
+          "contains": "/dashboard",
+          "timeout_ms": 30000
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_visible",
+          "selector": {
+            "by": "role",
+            "role": "button",
+            "name": "Sign in",
+            "exact": true
+          }
+        },
+        {
+          "type": "expect_url_contains",
+          "value": "/dashboard"
+        }
+      ]
+    }
+  ]
+}

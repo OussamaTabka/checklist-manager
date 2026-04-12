@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Check memory usage patterns",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  19,
+    "test_case_title":  "Memory Profiling",
+    "use_auth":  false,
+    "test_case_text":  "Memory Profiling Check memory usage patterns",
+    "run_id":  "coverage-19"
+}

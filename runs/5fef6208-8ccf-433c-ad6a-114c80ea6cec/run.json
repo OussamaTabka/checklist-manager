@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "run_id": "5fef6208-8ccf-433c-ad6a-114c80ea6cec",
+  "target": {
+    "base_url": "http://localhost:5173"
+  },
+  "runtime": {
+    "headless": true,
+    "timeout_ms": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "trace": "retain-on-failure",
+    "video": "retain-on-failure",
+    "screenshot": "only-on-failure"
+  },
+  "cases": [
+    {
+      "external_id": 37,
+      "title": "[FORCED-FAIL 20260412-130602] Users table should load",
+      "severity": "critical",
+      "use_auth": false,
+      "steps": [
+        {
+          "action": "goto",
+          "url": "/login"
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_visible",
+          "selector": {
+            "by": "testid",
+            "id": "login-btn-submit"
+          }
+        }
+      ]
+    }
+  ]
+}

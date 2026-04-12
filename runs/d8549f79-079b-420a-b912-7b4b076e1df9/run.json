@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "run_id": "d8549f79-079b-420a-b912-7b4b076e1df9",
+  "target": {
+    "base_url": "http://172.25.64.1:5173"
+  },
+  "runtime": {
+    "headless": true,
+    "timeout_ms": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "trace": "retain-on-failure",
+    "video": "retain-on-failure",
+    "screenshot": "only-on-failure"
+  },
+  "cases": [
+    {
+      "external_id": 1,
+      "title": "Dashboard loads",
+      "severity": "critical",
+      "use_auth": true,
+      "steps": [
+        {
+          "action": "goto",
+          "url": "/dashboard"
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_visible",
+          "selector": {
+            "by": "testid",
+            "id": "dashboard-stats"
+          }
+        }
+      ]
+    }
+  ]
+}

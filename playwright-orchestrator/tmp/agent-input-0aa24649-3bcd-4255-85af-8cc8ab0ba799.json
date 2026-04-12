@@ -1,0 +1,15 @@
+{
+    "run_id": "0aa24649-3bcd-4255-85af-8cc8ab0ba799",
+    "external_id": 10,
+    "test_case_title": "Authentication Headers",
+    "test_case_description": "Check Bearer token validation",
+    "test_case_text": "Authentication Headers\nCheck Bearer token validation",
+    "base_url": "http://localhost:5173",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "High",
+    "criticality": "Critical",
+    "current_status": "Passed",
+    "project_version_id": 2
+}

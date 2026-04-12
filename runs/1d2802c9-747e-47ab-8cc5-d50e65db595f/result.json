@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "run_id": "1d2802c9-747e-47ab-8cc5-d50e65db595f",
+  "runner_run_id": "runner-1776005363079",
+  "base_url_used": "http://localhost:5173",
+  "status": "done",
+  "summary": {
+    "passed": 0,
+    "failed": 1,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 11,
+      "status": "failed",
+      "attempt": 1,
+      "duration_ms": 32504,
+      "error_type": "assertion_failed",
+      "error_message": "Expected visible but selector was not visible: testid=checklists-table (TimeoutError: locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('checklists-table') to be visible\u001b[22m\n)",
+      "artifacts": {
+        "trace_path": "artifacts/11/trace.zip",
+        "screenshot_path": "artifacts/11/fail.png",
+        "video_path": "artifacts/11/video.webm"
+      }
+    }
+  ]
+}

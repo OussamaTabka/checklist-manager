@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "run_id": "cross-browser-runner-check",
+  "runner_run_id": "runner-1776014813226",
+  "base_url_used": "https://example.com",
+  "status": "done",
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 1,
+      "status": "passed",
+      "attempt": 1,
+      "duration_ms": 3467,
+      "error_type": null,
+      "error_message": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      },
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://example.com -> ok (623ms)",
+        "[chrome] Assert 1: expect_visible css=body -> ok (32ms)",
+        "[chrome] Run completed successfully",
+        "[firefox] Browser context started",
+        "[firefox] Step 1: goto https://example.com -> ok (485ms)",
+        "[firefox] Assert 1: expect_visible css=body -> ok (64ms)",
+        "[firefox] Run completed successfully",
+        "[safari] Browser context started",
+        "[safari] Step 1: goto https://example.com -> ok (249ms)",
+        "[safari] Assert 1: expect_visible css=body -> ok (50ms)",
+        "[safari] Run completed successfully"
+      ]
+    }
+  ]
+}

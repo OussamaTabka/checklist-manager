@@ -1,0 +1,100 @@
+{
+  "schema_version": "1.0",
+  "run_id": "9cef3fc3-df4b-4e74-9278-0563fed6da2d",
+  "target": {
+    "base_url": "http://host.docker.internal:5173"
+  },
+  "runtime": {
+    "headless": true,
+    "timeout_ms": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "trace": "retain-on-failure",
+    "video": "retain-on-failure",
+    "screenshot": "only-on-failure"
+  },
+  "cases": [
+    {
+      "external_id": 1,
+      "title": "Smoke Authenticated Dashboard",
+      "severity": "critical",
+      "use_auth": true,
+      "steps": [
+        {
+          "action": "goto",
+          "url": "/dashboard"
+        },
+        {
+          "action": "wait_for_url",
+          "contains": "/dashboard",
+          "timeout_ms": 30000
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_url_contains",
+          "value": "/dashboard"
+        }
+      ]
+    },
+    {
+      "external_id": 2,
+      "title": "Smoke UI Login",
+      "severity": "critical",
+      "use_auth": false,
+      "steps": [
+        {
+          "action": "goto",
+          "url": "/login"
+        },
+        {
+          "action": "fill",
+          "selector": {
+            "by": "testid",
+            "id": "login-input-email"
+          },
+          "value": "${E2E_EMAIL}"
+        },
+        {
+          "action": "fill",
+          "selector": {
+            "by": "testid",
+            "id": "login-input-password"
+          },
+          "value": "${E2E_PASSWORD}"
+        },
+        {
+          "action": "click",
+          "selector": {
+            "by": "testid",
+            "id": "login-btn-submit"
+          }
+        },
+        {
+          "action": "wait_for_url",
+          "contains": "/dashboard",
+          "timeout_ms": 30000
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_url_contains",
+          "value": "/dashboard"
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "mode": "api",
+    "csrf_cookie_url": "http://host.docker.internal:8000/sanctum/csrf-cookie",
+    "login_url": "http://host.docker.internal:8000/api/login",
+    "verify_url": "http://host.docker.internal:8000/api/me",
+    "username_env": "E2E_EMAIL",
+    "password_env": "E2E_PASSWORD",
+    "username_field": "email",
+    "password_field": "password",
+    "body_format": "json"
+  }
+}

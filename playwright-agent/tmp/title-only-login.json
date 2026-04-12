@@ -1,0 +1,9 @@
+{
+  "run_id": "title-only-login",
+  "external_id": 2,
+  "test_case_title": "Positive Login Test",
+  "test_case_description": "",
+  "test_case_text": "Positive Login Test",
+  "base_url": "https://practicetestautomation.com/practice-test-login/",
+  "use_auth": false
+}

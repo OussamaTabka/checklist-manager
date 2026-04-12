@@ -190,18 +190,29 @@ onMounted(async () => {
         </h2>
       </div>
 
-      <p v-if="createError" class="error">{{ createError }}</p>
-      <p v-if="successMessage" class="success">{{ successMessage }}</p>
+      <p v-if="createError" class="error" data-testid="projects-msg-error">{{ createError }}</p>
+      <p v-if="successMessage" class="success" data-testid="projects-msg-success">{{ successMessage }}</p>
 
-      <form class="stack" @submit.prevent="submitProject">
+      <form class="stack" @submit.prevent="submitProject" data-testid="projects-form">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
           <div class="field">
             <label style="font-weight: 600; color: #1f2937;">Project Name</label>
-            <input v-model="form.name" required placeholder="e.g., API Testing Phase 1" />
+            <input
+              v-model="form.name"
+              required
+              placeholder="e.g., API Testing Phase 1"
+              data-testid="projects-input-name"
+            />
           </div>
           <div class="field">
             <label style="font-weight: 600; color: #1f2937;">App URL</label>
-            <input v-model="form.app_url" type="url" placeholder="https://example.com" required />
+            <input
+              v-model="form.app_url"
+              type="url"
+              placeholder="https://example.com"
+              required
+              data-testid="projects-input-app-url"
+            />
           </div>
         </div>
 
@@ -326,7 +337,13 @@ onMounted(async () => {
         </div>
 
         <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
-          <button class="btn btn-primary" type="submit" :disabled="creating" style="min-width: 200px; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;">
+          <button
+            class="btn btn-primary"
+            type="submit"
+            :disabled="creating"
+            style="min-width: 200px; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;"
+            data-testid="projects-btn-submit"
+          >
             <LoaderCircle v-if="creating" :size="16" class="spin" />
             <Save v-else-if="form.id" :size="16" />
             <Sparkles v-else :size="16" />
@@ -348,11 +365,11 @@ onMounted(async () => {
         </h2>
       </div>
 
-      <p v-if="listError" class="error">{{ listError }}</p>
+      <p v-if="listError" class="error" data-testid="projects-msg-error-list">{{ listError }}</p>
       <p v-if="loadingProjects" class="muted">Loading projects...</p>
 
       <div v-if="!loadingProjects" class="table-wrap">
-        <table>
+        <table data-testid="projects-table">
           <thead>
             <tr>
               <th>ID</th>

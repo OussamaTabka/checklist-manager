@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "run_id": "acc3b124-c3da-4690-9fdd-9e4659f9f1cf",
+  "runner_run_id": "runner-1775997804400",
+  "base_url_used": "http://localhost:5173",
+  "status": "done",
+  "summary": {
+    "passed": 0,
+    "failed": 1,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 28,
+      "status": "failed",
+      "attempt": 1,
+      "duration_ms": 2824,
+      "error_type": "unexpected_error",
+      "error_message": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/projects\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/projects\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "artifacts": {
+        "trace_path": "artifacts/28/trace.zip",
+        "screenshot_path": "artifacts/28/fail.png",
+        "video_path": "artifacts/28/video.webm"
+      }
+    }
+  ]
+}

@@ -37,4 +37,9 @@ class VersionItem extends Model
     {
         return $this->belongsTo(User::class, 'tested_by');
     }
+
+    public function testResults(): HasMany
+    {
+        return $this->hasMany(TestResult::class);
+    }
 }

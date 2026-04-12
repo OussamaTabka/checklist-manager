@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "run_id": "328d86da-7a85-424c-8938-5fcbdaabca07",
+  "target": {
+    "base_url": "http://localhost:5173"
+  },
+  "runtime": {
+    "headless": true,
+    "timeout_ms": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "trace": "retain-on-failure",
+    "video": "retain-on-failure",
+    "screenshot": "only-on-failure"
+  },
+  "cases": [
+    {
+      "external_id": 36,
+      "title": "[FORCED-FAIL] Projects table should render",
+      "severity": "critical",
+      "use_auth": false,
+      "steps": [
+        {
+          "action": "goto",
+          "url": "/projects"
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_visible",
+          "selector": {
+            "by": "testid",
+            "id": "projects-table"
+          }
+        }
+      ]
+    }
+  ]
+}

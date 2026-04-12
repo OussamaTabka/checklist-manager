@@ -1,0 +1,9 @@
+{
+  "run_id": "title-all-security",
+  "external_id": 102,
+  "test_case_title": "SQL Injection Testing",
+  "test_case_description": "Test for SQL injection vulnerabilities",
+  "test_case_text": "SQL Injection Testing",
+  "base_url": "https://www.apple.com/tn/buy",
+  "use_auth": false
+}

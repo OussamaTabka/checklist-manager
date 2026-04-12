@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "run_id": "50bb6b1b-583d-46de-abad-0bc8898d2f7d",
+  "runner_run_id": "runner-1776004270609",
+  "base_url_used": "http://localhost:5173",
+  "status": "done",
+  "summary": {
+    "passed": 0,
+    "failed": 1,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 37,
+      "status": "failed",
+      "attempt": 1,
+      "duration_ms": 33068,
+      "error_type": "assertion_failed",
+      "error_message": "Expected visible but selector was not visible: testid=dashboard-stats (TimeoutError: locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('dashboard-stats') to be visible\u001b[22m\n)",
+      "artifacts": {
+        "trace_path": "artifacts/37/trace.zip",
+        "screenshot_path": "artifacts/37/fail.png",
+        "video_path": "artifacts/37/video.webm"
+      }
+    }
+  ]
+}

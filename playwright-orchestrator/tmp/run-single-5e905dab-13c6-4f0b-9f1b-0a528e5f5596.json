@@ -1,0 +1,41 @@
+{
+    "schema_version": "1.0",
+    "run_id": "5e905dab-13c6-4f0b-9f1b-0a528e5f5596",
+    "target": {
+        "base_url": "http://localhost:5173"
+    },
+    "runtime": {
+        "headless": true,
+        "timeout_ms": 30000,
+        "viewport": {
+            "width": 1280,
+            "height": 720
+        },
+        "trace": "retain-on-failure",
+        "video": "retain-on-failure",
+        "screenshot": "only-on-failure"
+    },
+    "cases": [
+        {
+            "external_id": 35,
+            "title": "[FORCED-FAIL] Dashboard stats should render",
+            "severity": "critical",
+            "use_auth": true,
+            "steps": [
+                {
+                    "action": "goto",
+                    "url": "/dashboard"
+                }
+            ],
+            "asserts": [
+                {
+                    "type": "expect_visible",
+                    "selector": {
+                        "by": "testid",
+                        "id": "dashboard-stats"
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,8 @@
+{
+  "run_id": "watch-hold-check",
+  "external_id": 1,
+  "test_case_title": "Positive LogIn test",
+  "test_case_text": "Open page and login",
+  "base_url": "https://practicetestautomation.com/practice-test-login/",
+  "use_auth": false
+}

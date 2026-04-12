@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "run_id": "e9dcc221-e286-4321-9041-f3bbf2f36fb8",
+  "runner_run_id": "runner-1775998811250",
+  "base_url_used": "http://localhost:5173",
+  "status": "done",
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 14,
+      "status": "passed",
+      "attempt": 1,
+      "duration_ms": 1056,
+      "error_type": null,
+      "error_message": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      }
+    }
+  ]
+}

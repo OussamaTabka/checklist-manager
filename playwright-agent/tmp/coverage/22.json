@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Test on mobile, tablet, desktop",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  22,
+    "test_case_title":  "Responsive Design",
+    "use_auth":  false,
+    "test_case_text":  "Responsive Design Test on mobile, tablet, desktop",
+    "run_id":  "coverage-22"
+}

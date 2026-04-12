@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "run_id": "7b060cc2-d79b-445e-b28f-b88a8ee42abe",
+  "status": "done",
+  "updated_at": "2026-04-12T18:29:16.987Z",
+  "cases": [
+    {
+      "external_id": 45,
+      "title": "Navigation Testing",
+      "status": "passed",
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto http://localhost:5173/projects/1 -> ok (1456ms)",
+        "[chrome] Step 2: wait_for_selector css=nav a[href], header a[href], a[href] state=visible -> ok (33ms)",
+        "[chrome] Step 3: click css=nav a[href], header a[href], a[href] -> ok (804ms)",
+        "[chrome] Step 4: screenshot navigation-after-click -> ok (118ms)",
+        "[chrome] Assert 1: expect_url_contains 'localhost' -> ok (0ms)",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

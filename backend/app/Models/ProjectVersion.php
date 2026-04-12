@@ -25,4 +25,9 @@ class ProjectVersion extends Model
     {
         return $this->hasMany(VersionItem::class);
     }
+
+    public function testRuns()
+    {
+        return $this->hasMany(TestRun::class);
+    }
 }

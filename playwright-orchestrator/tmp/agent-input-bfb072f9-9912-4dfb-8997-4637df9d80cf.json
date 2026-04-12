@@ -1,0 +1,15 @@
+{
+    "run_id": "bfb072f9-9912-4dfb-8997-4637df9d80cf",
+    "external_id": 7,
+    "test_case_title": "Request/Response Validation",
+    "test_case_description": "Validate JSON schema compliance",
+    "test_case_text": "Request/Response Validation\nValidate JSON schema compliance",
+    "base_url": "http://localhost:5173",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "High",
+    "criticality": "Critical",
+    "current_status": "Passed",
+    "project_version_id": 2
+}

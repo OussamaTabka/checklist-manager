@@ -1,0 +1,15 @@
+{
+    "run_id": "a830e6e2-c220-4ba8-892d-ad2ae15b0600",
+    "external_id": 27,
+    "test_case_title": "Cross-Browser Compatibility",
+    "test_case_description": "Test on Chrome, Firefox, Safari, Edge",
+    "test_case_text": "Cross-Browser Compatibility\nTest on Chrome, Firefox, Safari, Edge",
+    "base_url": "https://www.apple.com/tn",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "High",
+    "criticality": "Major",
+    "current_status": "Failed",
+    "project_version_id": 6
+}

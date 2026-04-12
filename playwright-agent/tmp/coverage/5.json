@@ -1,0 +1,9 @@
+{
+    "test_case_description":  "Verify role-based access control",
+    "base_url":  "https://www.apple.com/tn/buy",
+    "external_id":  5,
+    "test_case_title":  "Authorization Testing",
+    "use_auth":  false,
+    "test_case_text":  "Authorization Testing Verify role-based access control",
+    "run_id":  "coverage-5"
+}

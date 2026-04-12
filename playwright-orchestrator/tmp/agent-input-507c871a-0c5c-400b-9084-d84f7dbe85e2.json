@@ -1,0 +1,15 @@
+{
+    "run_id": "507c871a-0c5c-400b-9084-d84f7dbe85e2",
+    "external_id": 11,
+    "test_case_title": "CORS Configuration",
+    "test_case_description": "Verify CORS headers",
+    "test_case_text": "CORS Configuration\nVerify CORS headers",
+    "base_url": "http://localhost:5173",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "Medium",
+    "criticality": "Minor",
+    "current_status": "Failed",
+    "project_version_id": 2
+}

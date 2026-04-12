@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "run_id": "48f99dad-b529-4a62-aefa-8d59df0c55cd",
+  "target": {
+    "base_url": "http://172.25.64.1:5173"
+  },
+  "runtime": {
+    "headless": true,
+    "timeout_ms": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "trace": "retain-on-failure",
+    "video": "retain-on-failure",
+    "screenshot": "only-on-failure"
+  },
+  "cases": [
+    {
+      "external_id": 1,
+      "title": "Smoke Login",
+      "severity": "critical",
+      "steps": [
+        {
+          "action": "goto",
+          "url": "/login"
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_visible",
+          "selector": {
+            "by": "role",
+            "role": "button",
+            "name": "Sign in",
+            "exact": true
+          }
+        }
+      ]
+    }
+  ]
+}
