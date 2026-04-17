@@ -32,6 +32,26 @@ php artisan queue:work --timeout=3600
 
 ---
 
+## Step 1.1: View Invitation Emails (MailDev)
+
+Invitation emails are sent via SMTP in local development. Start the local email inbox:
+
+```bash
+cd backend
+
+# Install backend dev dependencies (MailDev)
+npm.cmd install
+
+# Start MailDev (SMTP :2525, Web UI :1080)
+npm.cmd run maildev
+```
+
+Open MailDev UI at: **http://localhost:1080**
+
+If you prefer logging emails instead of MailDev, set `MAIL_MAILER=log` in `backend/.env` and check `backend/storage/logs/laravel.log`.
+
+---
+
 ## Step 2: Launch Frontend  
 
 ```bash

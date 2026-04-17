@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\VersionItemController;
 use App\Http\Controllers\Api\ProjectVersionController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\ExportController;
+use App\Http\Controllers\Api\PageAnalysisController;
 
 Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
@@ -32,6 +33,8 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
         // SYSTEM DATA - Accessible to all authenticated users
         // ==========================================
         Route::get('/available-testers', [UserController::class, 'getAvailableTesters']); // Get users available for project assignment
+
+        Route::post('/analyze', [PageAnalysisController::class, 'analyze']);
 
         // ==========================================
         // GESTION UTILISATEURS & SYSTÈME (ADMIN ONLY)
