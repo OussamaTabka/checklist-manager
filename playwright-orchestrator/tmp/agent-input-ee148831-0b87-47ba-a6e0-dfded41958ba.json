@@ -1,0 +1,15 @@
+{
+    "run_id": "ee148831-0b87-47ba-a6e0-dfded41958ba",
+    "external_id": 45,
+    "test_case_title": "Navigation Testing",
+    "test_case_description": "Verify all navigation links work",
+    "test_case_text": "Navigation Testing\nVerify all navigation links work",
+    "base_url": "https://www.apple.com/store",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "Medium",
+    "criticality": "Minor",
+    "current_status": "Passed",
+    "project_version_id": 12
+}

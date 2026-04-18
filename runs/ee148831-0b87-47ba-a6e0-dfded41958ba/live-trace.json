@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "run_id": "ee148831-0b87-47ba-a6e0-dfded41958ba",
+  "status": "done",
+  "updated_at": "2026-04-13T15:58:53.849Z",
+  "cases": [
+    {
+      "external_id": 45,
+      "title": "Navigation Testing",
+      "status": "passed",
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://www.apple.com/store -> ok (2573ms)",
+        "[chrome] Step 2: wait_for_selector css=nav a[href], header a[href], a[href] state=visible -> ok (655ms)",
+        "[chrome] Step 3: click css=nav a[href], header a[href], a[href] -> ok (2116ms)",
+        "[chrome] Step 4: screenshot navigation-after-click -> ok (105ms)",
+        "[chrome] Assert 1: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

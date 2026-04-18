@@ -1,0 +1,51 @@
+{
+    "schema_version": "1.0",
+    "run_id": "5eed13f7-51ff-4f63-a2de-70bb85c43920",
+    "target": {
+        "base_url": "https://www.apple.com/tn/buy"
+    },
+    "runtime": {
+        "headless": false,
+        "slow_mo_ms": 700,
+        "hold_open_ms": 12000,
+        "timeout_ms": 30000,
+        "viewport": {
+            "width": 1280,
+            "height": 720
+        },
+        "trace": "retain-on-failure",
+        "video": "retain-on-failure",
+        "screenshot": "only-on-failure"
+    },
+    "cases": [
+        {
+            "external_id": 42,
+            "title": "Responsive Design",
+            "severity": "critical",
+            "use_auth": true,
+            "steps": [
+                {
+                    "action": "goto",
+                    "url": "https://www.apple.com/tn/buy"
+                },
+                {
+                    "action": "screenshot",
+                    "name": "responsive-baseline"
+                }
+            ],
+            "asserts": [
+                {
+                    "type": "expect_visible",
+                    "selector": {
+                        "by": "css",
+                        "value": "body"
+                    }
+                },
+                {
+                    "type": "expect_url_contains",
+                    "value": "www.apple.com"
+                }
+            ]
+        }
+    ]
+}

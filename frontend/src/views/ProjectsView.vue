@@ -1,6 +1,6 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeft,
   ArrowRight,
@@ -12,6 +12,7 @@ import {
   LoaderCircle,
   Pencil,
   Rocket,
+  Search,
   Save,
   Settings,
   Sparkles,
@@ -23,6 +24,8 @@ import { apiRequest, withQuery } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
+const route = useRoute()
+const router = useRouter()
 
 const projects = ref([])
 const pagination = reactive({
@@ -37,6 +40,17 @@ const createError = ref('')
 const successMessage = ref('')
 const loadingProjects = ref(false)
 const creating = ref(false)
+const showProjectForm = ref(false)
+const showAdvancedFilters = ref(false)
+
+const filters = reactive({
+  name: '',
+  type: '',
+  category: '',
+  query: '',
+  creator: 'all',
+  checklist: 'all',
+})
 
 const form = reactive({
   id: null,
@@ -46,6 +60,97 @@ const form = reactive({
   checklist_id: '',
   checklist_ids: [], // additional checklists
   tester_ids: [], // assigned testers
+})
+
+const creatorFilterOptions = computed(() => {
+  const creators = projects.value
+    .map((project) => project.creator)
+    .filter((creator) => Boolean(creator?.id))
+
+  const seen = new Set()
+  return creators.filter((creator) => {
+    if (seen.has(creator.id)) {
+      return false
+    }
+    seen.add(creator.id)
+    return true
+  })
+})
+
+const checklistFilterOptions = computed(() => {
+  const allChecklists = projects.value.flatMap((project) => project.checklists || [])
+  const seen = new Set()
+
+  return allChecklists.filter((checklist) => {
+    if (!checklist?.id || seen.has(checklist.id)) {
+      return false
+    }
+    seen.add(checklist.id)
+    return true
+  })
+})
+
+const activeFilterBadges = computed(() => {
+  const badges = []
+
+  if (filters.name.trim() !== '') {
+    badges.push({ key: 'name', label: `Name: ${filters.name.trim()}` })
+  }
+
+  if (filters.type.trim() !== '') {
+    badges.push({ key: 'type', label: `Type: ${filters.type.trim()}` })
+  }
+
+  if (filters.category.trim() !== '') {
+    badges.push({ key: 'category', label: `Category: ${filters.category.trim()}` })
+  }
+
+  if (filters.query.trim() !== '') {
+    badges.push({ key: 'query', label: `Search: ${filters.query.trim()}` })
+  }
+
+  if (filters.creator !== 'all') {
+    const creator = creatorFilterOptions.value.find((item) => String(item.id) === String(filters.creator))
+    badges.push({ key: 'creator', label: `Creator: ${creator?.name || filters.creator}` })
+  }
+
+  if (filters.checklist !== 'all') {
+    const checklist = checklistFilterOptions.value.find((item) => String(item.id) === String(filters.checklist))
+    badges.push({ key: 'checklist', label: `Checklist: ${checklist?.name || filters.checklist}` })
+  }
+
+  return badges
+})
+
+const hasActiveFilters = computed(() => activeFilterBadges.value.length > 0)
+
+const filteredProjects = computed(() => {
+  return projects.value.filter((project) => {
+    const projectType = String(project.type || project.project_type || '').trim()
+    const checklistCategories = (project.checklists || []).map((checklist) => String(checklist.category || '').trim())
+    const projectCategory = String(project.category || checklistCategories[0] || '').trim()
+
+    const searchText = `${project.name || ''} ${project.description || ''} ${project.app_url || ''} ${projectType} ${projectCategory}`.toLowerCase()
+    const matchesName =
+      filters.name.trim() === '' ||
+      String(project.name || '').toLowerCase().includes(filters.name.trim().toLowerCase())
+    const matchesType =
+      filters.type.trim() === '' ||
+      projectType.toLowerCase().includes(filters.type.trim().toLowerCase())
+    const matchesCategory =
+      filters.category.trim() === '' ||
+      projectCategory.toLowerCase().includes(filters.category.trim().toLowerCase()) ||
+      checklistCategories.some((value) => value.toLowerCase().includes(filters.category.trim().toLowerCase()))
+    const matchesQuery = filters.query.trim() === '' || searchText.includes(filters.query.trim().toLowerCase())
+    const matchesCreator =
+      filters.creator === 'all' ||
+      String(project.creator?.id || '') === String(filters.creator)
+    const matchesChecklist =
+      filters.checklist === 'all' ||
+      (project.checklists || []).some((checklist) => String(checklist.id) === String(filters.checklist))
+
+    return matchesName && matchesType && matchesCategory && matchesQuery && matchesCreator && matchesChecklist
+  })
 })
 
 async function loadProjects(page = 1) {
@@ -117,7 +222,7 @@ async function submitProject() {
       successMessage.value = 'Project created successfully.'
     }
 
-    resetForm()
+    resetForm(true)
     await loadProjects(1)
   } catch (error) {
     createError.value = error.data?.message || error.message
@@ -126,7 +231,7 @@ async function submitProject() {
   }
 }
 
-function resetForm() {
+function resetForm(closeForm = false) {
   form.id = null
   form.name = ''
   form.description = ''
@@ -134,9 +239,96 @@ function resetForm() {
   form.checklist_id = ''
   form.checklist_ids = []
   form.tester_ids = []
+
+  if (closeForm) {
+    showProjectForm.value = false
+  }
+}
+
+function clearAllFilters() {
+  filters.name = ''
+  filters.type = ''
+  filters.category = ''
+  filters.query = ''
+  filters.creator = 'all'
+  filters.checklist = 'all'
+}
+
+function removeFilter(key) {
+  if (key === 'name') {
+    filters.name = ''
+    return
+  }
+
+  if (key === 'type') {
+    filters.type = ''
+    return
+  }
+
+  if (key === 'category') {
+    filters.category = ''
+    return
+  }
+
+  if (key === 'query') {
+    filters.query = ''
+    return
+  }
+
+  if (key === 'creator') {
+    filters.creator = 'all'
+    return
+  }
+
+  if (key === 'checklist') {
+    filters.checklist = 'all'
+  }
+}
+
+function toggleCreatorFilter(id) {
+  const value = String(id)
+  filters.creator = filters.creator === value ? 'all' : value
+}
+
+function toggleChecklistFilter(id) {
+  const value = String(id)
+  filters.checklist = filters.checklist === value ? 'all' : value
+}
+
+function getHostname(url) {
+  try {
+    return new URL(url).hostname
+  } catch {
+    return url
+  }
+}
+
+function openCreateForm() {
+  resetForm(false)
+  showProjectForm.value = true
+}
+
+function consumeCreateQuery() {
+  if (route.query.create !== '1') {
+    return
+  }
+
+  const nextQuery = { ...route.query }
+  delete nextQuery.create
+  router.replace({ query: nextQuery })
+}
+
+function openCreateFormFromQuery() {
+  if (!auth.canManageProjects || route.query.create !== '1') {
+    return
+  }
+
+  openCreateForm()
+  consumeCreateQuery()
 }
 
 function editProject(project) {
+  showProjectForm.value = true
   form.id = project.id
   form.name = project.name
   form.description = project.description || ''
@@ -166,24 +358,143 @@ async function deleteProject(projectId) {
 
 onMounted(async () => {
   await Promise.all([loadProjects(), loadProjectMetadata()])
+  openCreateFormFromQuery()
 })
+
+watch(
+  () => route.query.create,
+  () => {
+    openCreateFormFromQuery()
+  },
+)
 </script>
 
 <template>
   <section class="page stack">
-    <div style="margin-bottom: 2rem;">
-      <h1 style="color: #1f2937; font-size: 2.5rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 0.6rem;">
-        <Rocket :size="30" :stroke-width="2.3" />
-        <span>Projects</span>
-      </h1>
-      <p class="muted" style="margin-top: 0.5rem; font-size: 1rem;">
-        Manage testing projects, assign checklists and testers, and track execution progress.
-      </p>
+    <div class="section-header section-header-start">
+      <div>
+        <h1 class="page-title-icon">
+          <Rocket :size="30" :stroke-width="2.3" />
+          <span>Projects</span>
+        </h1>
+        <p class="muted page-subtitle">
+          Manage testing projects, assign checklists and testers, and track execution progress.
+        </p>
+      </div>
+
     </div>
 
-    <div v-if="auth.canManageProjects" class="card stack">
-      <div style="border-bottom: 2px solid #e5e7eb; padding-bottom: 1rem; margin-bottom: 1.5rem;">
-        <h2 style="margin: 0; color: #1f2937; display: flex; align-items: center; gap: 0.5rem;">
+    <div class="card stack stack-gap-sm">
+      <div class="search-top-row">
+        <div class="search-input-wrap">
+          <Search :size="18" :stroke-width="2.1" />
+          <input v-model="filters.query" placeholder="Search projects..." class="search-input" />
+        </div>
+
+        <button
+          v-if="auth.canManageProjects"
+          class="btn btn-primary create-project-btn"
+          type="button"
+          @click="openCreateForm"
+        >
+          <CirclePlus :size="16" />
+          <span>Create Project</span>
+        </button>
+      </div>
+
+      <div class="actions actions-between">
+        <button class="btn btn-secondary btn-sm" type="button" @click="showAdvancedFilters = !showAdvancedFilters">
+          <span>{{ showAdvancedFilters ? 'Hide Filters' : 'Show Filters' }}</span>
+        </button>
+
+        <button v-if="hasActiveFilters" class="btn btn-secondary btn-sm" type="button" @click="clearAllFilters">
+          Clear all
+        </button>
+      </div>
+
+      <div v-if="showAdvancedFilters" class="stack advanced-filters-stack">
+        <div class="grid filters-grid">
+          <div class="field">
+            <label class="field-label-strong">Name</label>
+            <input v-model="filters.name" placeholder="Filter by project name" />
+          </div>
+
+          <div class="field">
+            <label class="field-label-strong">Type</label>
+            <input v-model="filters.type" placeholder="Filter by type" />
+          </div>
+
+          <div class="field">
+            <label class="field-label-strong">Category</label>
+            <input v-model="filters.category" placeholder="Filter by category" />
+          </div>
+        </div>
+
+        <div class="field field-tight">
+          <label class="field-label-strong">Creator</label>
+          <div class="chip-row">
+            <button
+              type="button"
+              class="filter-chip"
+              :class="{ active: filters.creator === 'all' }"
+              @click="filters.creator = 'all'"
+            >
+              All creators
+            </button>
+            <button
+              v-for="creator in creatorFilterOptions"
+              :key="creator.id"
+              type="button"
+              class="filter-chip"
+              :class="{ active: filters.creator === String(creator.id) }"
+              @click="toggleCreatorFilter(creator.id)"
+            >
+              {{ creator.name }}
+            </button>
+          </div>
+        </div>
+
+        <div class="field field-tight">
+          <label class="field-label-strong">Checklist</label>
+          <div class="chip-row">
+            <button
+              type="button"
+              class="filter-chip"
+              :class="{ active: filters.checklist === 'all' }"
+              @click="filters.checklist = 'all'"
+            >
+              All checklists
+            </button>
+            <button
+              v-for="checklist in checklistFilterOptions"
+              :key="checklist.id"
+              type="button"
+              class="filter-chip"
+              :class="{ active: filters.checklist === String(checklist.id) }"
+              @click="toggleChecklistFilter(checklist.id)"
+            >
+              {{ checklist.name }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="hasActiveFilters" class="active-filters-row">
+        <span class="muted active-filters-label">Filters applied:</span>
+        <div class="chip-row">
+          <span v-for="badge in activeFilterBadges" :key="badge.key" class="applied-chip">
+            {{ badge.label }}
+            <button type="button" @click="removeFilter(badge.key)">
+              <X :size="12" />
+            </button>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="auth.canManageProjects && showProjectForm" class="card stack">
+      <div class="section-divider">
+        <h2 class="section-heading-with-icon">
           <Pencil v-if="form.id" :size="20" :stroke-width="2.2" />
           <CirclePlus v-else :size="20" :stroke-width="2.2" />
           <span>{{ form.id ? 'Edit Project' : 'Create New Project' }}</span>
@@ -194,9 +505,9 @@ onMounted(async () => {
       <p v-if="successMessage" class="success" data-testid="projects-msg-success">{{ successMessage }}</p>
 
       <form class="stack" @submit.prevent="submitProject" data-testid="projects-form">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-grid-two">
           <div class="field">
-            <label style="font-weight: 600; color: #1f2937;">Project Name</label>
+            <label class="field-label-strong">Project Name</label>
             <input
               v-model="form.name"
               required
@@ -205,7 +516,7 @@ onMounted(async () => {
             />
           </div>
           <div class="field">
-            <label style="font-weight: 600; color: #1f2937;">App URL</label>
+            <label class="field-label-strong">App URL</label>
             <input
               v-model="form.app_url"
               type="url"
@@ -217,14 +528,14 @@ onMounted(async () => {
         </div>
 
         <div class="field">
-          <label style="font-weight: 600; color: #1f2937;">Description</label>
+          <label class="field-label-strong">Description</label>
           <textarea v-model="form.description" rows="3" placeholder="Add details about this project..." />
         </div>
 
         <!-- Create New Project Only -->
         <div v-if="!form.id" class="card project-setup-section">
-          <div style="border-bottom: 2px solid #e5e7eb; padding-bottom: 1rem; margin-bottom: 1.5rem;">
-            <h3 style="margin: 0; color: #1f2937; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+          <div class="section-divider">
+            <h3 class="section-heading-with-icon-sm">
               <Settings :size="18" :stroke-width="2.2" />
               <span>Project Setup</span>
             </h3>
@@ -232,60 +543,49 @@ onMounted(async () => {
 
           <!-- Primary Checklist -->
           <div class="field">
-            <label style="font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 0.5rem;">
+            <label class="label-with-icon">
               <ClipboardList :size="18" :stroke-width="2.1" />
-              Primary Checklist <span style="color: #ef4444;">*</span>
+              Primary Checklist <span class="label-required">*</span>
             </label>
-            <select v-model="form.checklist_id" required style="margin-top: 0.5rem;">
+            <select v-model="form.checklist_id" required class="select-top-gap">
               <option disabled value="">Select primary checklist for version 1</option>
               <option v-for="checklist in checklists" :key="checklist.id" :value="checklist.id">
                 {{ checklist.name }}{{ checklist.description ? ' - ' + checklist.description : '' }}
               </option>
             </select>
-            <p class="muted" style="font-size: 0.85rem; margin-top: 0.5rem; margin-bottom: 1.5rem; display: flex; align-items: flex-start; gap: 0.45rem;">
-              <Info :size="14" style="margin-top: 0.1rem; flex-shrink: 0;" />
+            <p class="muted helper-text-info">
+              <Info :size="14" class="icon-inline-top" />
               <span>Used to create project version 1. You can add more checklists below.</span>
             </p>
           </div>
 
           <!-- Additional Checklists -->
           <div class="field">
-            <label style="font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 0.5rem;">
+            <label class="label-with-icon">
               <BookOpen :size="18" :stroke-width="2.1" />
               Additional Checklists
             </label>
-            <p class="muted" style="font-size: 0.85rem; margin: 0.5rem 0 1rem 0;">
+            <p class="muted helper-text">
               Select all checklists you want to assign to this project
             </p>
-            <div v-if="checklists.length === 0" class="muted" style="padding: 1rem; text-align: center; background: #f9fafb; border-radius: 0.5rem;">
+            <div v-if="checklists.length === 0" class="muted empty-state-box">
               No checklists available
             </div>
-            <div v-else style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.75rem;">
+            <div v-else class="selection-grid">
               <label 
                 v-for="checklist in checklists" 
                 :key="checklist.id" 
-                style="
-                  display: flex; 
-                  align-items: flex-start; 
-                  gap: 0.75rem; 
-                  cursor: pointer;
-                  padding: 0.75rem;
-                  background: #f9fafb;
-                  border: 1px solid #e5e7eb;
-                  border-radius: 0.5rem;
-                  transition: all 0.2s ease;
-                  hover-state: hover;
-                "
+                class="selection-card"
               >
                 <input 
                   type="checkbox" 
                   :value="checklist.id" 
                   v-model="form.checklist_ids"
-                  style="margin-top: 0.25rem; cursor: pointer; width: 18px; height: 18px;"
+                  class="selection-check"
                 />
-                <div style="flex: 1;">
-                  <div style="font-weight: 500; color: #1f2937;">{{ checklist.name }}</div>
-                  <div v-if="checklist.description" class="muted" style="font-size: 0.8rem; margin-top: 0.25rem;">
+                <div class="selection-body">
+                  <div class="selection-title">{{ checklist.name }}</div>
+                  <div v-if="checklist.description" class="muted selection-meta">
                     {{ checklist.description }}
                   </div>
                 </div>
@@ -294,54 +594,43 @@ onMounted(async () => {
           </div>
 
           <!-- Assign Testers -->
-          <div class="field" style="margin-top: 1.5rem;">
-            <label style="font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 0.5rem;">
+          <div class="field section-space-top">
+            <label class="label-with-icon">
               <Users :size="18" :stroke-width="2.1" />
               Assign Testers
             </label>
-            <p class="muted" style="font-size: 0.85rem; margin: 0.5rem 0 1rem 0;">
+            <p class="muted helper-text">
               Select testers who will execute tests for this project
             </p>
-            <div v-if="users.length === 0" class="muted" style="padding: 1rem; text-align: center; background: #f9fafb; border-radius: 0.5rem;">
+            <div v-if="users.length === 0" class="muted empty-state-box">
               No testers available
             </div>
-            <div v-else style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.75rem;">
+            <div v-else class="selection-grid">
               <label 
                 v-for="user in users" 
                 :key="user.id" 
-                style="
-                  display: flex; 
-                  align-items: flex-start; 
-                  gap: 0.75rem; 
-                  cursor: pointer;
-                  padding: 0.75rem;
-                  background: #f0fdf4;
-                  border: 1px solid #dcfce7;
-                  border-radius: 0.5rem;
-                  transition: all 0.2s ease;
-                "
+                class="selection-card selection-card-green"
               >
                 <input 
                   type="checkbox" 
                   :value="user.id" 
                   v-model="form.tester_ids"
-                  style="margin-top: 0.25rem; cursor: pointer; width: 18px; height: 18px;"
+                  class="selection-check"
                 />
-                <div style="flex: 1;">
-                  <div style="font-weight: 500; color: #1f2937;">{{ user.name }}</div>
-                  <div class="muted" style="font-size: 0.8rem; margin-top: 0.25rem;">{{ user.email }}</div>
+                <div class="selection-body">
+                  <div class="selection-title">{{ user.name }}</div>
+                  <div class="muted selection-meta">{{ user.email }}</div>
                 </div>
               </label>
             </div>
           </div>
         </div>
 
-        <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+        <div class="form-actions-row">
           <button
-            class="btn btn-primary"
+            class="btn btn-primary btn-min-wide"
             type="submit"
             :disabled="creating"
-            style="min-width: 200px; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;"
             data-testid="projects-btn-submit"
           >
             <LoaderCircle v-if="creating" :size="16" class="spin" />
@@ -349,17 +638,17 @@ onMounted(async () => {
             <Sparkles v-else :size="16" />
             <span>{{ creating ? (form.id ? 'Updating...' : 'Creating...') : (form.id ? 'Update Project' : 'Create Project') }}</span>
           </button>
-          <button v-if="form.id" type="button" class="btn btn-secondary" @click="resetForm" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+          <button type="button" class="btn btn-secondary btn-inline-icon" @click="resetForm(true)">
             <X :size="16" />
-            <span>Cancel</span>
+            <span>Close</span>
           </button>
         </div>
       </form>
     </div>
 
-    <div class="card stack" style="margin-top: 2rem;">
-      <div style="border-bottom: 2px solid #e5e7eb; padding-bottom: 1rem; margin-bottom: 1.5rem;">
-        <h2 style="margin: 0; color: #1f2937; display: flex; align-items: center; gap: 0.5rem;">
+    <div class="card stack section-space-xl">
+      <div class="section-divider">
+        <h2 class="section-heading-with-icon">
           <ChartColumn :size="20" :stroke-width="2.2" />
           <span>Project List</span>
         </h2>
@@ -368,90 +657,76 @@ onMounted(async () => {
       <p v-if="listError" class="error" data-testid="projects-msg-error-list">{{ listError }}</p>
       <p v-if="loadingProjects" class="muted">Loading projects...</p>
 
-      <div v-if="!loadingProjects" class="table-wrap">
-        <table data-testid="projects-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Creator</th>
-              <th>Checklists</th>
-              <th>Assigned Testers</th>
-              <th>App URL</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="project in projects" :key="project.id">
-              <td>{{ project.id }}</td>
-              <td>
-                <RouterLink :to="{ name: 'project-detail', params: { id: project.id } }">
-                  {{ project.name }}
-                </RouterLink>
-              </td>
-              <td>{{ project.creator?.name || '-' }}</td>
-              <td>
-                <div v-if="project.checklists && project.checklists.length > 0" style="font-size: 0.85rem;">
-                  <div v-for="checklist in project.checklists" :key="checklist.id" style="background: #f3f4f6; padding: 0.25rem 0.5rem; border-radius: 0.25rem; margin-bottom: 0.25rem;">
-                    {{ checklist.name }}
-                  </div>
-                </div>
-                <span v-else class="muted">-</span>
-              </td>
-              <td>
-                <div v-if="project.testers && project.testers.length > 0" style="font-size: 0.85rem;">
-                  <div v-for="tester in project.testers" :key="tester.id" style="background: #dcfce7; padding: 0.25rem 0.5rem; border-radius: 0.25rem; margin-bottom: 0.25rem;">
-                    {{ tester.name }}
-                  </div>
-                </div>
-                <span v-else class="muted">No testers assigned</span>
-              </td>
-              <td>
-                <a v-if="project.app_url" :href="project.app_url" target="_blank" rel="noopener noreferrer" style="font-size: 0.85rem;">
-                  {{ new URL(project.app_url).hostname }}
-                </a>
-                <span v-else class="muted">-</span>
-              </td>
-              <td>
-                <div class="actions" style="gap: 0.5rem;">
-                  <button v-if="canManageProject(project)" class="btn btn-secondary btn-sm" @click="editProject(project)" title="Edit project" style="display: inline-flex; align-items: center; gap: 0.3rem;">
-                    <Pencil :size="14" />
-                    <span>Edit</span>
-                  </button>
-                  <button v-if="canManageProject(project)" class="btn btn-danger btn-sm" @click="deleteProject(project.id)" title="Delete project" style="display: inline-flex; align-items: center; gap: 0.3rem;">
-                    <Trash2 :size="14" />
-                    <span>Delete</span>
-                  </button>
-                </div>
-              </td>
-            </tr>
-            <tr v-if="projects.length === 0">
-              <td colspan="7" class="muted">No projects found.</td>
-            </tr>
-          </tbody>
-        </table>
+      <div v-if="!loadingProjects && filteredProjects.length > 0" class="projects-grid" data-testid="projects-table">
+        <article v-for="project in filteredProjects" :key="project.id" class="project-card">
+          <div class="project-card-head">
+            <div>
+              <RouterLink :to="{ name: 'project-detail', params: { id: project.id } }" class="project-title-link">
+                {{ project.name }}
+              </RouterLink>
+              <p class="muted meta-line">#{{ project.id }} • {{ project.creator?.name || 'Unknown creator' }}</p>
+            </div>
+          </div>
+
+          <p class="muted description-fixed">{{ project.description || 'No description provided.' }}</p>
+
+          <div class="project-meta-row">
+            <span class="mini-label">Checklists</span>
+            <div class="chip-row">
+              <span v-for="checklist in project.checklists || []" :key="checklist.id" class="mini-chip">{{ checklist.name }}</span>
+              <span v-if="!project.checklists || project.checklists.length === 0" class="muted">No checklist</span>
+            </div>
+          </div>
+
+          <div class="project-meta-row">
+            <span class="mini-label">Testers</span>
+            <div class="chip-row">
+              <span v-for="tester in project.testers || []" :key="tester.id" class="mini-chip tester-chip">{{ tester.name }}</span>
+              <span v-if="!project.testers || project.testers.length === 0" class="muted">No tester assigned</span>
+            </div>
+          </div>
+
+          <div class="project-card-footer">
+            <a v-if="project.app_url" :href="project.app_url" target="_blank" rel="noopener noreferrer" class="muted app-url-text">
+              {{ getHostname(project.app_url) }}
+            </a>
+            <span v-else class="muted app-url-text">No app URL</span>
+
+            <div class="actions">
+              <button v-if="canManageProject(project)" class="btn btn-secondary btn-sm" @click="editProject(project)">
+                <Pencil :size="14" />
+                <span>Edit</span>
+              </button>
+              <button v-if="canManageProject(project)" class="btn btn-danger btn-sm" @click="deleteProject(project.id)">
+                <Trash2 :size="14" />
+              </button>
+            </div>
+          </div>
+        </article>
       </div>
 
-      <div class="pagination" style="justify-content: center; gap: 1rem; margin-top: 2rem;">
+      <div v-if="!loadingProjects && filteredProjects.length === 0" class="card empty-dashed-card">
+        <p class="muted">No projects found with current filters.</p>
+      </div>
+
+      <div class="pagination pagination-centered">
         <button
-          class="btn btn-secondary btn-sm"
+          class="btn btn-secondary btn-sm btn-nav-icon"
           :disabled="pagination.current_page <= 1"
           @click="loadProjects(pagination.current_page - 1)"
           title="Go to previous page"
-          style="display: inline-flex; align-items: center; gap: 0.3rem;"
         >
           <ArrowLeft :size="14" />
           <span>Previous</span>
         </button>
-        <span class="muted" style="font-weight: 600;">
+        <span class="muted pagination-text">
           Page {{ pagination.current_page }} of {{ pagination.last_page }}
         </span>
         <button
-          class="btn btn-secondary btn-sm"
+          class="btn btn-secondary btn-sm btn-nav-icon"
           :disabled="pagination.current_page >= pagination.last_page"
           @click="loadProjects(pagination.current_page + 1)"
           title="Go to next page"
-          style="display: inline-flex; align-items: center; gap: 0.3rem;"
         >
           <span>Next</span>
           <ArrowRight :size="14" />
@@ -460,19 +735,3 @@ onMounted(async () => {
     </div>
   </section>
 </template>
-
-<style scoped>
-.spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-</style>

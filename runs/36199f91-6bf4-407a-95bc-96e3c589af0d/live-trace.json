@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "run_id": "36199f91-6bf4-407a-95bc-96e3c589af0d",
+  "status": "done",
+  "updated_at": "2026-04-13T15:56:33.275Z",
+  "cases": [
+    {
+      "external_id": 41,
+      "title": "Cross-Browser Compatibility",
+      "status": "blocked",
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://www.apple.com/store -> ok (3871ms)",
+        "[chrome] Step 2: screenshot cross-browser-home -> ok (1990ms)",
+        "[chrome] Assert 1: expect_visible css=body -> ok (45ms)",
+        "[chrome] Assert 2: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[chrome] Run completed successfully",
+        "[firefox] Browser context started",
+        "[firefox] Step 1: goto https://www.apple.com/store -> ok (3246ms)",
+        "[firefox] Step 2: screenshot cross-browser-home -> ok (990ms)",
+        "[firefox] Assert 1: expect_visible css=body -> ok (204ms)",
+        "[firefox] Assert 2: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[firefox] Run completed successfully",
+        "[safari] Browser context started",
+        "[safari] Step 1: goto https://www.apple.com/store -> ok (1999ms)",
+        "[safari] Step 2: screenshot cross-browser-home -> ok (1905ms)",
+        "[safari] Assert 1: expect_visible css=body -> failed (Expected visible but selector was not visible: css=body (Error: locator.waitFor: Target page, context or browser has been closed))",
+        "[safari] Run failed: Expected visible but selector was not visible: css=body (Error: locator.waitFor: Target page, context or browser has been closed)",
+        "[safari] Browser launch failed: page.screenshot: Target page, context or browser has been closed",
+        "[edge] Browser context started",
+        "[edge] Step 1: goto https://www.apple.com/store -> ok (2367ms)",
+        "[edge] Step 2: screenshot cross-browser-home -> ok (1248ms)",
+        "[edge] Assert 1: expect_visible css=body -> failed (Expected visible but selector was not visible: css=body (Error: locator.waitFor: Target page, context or browser has been closed))",
+        "[edge] Run failed: Expected visible but selector was not visible: css=body (Error: locator.waitFor: Target page, context or browser has been closed)",
+        "[edge] Browser launch failed: page.screenshot: Target page, context or browser has been closed"
+      ]
+    }
+  ]
+}

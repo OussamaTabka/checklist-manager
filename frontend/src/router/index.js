@@ -9,6 +9,11 @@ import ProjectsView from '@/views/ProjectsView.vue'
 import ProjectDetailView from '@/views/ProjectDetailView.vue'
 import ChecklistsView from '@/views/ChecklistsView.vue'
 import UsersView from '@/views/UsersView.vue'
+import UserStoriesListView from '@/views/UserStoriesListView.vue'
+import UserStoryFormView from '@/views/UserStoryFormView.vue'
+import UserStoryImportView from '@/views/UserStoryImportView.vue'
+import UserStoryDetailView from '@/views/UserStoryDetailView.vue'
+import SettingsView from '@/views/SettingsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -50,7 +55,7 @@ const router = createRouter({
       path: '/projects',
       name: 'projects',
       component: ProjectsView,
-      meta: { requiresAuth: true, roles: ['admin', 'chef', 'admin_contenus', 'testeur'] },
+      meta: { requiresAuth: true, roles: ['admin', 'chef', 'testeur'] },
     },
     {
       path: '/projects/:id',
@@ -62,13 +67,49 @@ const router = createRouter({
       path: '/checklists',
       name: 'checklists',
       component: ChecklistsView,
-      meta: { requiresAuth: true, roles: ['chef', 'admin_contenus'] },
+      meta: { requiresAuth: true, roles: ['chef', 'admin'] },
     },
     {
       path: '/users',
       name: 'users',
       component: UsersView,
       meta: { requiresAuth: true, roles: ['admin'] },
+    },
+    {
+      path: '/stories',
+      name: 'stories',
+      component: UserStoriesListView,
+      meta: { requiresAuth: true, roles: ['admin', 'chef'] },
+    },
+    {
+      path: '/stories/create',
+      name: 'story-create',
+      component: UserStoryFormView,
+      meta: { requiresAuth: true, roles: ['chef'] },
+    },
+    {
+      path: '/stories/import',
+      name: 'story-import',
+      component: UserStoryImportView,
+      meta: { requiresAuth: true, roles: ['chef'] },
+    },
+    {
+      path: '/stories/:id',
+      name: 'story-detail',
+      component: UserStoryDetailView,
+      meta: { requiresAuth: true, roles: ['admin', 'chef'] },
+    },
+    {
+      path: '/stories/:id/edit',
+      name: 'story-edit',
+      component: UserStoryFormView,
+      meta: { requiresAuth: true, roles: ['chef'] },
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: SettingsView,
+      meta: { requiresAuth: true },
     },
   ],
 })

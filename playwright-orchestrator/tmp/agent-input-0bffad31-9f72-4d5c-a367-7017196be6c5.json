@@ -1,0 +1,15 @@
+{
+    "run_id": "0bffad31-9f72-4d5c-a367-7017196be6c5",
+    "external_id": 46,
+    "test_case_title": "Button Functionality",
+    "test_case_description": "Test all interactive buttons",
+    "test_case_text": "Button Functionality\nTest all interactive buttons",
+    "base_url": "https://www.apple.com",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "Medium",
+    "criticality": "Minor",
+    "current_status": "Blocked",
+    "project_version_id": 12
+}

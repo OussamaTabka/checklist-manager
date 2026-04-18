@@ -1,6 +1,8 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
+import { useSettingsStore } from '@/stores/settings'
+import { initRuntimeTranslations } from '@/lib/runtimeTranslations'
 
 import App from './App.vue'
 import router from './router'
@@ -13,6 +15,12 @@ app.use(pinia)
 app.use(router)
 
 const auth = useAuthStore(pinia)
+const settings = useSettingsStore(pinia)
+
+if (typeof window !== 'undefined') {
+  settings.loadSettings()
+	initRuntimeTranslations(pinia)
+}
 
 if (typeof window !== 'undefined') {
 	window.addEventListener('auth:unauthorized', async () => {

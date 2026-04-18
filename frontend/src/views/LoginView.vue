@@ -30,7 +30,7 @@ async function onSubmit() {
 </script>
 
 <template>
-  <section class="page" style="max-width: 420px; margin-top: 4rem">
+  <section class="page page-auth-sm">
     <div class="card stack">
       <div>
         <h1>Sign in</h1>
@@ -62,7 +62,7 @@ async function onSubmit() {
           />
         </div>
 
-        <div style="display: flex; justify-content: flex-end">
+        <div class="auth-link-row">
           <RouterLink :to="{ name: 'forgot-password' }" class="muted">Forgot password?</RouterLink>
         </div>
 

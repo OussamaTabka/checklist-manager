@@ -29,6 +29,7 @@ class DashboardController extends Controller
         $totalItems = 0;
         $testedItems = 0;
         $criticalFailures = 0;
+        $failedItems = 0;
         $projectRows = [];
 
         foreach ($projects as $project) {
@@ -49,6 +50,7 @@ class DashboardController extends Controller
             $totalItems += $total;
             $testedItems += $tested;
             $criticalFailures += $criticalFailed;
+            $failedItems += $failed;
 
             $projectRows[] = [
                 'id' => $project->id,
@@ -66,6 +68,8 @@ class DashboardController extends Controller
             'totalChecklists' => $user->hasRole('admin') ? Checklist::count() : null,
             'globalProgress' => $totalItems > 0 ? round(($testedItems / $totalItems) * 100, 2) : 0,
             'failedCriticalItems' => $criticalFailures,
+            'testsRun' => $testedItems,
+            'testsFailed' => $failedItems,
             'projectSuccessRows' => $projectRows,
         ]);
     }

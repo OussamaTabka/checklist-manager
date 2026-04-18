@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "run_id": "a41ca3dd-26a3-4726-befe-c6d14e2a1a47",
+  "status": "done",
+  "updated_at": "2026-04-13T15:59:57.215Z",
+  "cases": [
+    {
+      "external_id": 44,
+      "title": "Form Validation",
+      "status": "blocked",
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://www.apple.com/store -> ok (2542ms)",
+        "[chrome] Step 2: click role=button, name=Submit -> failed (locator.click: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Submit' })\u001b[22m\n)",
+        "[chrome] Run failed: locator.click: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Submit' })\u001b[22m\n"
+      ]
+    }
+  ]
+}

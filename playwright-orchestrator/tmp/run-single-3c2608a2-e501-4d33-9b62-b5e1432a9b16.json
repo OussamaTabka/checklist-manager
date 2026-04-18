@@ -1,0 +1,67 @@
+{
+    "schema_version": "1.0",
+    "run_id": "3c2608a2-e501-4d33-9b62-b5e1432a9b16",
+    "target": {
+        "base_url": "https://www.apple.com"
+    },
+    "runtime": {
+        "headless": false,
+        "slow_mo_ms": 700,
+        "hold_open_ms": 12000,
+        "timeout_ms": 30000,
+        "viewport": {
+            "width": 1280,
+            "height": 720
+        },
+        "trace": "retain-on-failure",
+        "video": "retain-on-failure",
+        "screenshot": "only-on-failure"
+    },
+    "cases": [
+        {
+            "external_id": 46,
+            "title": "Button Functionality",
+            "severity": "critical",
+            "use_auth": true,
+            "steps": [
+                {
+                    "action": "goto",
+                    "url": "https://www.apple.com"
+                },
+                {
+                    "action": "wait_for_selector",
+                    "selector": {
+                        "by": "css",
+                        "value": "main button:not([disabled]), main [role=\"button\"]:not([aria-disabled=\"true\"]), main input[type=\"button\"]:not([disabled]), main input[type=\"submit\"]:not([disabled]), main a[role=\"button\"], main a[href]"
+                    },
+                    "state": "visible",
+                    "timeout_ms": 20000
+                },
+                {
+                    "action": "click",
+                    "selector": {
+                        "by": "css",
+                        "value": "main button:not([disabled]), main [role=\"button\"]:not([aria-disabled=\"true\"]), main input[type=\"button\"]:not([disabled]), main input[type=\"submit\"]:not([disabled]), main a[role=\"button\"], main a[href]"
+                    }
+                },
+                {
+                    "action": "screenshot",
+                    "name": "button-functionality-after-click"
+                }
+            ],
+            "asserts": [
+                {
+                    "type": "expect_visible",
+                    "selector": {
+                        "by": "css",
+                        "value": "main button:not([disabled]), main [role=\"button\"]:not([aria-disabled=\"true\"]), main input[type=\"button\"]:not([disabled]), main input[type=\"submit\"]:not([disabled]), main a[role=\"button\"], main a[href]"
+                    }
+                },
+                {
+                    "type": "expect_url_contains",
+                    "value": "www.apple.com"
+                }
+            ]
+        }
+    ]
+}
