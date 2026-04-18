@@ -21,9 +21,8 @@ const form = reactive({
 const roleOptions = computed(() => {
   if (form.id) {
     return [
-      { value: 'admin', label: 'Admin Système' },
+      { value: 'admin', label: 'Admin' },
       { value: 'chef', label: 'Chef de Projet' },
-      { value: 'admin_contenus', label: 'Admin Contenus' },
       { value: 'testeur', label: 'Testeur' },
     ]
   }

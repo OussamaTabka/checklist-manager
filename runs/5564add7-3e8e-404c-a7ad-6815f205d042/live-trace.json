@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "run_id": "5564add7-3e8e-404c-a7ad-6815f205d042",
+  "status": "running",
+  "updated_at": "2026-04-12T21:25:24.519Z",
+  "cases": [
+    {
+      "external_id": 41,
+      "title": "Cross-Browser Compatibility",
+      "status": "running",
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://www.apple.com/tn/buy -> ok (2329ms)",
+        "[chrome] Step 2: screenshot cross-browser-home -> ok (285ms)",
+        "[chrome] Assert 1: expect_visible css=body -> ok (33ms)",
+        "[chrome] Assert 2: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[chrome] Run completed successfully",
+        "[firefox] Browser context started"
+      ]
+    }
+  ]
+}

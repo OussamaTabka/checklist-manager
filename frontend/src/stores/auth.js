@@ -16,9 +16,6 @@ export const useAuthStore = defineStore('auth', () => {
   // CHEF DE PROJET - Gestion complète des projets et checklists
   const isProjectManager = computed(() => roles.value.includes('chef'))
   
-  // ADMINISTRATEUR CONTENUS - Gestion qualité des checklists
-  const isContentAdmin = computed(() => roles.value.includes('admin_contenus'))
-  
   // TESTEUR - Exécution des tests
   const isTester = computed(() => roles.value.includes('testeur'))
   
@@ -26,18 +23,18 @@ export const useAuthStore = defineStore('auth', () => {
   // Peut gérer les projets (Chef uniquement)
   const canManageProjects = computed(() => roles.value.includes('chef'))
   
-  // Peut gérer les checklists (Chef et Admin Contenus)
+  // Peut gérer les checklists (Chef et Admin)
   const canManageChecklists = computed(
-    () => roles.value.includes('chef') || roles.value.includes('admin_contenus')
+    () => roles.value.includes('chef') || roles.value.includes('admin')
   )
   
   // Peut gérer les utilisateurs (Admin Système uniquement)
   const canManageUsers = computed(() => roles.value.includes('admin'))
   
-  // Peut exécuter les tests (Tous sauf Admin Système)
+  // Peut exécuter les tests (Chef, Admin et Testeur)
   const canTest = computed(
     () => roles.value.includes('chef') || 
-           roles.value.includes('admin_contenus') || 
+           roles.value.includes('admin') || 
            roles.value.includes('testeur')
   )
   
@@ -170,7 +167,6 @@ export const useAuthStore = defineStore('auth', () => {
     // Computed Properties - Rôles
     isSystemAdmin,
     isProjectManager,
-    isContentAdmin,
     isTester,
     isAdmin, // Alias pour compatibilité
     

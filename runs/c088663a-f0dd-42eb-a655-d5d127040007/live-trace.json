@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "run_id": "c088663a-f0dd-42eb-a655-d5d127040007",
+  "status": "running",
+  "updated_at": "2026-04-16T18:29:03.264Z",
+  "cases": [
+    {
+      "external_id": 41,
+      "title": "Cross-Browser Compatibility",
+      "status": "running",
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://www.apple.com/store -> ok (2507ms)",
+        "[chrome] Step 2: screenshot cross-browser-home -> ok (1015ms)",
+        "[chrome] Assert 1: expect_visible css=body -> ok (79ms)",
+        "[chrome] Assert 2: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[chrome] Run completed successfully",
+        "[firefox] Browser context started",
+        "[firefox] Step 1: goto https://www.apple.com/store -> failed (page.goto: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - navigating to \"https://www.apple.com/store\", waiting until \"domcontentloaded\"\u001b[22m\n)",
+        "[firefox] Run failed: page.goto: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - navigating to \"https://www.apple.com/store\", waiting until \"domcontentloaded\"\u001b[22m\n",
+        "[firefox] Browser launch failed: page.screenshot: Target page, context or browser has been closed",
+        "[safari] Browser context started",
+        "[safari] Step 1: goto https://www.apple.com/store -> ok (2221ms)",
+        "[safari] Step 2: screenshot cross-browser-home -> failed (page.screenshot: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - taking page screenshot\u001b[22m\n\u001b[2m  - waiting for fonts to load...\u001b[22m\n\u001b[2m  - fonts loaded\u001b[22m\n)",
+        "[safari] Run failed: page.screenshot: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - taking page screenshot\u001b[22m\n\u001b[2m  - waiting for fonts to load...\u001b[22m\n\u001b[2m  - fonts loaded\u001b[22m\n",
+        "[safari] Browser launch failed: page.screenshot: Target page, context or browser has been closed",
+        "[edge] Browser context started"
+      ]
+    }
+  ]
+}

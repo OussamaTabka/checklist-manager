@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "run_id": "f8f45124-7b3c-4363-811e-44b07de708bf",
+  "status": "done",
+  "updated_at": "2026-04-16T18:48:27.201Z",
+  "cases": [
+    {
+      "external_id": 41,
+      "title": "Cross-Browser Compatibility",
+      "status": "passed",
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://www.apple.com -> ok (1762ms)",
+        "[chrome] Step 2: screenshot cross-browser-home -> ok (590ms)",
+        "[chrome] Assert 1: expect_visible css=body -> ok (37ms)",
+        "[chrome] Assert 2: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[chrome] Run completed successfully",
+        "[firefox] Browser context started",
+        "[firefox] Step 1: goto https://www.apple.com -> ok (2075ms)",
+        "[firefox] Step 2: screenshot cross-browser-home -> ok (1617ms)",
+        "[firefox] Assert 1: expect_visible css=body -> ok (31ms)",
+        "[firefox] Assert 2: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[firefox] Run completed successfully",
+        "[safari] Browser context started",
+        "[safari] Step 1: goto https://www.apple.com -> ok (2185ms)",
+        "[safari] Step 2: screenshot cross-browser-home -> ok (424ms)",
+        "[safari] Assert 1: expect_visible css=body -> ok (56ms)",
+        "[safari] Assert 2: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[safari] Run completed successfully",
+        "[edge] Browser context started",
+        "[edge] Step 1: goto https://www.apple.com -> ok (2568ms)",
+        "[edge] Step 2: screenshot cross-browser-home -> ok (707ms)",
+        "[edge] Assert 1: expect_visible css=body -> ok (33ms)",
+        "[edge] Assert 2: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[edge] Run completed successfully"
+      ]
+    }
+  ]
+}

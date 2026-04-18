@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "run_id": "ee148831-0b87-47ba-a6e0-dfded41958ba",
+  "runner_run_id": "runner-1776095915479",
+  "base_url_used": "https://www.apple.com/store",
+  "status": "done",
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 45,
+      "status": "passed",
+      "attempt": 1,
+      "duration_ms": 17779,
+      "error_type": null,
+      "error_message": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      },
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://www.apple.com/store -> ok (2573ms)",
+        "[chrome] Step 2: wait_for_selector css=nav a[href], header a[href], a[href] state=visible -> ok (655ms)",
+        "[chrome] Step 3: click css=nav a[href], header a[href], a[href] -> ok (2116ms)",
+        "[chrome] Step 4: screenshot navigation-after-click -> ok (105ms)",
+        "[chrome] Assert 1: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

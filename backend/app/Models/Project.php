@@ -49,4 +49,12 @@ class Project extends Model
             'checklist_id'
         )->withTimestamps();
     }
+
+    /**
+     * Get all user stories for this project
+     */
+    public function userStories(): HasMany
+    {
+        return $this->hasMany(UserStory::class);
+    }
 }

@@ -12,7 +12,15 @@ class ChecklistItem extends Model
         'description',
         'priority',
         'criticality',
-        'order'
+        'order',
+        'status',
+        'last_run_at',
+        'run_count',
+    ];
+
+    protected $casts = [
+        'last_run_at' => 'datetime',
+        'run_count' => 'integer',
     ];
 
     // Relation : item appartient à une checklist

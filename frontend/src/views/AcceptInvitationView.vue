@@ -80,7 +80,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section class="page" style="max-width: 520px; margin-top: 4rem">
+  <section class="page page-auth-lg">
     <div class="card stack">
       <div>
         <h1>Set up your account</h1>

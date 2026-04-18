@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "run_id": "0bffad31-9f72-4d5c-a367-7017196be6c5",
+  "status": "done",
+  "updated_at": "2026-04-16T18:42:11.051Z",
+  "cases": [
+    {
+      "external_id": 46,
+      "title": "Button Functionality",
+      "status": "passed",
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://www.apple.com -> ok (1739ms)",
+        "[chrome] Step 2: wait_for_selector css=main button:not([disabled]), main [role=\"button\"]:not([aria-disabled=\"true\"]), main input[type=\"button\"]:not([disabled]), main input[type=\"submit\"]:not([disabled]), main a[role=\"button\"], main a[href] state=visible -> ok (228ms)",
+        "[chrome] Step 3: click css=main button:not([disabled]), main [role=\"button\"]:not([aria-disabled=\"true\"]), main input[type=\"button\"]:not([disabled]), main input[type=\"submit\"]:not([disabled]), main a[role=\"button\"], main a[href] -> ok (1732ms)",
+        "[chrome] Step 4: screenshot button-functionality-after-click -> ok (1028ms)",
+        "[chrome] Assert 1: expect_visible css=main button:not([disabled]), main [role=\"button\"]:not([aria-disabled=\"true\"]), main input[type=\"button\"]:not([disabled]), main input[type=\"submit\"]:not([disabled]), main a[role=\"button\"], main a[href] -> ok (181ms)",
+        "[chrome] Assert 2: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

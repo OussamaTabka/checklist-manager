@@ -1,9 +1,13 @@
 <script setup>
-import { onMounted, reactive, ref, computed } from 'vue'
+import { onMounted, reactive, ref, computed, watch } from 'vue'
+import { CirclePlus, Filter, Search, X } from 'lucide-vue-next'
+import { useRoute, useRouter } from 'vue-router'
 import { apiRequest, withQuery } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
+const route = useRoute()
+const router = useRouter()
 
 const checklists = ref([])
 const pagination = reactive({ current_page: 1, last_page: 1 })
@@ -14,6 +18,15 @@ const submitting = ref(false)
 const availableItems = ref([])
 const selectedExistingItemId = ref('')
 const itemSearchQueries = ref({}) // Track search input for each item field
+const showChecklistForm = ref(false)
+const showAdvancedFilters = ref(false)
+
+const filters = reactive({
+  name: '',
+  type: '',
+  category: '',
+  search: '',
+})
 
 const defaultItem = () => ({
   id: null,
@@ -43,6 +56,53 @@ const addableExistingItems = computed(() => {
   })
 })
 
+const filteredChecklists = computed(() => {
+  return checklists.value.filter((checklist) => {
+    const checklistType = String(checklist.type || '').trim()
+    const checklistCategory = String(checklist.category || '').trim()
+
+    const matchesName =
+      filters.name.trim() === '' ||
+      String(checklist.name || '').toLowerCase().includes(filters.name.trim().toLowerCase())
+    const matchesType =
+      filters.type.trim() === '' ||
+      checklistType.toLowerCase().includes(filters.type.trim().toLowerCase())
+    const matchesCategory =
+      filters.category.trim() === '' ||
+      checklistCategory.toLowerCase().includes(filters.category.trim().toLowerCase())
+    const searchText = `${checklist.name || ''} ${checklist.description || ''} ${checklistCategory} ${checklistType}`.toLowerCase()
+    const matchesSearch =
+      filters.search.trim() === '' ||
+      searchText.includes(filters.search.trim().toLowerCase())
+
+    return matchesName && matchesType && matchesCategory && matchesSearch
+  })
+})
+
+const activeFilterBadges = computed(() => {
+  const badges = []
+
+  if (filters.search.trim() !== '') {
+    badges.push({ key: 'search', label: `Search: ${filters.search.trim()}` })
+  }
+
+  if (filters.name.trim() !== '') {
+    badges.push({ key: 'name', label: `Name: ${filters.name.trim()}` })
+  }
+
+  if (filters.type.trim() !== '') {
+    badges.push({ key: 'type', label: `Type: ${filters.type.trim()}` })
+  }
+
+  if (filters.category.trim() !== '') {
+    badges.push({ key: 'category', label: `Category: ${filters.category.trim()}` })
+  }
+
+  return badges
+})
+
+const hasActiveFilters = computed(() => activeFilterBadges.value.length > 0)
+
 // Compute filtered items for autocomplete based on search query
 const getFilteredItems = (itemIndex) => {
   const query = itemSearchQueries.value[itemIndex] || ''
@@ -64,7 +124,65 @@ function resetForm() {
   itemSearchQueries.value = {}
 }
 
+function openCreateChecklistForm() {
+  resetForm()
+  showChecklistForm.value = true
+}
+
+function consumeCreateQuery() {
+  if (route.query.create !== '1') {
+    return
+  }
+
+  const nextQuery = { ...route.query }
+  delete nextQuery.create
+  router.replace({ query: nextQuery })
+}
+
+function openCreateChecklistFormFromQuery() {
+  if (!auth.canManageChecklists || route.query.create !== '1') {
+    return
+  }
+
+  openCreateChecklistForm()
+  consumeCreateQuery()
+}
+
+function closeChecklistForm() {
+  resetForm()
+  showChecklistForm.value = false
+}
+
+function clearAllFilters() {
+  filters.name = ''
+  filters.type = ''
+  filters.category = ''
+  filters.search = ''
+}
+
+function removeFilter(key) {
+  if (key === 'name') {
+    filters.name = ''
+    return
+  }
+
+  if (key === 'type') {
+    filters.type = ''
+    return
+  }
+
+  if (key === 'category') {
+    filters.category = ''
+    return
+  }
+
+  if (key === 'search') {
+    filters.search = ''
+  }
+}
+
 function editChecklist(checklist) {
+  showChecklistForm.value = true
   form.id = checklist.id
   form.name = checklist.name
   form.description = checklist.description || ''
@@ -182,6 +300,7 @@ async function submitChecklist() {
     }
 
     resetForm()
+    showChecklistForm.value = false
     await loadChecklists()
   } catch (error) {
     errorMessage.value = error.data?.message || error.message
@@ -213,7 +332,15 @@ async function deleteChecklist(checklistId) {
 onMounted(async () => {
   await loadChecklists()
   await loadAvailableItems()
+  openCreateChecklistFormFromQuery()
 })
+
+watch(
+  () => route.query.create,
+  () => {
+    openCreateChecklistFormFromQuery()
+  },
+)
 </script>
 
 <template>
@@ -223,10 +350,67 @@ onMounted(async () => {
     </div>
 
     <div v-if="!auth.canManageChecklists" class="card error">
-      <p>Only project managers and content admins can create or edit checklists.</p>
+      <p>Only project managers and admins can create or edit checklists.</p>
     </div>
 
-    <div v-if="auth.canManageChecklists" class="card stack">
+    <div class="card stack stack-gap-sm">
+      <div class="search-top-row">
+        <div class="search-input-wrap">
+          <Search :size="18" :stroke-width="2.1" />
+          <input v-model="filters.search" placeholder="Search checklists..." class="search-input" />
+        </div>
+
+        <button
+          v-if="auth.canManageChecklists"
+          class="btn btn-primary create-project-btn"
+          type="button"
+          @click="openCreateChecklistForm"
+        >
+          <CirclePlus :size="16" />
+          <span>Create Checklist</span>
+        </button>
+      </div>
+
+      <div class="actions actions-between">
+        <button class="btn btn-secondary btn-sm" type="button" @click="showAdvancedFilters = !showAdvancedFilters">
+          <Filter :size="14" />
+          <span>{{ showAdvancedFilters ? 'Hide Filters' : 'Show Filters' }}</span>
+        </button>
+
+        <button v-if="hasActiveFilters" class="btn btn-secondary btn-sm" type="button" @click="clearAllFilters">
+          Clear all
+        </button>
+      </div>
+
+      <div v-if="showAdvancedFilters" class="grid filters-grid">
+        <div class="field">
+          <label>Name</label>
+          <input v-model="filters.name" placeholder="Filter by checklist name" />
+        </div>
+        <div class="field">
+          <label>Type</label>
+          <input v-model="filters.type" placeholder="Filter by checklist type" />
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <input v-model="filters.category" placeholder="Filter by checklist category" />
+        </div>
+      </div>
+
+      <div v-if="hasActiveFilters" class="active-filters-row">
+        <span class="muted active-filters-label">Filters applied:</span>
+        <div class="chip-row">
+          <span v-for="badge in activeFilterBadges" :key="badge.key" class="applied-chip">
+            {{ badge.label }}
+            <button type="button" @click="removeFilter(badge.key)">
+              <X :size="12" />
+            </button>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="auth.canManageChecklists && showChecklistForm" class="card stack">
       <h2>{{ form.id ? `Edit checklist #${form.id}` : 'Create checklist' }}</h2>
 
       <p v-if="errorMessage" class="error" data-testid="checklists-msg-error">{{ errorMessage }}</p>
@@ -283,7 +467,7 @@ onMounted(async () => {
                   </option>
                 </select>
               </div>
-              <div class="field" style="align-self: end;">
+              <div class="field field-end">
                 <button
                   type="button"
                   class="btn btn-secondary"
@@ -298,7 +482,7 @@ onMounted(async () => {
 
           <div v-for="(item, index) in form.items" :key="index" class="card stack">
             <div class="grid">
-              <div class="field" style="position: relative;">
+              <div class="field field-relative">
                 <label>Title</label>
                 <input 
                   v-model="item.title" 
@@ -308,33 +492,17 @@ onMounted(async () => {
                   placeholder="Start typing to search existing items..."
                 />
                 <!-- Autocomplete suggestions dropdown -->
-                <div v-if="getFilteredItems(index).length > 0 && itemSearchQueries[index]" 
-                     class="autocomplete-dropdown"
-                     style="
-                       position: absolute;
-                       top: 100%;
-                       left: 0;
-                       right: 0;
-                       background: white;
-                       border: 1px solid #ddd;
-                       border-top: none;
-                       max-height: 200px;
-                       overflow-y: auto;
-                       z-index: 10;
-                     ">
+                <div
+                  v-if="getFilteredItems(index).length > 0 && itemSearchQueries[index]"
+                  class="autocomplete-dropdown"
+                >
                   <div v-for="suggestion in getFilteredItems(index)" 
                        :key="suggestion.id"
                        @click="selectExistingItem(index, suggestion)"
-                       style="
-                         padding: 8px 12px;
-                         cursor: pointer;
-                         border-bottom: 1px solid #eee;
-                       "
-                       @mouseenter="$event.target.style.backgroundColor = '#f0f0f0'"
-                       @mouseleave="$event.target.style.backgroundColor = 'white'">
+                       class="autocomplete-option">
                     <strong>{{ suggestion.title }}</strong>
-                    <div style="font-size: 0.85em; color: #666;">{{ suggestion.description || 'No description' }}</div>
-                    <div style="font-size: 0.8em; color: #999;">
+                    <div class="autocomplete-desc">{{ suggestion.description || 'No description' }}</div>
+                    <div class="autocomplete-meta">
                       Priority: {{ suggestion.priority }} | Criticality: {{ suggestion.criticality }}
                     </div>
                   </div>
@@ -373,13 +541,14 @@ onMounted(async () => {
           <button class="btn btn-primary" type="submit" :disabled="submitting" data-testid="checklists-btn-submit">
             {{ submitting ? 'Saving...' : form.id ? 'Update checklist' : 'Create checklist' }}
           </button>
-          <button type="button" class="btn btn-secondary" @click="resetForm">Reset</button>
+          <button type="button" class="btn btn-secondary" @click="closeChecklistForm">Close</button>
         </div>
       </form>
     </div>
 
     <div class="card stack">
       <h2>Checklist list</h2>
+
       <p v-if="loading" class="muted">Loading checklists...</p>
 
       <div class="table-wrap" v-if="!loading">
@@ -395,7 +564,7 @@ onMounted(async () => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="checklist in checklists" :key="checklist.id">
+            <tr v-for="checklist in filteredChecklists" :key="checklist.id">
               <td>{{ checklist.id }}</td>
               <td>
                 <strong>{{ checklist.name }}</strong>
@@ -417,7 +586,7 @@ onMounted(async () => {
                 </div>
               </td>
             </tr>
-            <tr v-if="checklists.length === 0">
+            <tr v-if="filteredChecklists.length === 0">
               <td colspan="6" class="muted">No checklists found.</td>
             </tr>
           </tbody>

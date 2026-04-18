@@ -868,7 +868,7 @@ onMounted(async () => {
               </option>
             </select>
           </div>
-          <div class="actions" style="align-items: end; gap: 0.5rem;">
+          <div class="actions actions-end-gap">
             <button class="btn btn-primary" type="submit">Create version</button>
             <button 
               type="button"
@@ -883,7 +883,7 @@ onMounted(async () => {
       </div>
 
       <!-- Inline Checklist Editor Modal -->
-      <div v-if="showChecklistEditor" class="card stack" style="border: 2px dashed #007bff; background-color: #f8f9fa;">
+      <div v-if="showChecklistEditor" class="card stack checklist-editor-panel">
         <h3>Edit Checklist for New Version</h3>
         <p class="muted">Customize this checklist before creating the version. Changes won't affect the original checklist.</p>
         
@@ -925,7 +925,7 @@ onMounted(async () => {
                     </option>
                   </select>
                 </div>
-                <div class="field" style="align-self: end;">
+                <div class="field field-end">
                   <button
                     type="button"
                     class="btn btn-secondary"
@@ -940,7 +940,7 @@ onMounted(async () => {
 
             <div v-for="(item, index) in checklistEditorForm.items" :key="index" class="card stack">
               <div class="grid">
-                <div class="field" style="position: relative;">
+                <div class="field field-relative">
                   <label>Title</label>
                   <input 
                     v-model="item.title" 
@@ -949,33 +949,17 @@ onMounted(async () => {
                     @focus="loadAvailableItems"
                     placeholder="Start typing to search existing items..."
                   />
-                  <div v-if="getFilteredItemsInEditor(index).length > 0 && itemSearchQueries[index]" 
-                       class="autocomplete-dropdown"
-                       style="
-                         position: absolute;
-                         top: 100%;
-                         left: 0;
-                         right: 0;
-                         background: white;
-                         border: 1px solid #ddd;
-                         border-top: none;
-                         max-height: 200px;
-                         overflow-y: auto;
-                         z-index: 10;
-                       ">
+                  <div
+                    v-if="getFilteredItemsInEditor(index).length > 0 && itemSearchQueries[index]"
+                    class="autocomplete-dropdown"
+                  >
                     <div v-for="suggestion in getFilteredItemsInEditor(index)" 
                          :key="suggestion.id"
                          @click="selectExistingItemInEditor(index, suggestion)"
-                         style="
-                           padding: 8px 12px;
-                           cursor: pointer;
-                           border-bottom: 1px solid #eee;
-                         "
-                         @mouseenter="$event.target.style.backgroundColor = '#f0f0f0'"
-                         @mouseleave="$event.target.style.backgroundColor = 'white'">
+                         class="autocomplete-option">
                       <strong>{{ suggestion.title }}</strong>
-                      <div style="font-size: 0.85em; color: #666;">{{ suggestion.description || 'No description' }}</div>
-                      <div style="font-size: 0.8em; color: #999;">
+                      <div class="autocomplete-desc">{{ suggestion.description || 'No description' }}</div>
+                      <div class="autocomplete-meta">
                         Priority: {{ suggestion.priority }} | Criticality: {{ suggestion.criticality }}
                       </div>
                     </div>
@@ -1027,8 +1011,8 @@ onMounted(async () => {
               </option>
             </select>
           </div>
-          <div style="align-items: end; display: flex; gap: 0.5rem">
-            <div v-if="selectedVersionId" style="position: relative">
+          <div class="actions-row-end">
+            <div v-if="selectedVersionId" class="relative-wrap">
               <button
                 class="btn btn-secondary btn-sm"
                 @click="openExportDropdown = openExportDropdown === 'version' ? null : 'version'"
@@ -1037,8 +1021,7 @@ onMounted(async () => {
               </button>
               <div
                 v-if="openExportDropdown === 'version'"
-                class="card stack"
-                style="position: absolute; right: 0; top: calc(100% + 0.4rem); z-index: 20; min-width: 120px; padding: 0.4rem"
+                class="card stack export-dropdown-menu"
               >
                 <button class="btn btn-secondary btn-sm" @click="exportVersion(Number(selectedVersionId), 'csv')">CSV</button>
                 <button class="btn btn-secondary btn-sm" @click="exportVersion(Number(selectedVersionId), 'pdf')">PDF</button>
@@ -1046,7 +1029,7 @@ onMounted(async () => {
               </div>
             </div>
 
-            <div style="position: relative">
+            <div class="relative-wrap">
               <button
                 class="btn btn-secondary btn-sm"
                 @click="openExportDropdown = openExportDropdown === 'project' ? null : 'project'"
@@ -1055,8 +1038,7 @@ onMounted(async () => {
               </button>
               <div
                 v-if="openExportDropdown === 'project'"
-                class="card stack"
-                style="position: absolute; right: 0; top: calc(100% + 0.4rem); z-index: 20; min-width: 120px; padding: 0.4rem"
+                class="card stack export-dropdown-menu"
               >
                 <button class="btn btn-secondary btn-sm" @click="exportProject('csv')">CSV</button>
                 <button class="btn btn-secondary btn-sm" @click="exportProject('pdf')">PDF</button>
@@ -1138,7 +1120,7 @@ onMounted(async () => {
                 <tr>
                   <td>{{ item.order + 1 }}</td>
                   <td>
-                    <strong style="cursor: pointer; color: #2563eb" @click="selectedItemId === item.id ? (selectedItemId = null) : (selectedItemId = item.id, loadComments(item.id))">
+                    <strong class="item-title-link" @click="selectedItemId === item.id ? (selectedItemId = null) : (selectedItemId = item.id, loadComments(item.id))">
                       {{ item.title }}
                     </strong>
                     <div class="muted">{{ item.description || '-' }}</div>
@@ -1159,7 +1141,7 @@ onMounted(async () => {
                     </select>
                   </td>
                   <td>
-                    <div class="stack" style="gap: 0.4rem">
+                    <div class="stack run-actions-stack">
                       <span :class="executionStateClass(stateForItem(item).execution_state)">
                         {{ executionStateLabel(stateForItem(item).execution_state) }}
                       </span>
@@ -1173,20 +1155,19 @@ onMounted(async () => {
                         :href="getArtifactUrl(item)"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="muted"
-                        style="font-size: 0.8rem; text-decoration: underline"
+                        class="muted artifact-link"
                       >
                         View artifacts
                       </a>
 
-                      <span v-if="stateForItem(item).last_error_message" class="error" style="padding: 0.5rem; font-size: 0.75rem; margin: 0">
+                      <span v-if="stateForItem(item).last_error_message" class="error run-error-inline">
                         {{ stateForItem(item).last_error_message }}
                       </span>
 
-                      <details v-if="stateForItem(item).execution_trace?.length" style="font-size: 0.78rem">
-                        <summary class="muted" style="cursor: pointer">Execution trace ({{ stateForItem(item).execution_trace.length }})</summary>
-                        <ol style="margin: 0.35rem 0 0; padding-left: 1.1rem; max-height: 12rem; overflow: auto">
-                          <li v-for="(line, index) in stateForItem(item).execution_trace" :key="`${item.id}-trace-${index}`" style="margin-bottom: 0.2rem">
+                      <details v-if="stateForItem(item).execution_trace?.length" class="trace-details">
+                        <summary class="muted trace-summary">Execution trace ({{ stateForItem(item).execution_trace.length }})</summary>
+                        <ol class="trace-list">
+                          <li v-for="(line, index) in stateForItem(item).execution_trace" :key="`${item.id}-trace-${index}`" class="trace-item">
                             {{ line }}
                           </li>
                         </ol>
@@ -1195,12 +1176,12 @@ onMounted(async () => {
                   </td>
                 </tr>
                 <tr v-if="selectedItemId === item.id">
-                  <td colspan="7" style="padding: 1.5rem">
+                  <td colspan="7" class="detail-row-cell">
                     <div class="card stack">
-                      <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0;">
+                      <div class="tabs-row">
                         <button 
                           :class="['btn btn-secondary btn-sm', { 'btn-primary': !showHistory }]" 
-                          style="display: inline-flex; align-items: center; gap: 0.35rem;"
+                          class="btn-icon-tight"
                           @click="showHistory = false; loadComments(item.id)"
                         >
                           <MessageCircle :size="16" />
@@ -1208,7 +1189,7 @@ onMounted(async () => {
                         </button>
                         <button 
                           :class="['btn btn-secondary btn-sm', { 'btn-primary': showHistory }]" 
-                          style="display: inline-flex; align-items: center; gap: 0.35rem;"
+                          class="btn-icon-tight"
                           @click="showHistory = true; loadHistory(item.id)"
                         >
                           <ClipboardList :size="16" />
@@ -1218,16 +1199,16 @@ onMounted(async () => {
 
                       <!-- COMMENTS TAB -->
                       <div v-if="!showHistory" class="stack">
-                        <h4 style="margin: 0 0 1rem 0">Comments</h4>
+                        <h4 class="subsection-title">Comments</h4>
                         <div v-if="commentsLoading" class="muted">Loading comments...</div>
                         <div v-else class="stack">
                           <div v-if="comments.length === 0" class="muted">No comments yet.</div>
                           <div v-for="comment in comments" :key="comment.id" class="comment-item">
-                            <div style="display: flex; justify-content: space-between; align-items: center">
+                            <div class="comment-head-row">
                               <strong>{{ comment.user?.name || 'Anonymous' }}</strong>
                               <button v-if="comment.user_id === auth.user.id || auth.isAdmin" class="btn btn-danger btn-sm" @click="deleteComment(comment.id, item.id)">Delete</button>
                             </div>
-                            <p class="muted" style="font-size: 0.85rem; margin: 0.25rem 0">{{ new Date(comment.created_at).toLocaleString() }}</p>
+                            <p class="muted comment-time">{{ new Date(comment.created_at).toLocaleString() }}</p>
                             <p>{{ comment.content }}</p>
                           </div>
                         </div>
@@ -1244,8 +1225,8 @@ onMounted(async () => {
                             accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.zip,.txt,.csv"
                             @change="onFileSelected"
                           />
-                          <p v-if="newCommentFile" class="muted" style="margin-top: 0.5rem; font-size: 0.9rem">
-                            <span style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                          <p v-if="newCommentFile" class="muted attachment-text">
+                            <span class="attachment-pill">
                               <Paperclip :size="14" />
                               <span>{{ newCommentFile.name }} ({{ (newCommentFile.size / 1024).toFixed(2) }} KB)</span>
                             </span>
@@ -1257,22 +1238,22 @@ onMounted(async () => {
 
                       <!-- CHANGE HISTORY TAB -->
                       <div v-if="showHistory" class="stack">
-                        <h4 style="margin: 0 0 1rem 0">Complete History & Traceability</h4>
+                        <h4 class="subsection-title">Complete History & Traceability</h4>
                         
                         <!-- Testing Info Summary -->
-                        <div v-if="itemHistory.tested_by || itemHistory.tested_at" style="background: #f3f4f6; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; border-left: 4px solid #059669;">
-                          <div style="font-weight: 600; color: #047857; margin-bottom: 0.5rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                        <div v-if="itemHistory.tested_by || itemHistory.tested_at" class="history-tested-box">
+                          <div class="history-tested-title">
                             <CheckCircle2 :size="16" />
                             <span>Tested</span>
                           </div>
-                          <div v-if="itemHistory.tested_by" style="font-size: 0.9rem; margin-bottom: 0.25rem;">
+                          <div v-if="itemHistory.tested_by" class="history-tested-line">
                             <strong>Tested by:</strong> {{ itemHistory.tested_by.name }}
                           </div>
-                          <div v-if="itemHistory.tested_at" style="font-size: 0.9rem;">
+                          <div v-if="itemHistory.tested_at" class="history-tested-line">
                             <strong>Tested at:</strong> {{ new Date(itemHistory.tested_at).toLocaleString() }}
                           </div>
-                          <div style="font-size: 0.9rem; margin-top: 0.5rem;">
-                            <strong>Status:</strong> <span style="background: #dcfce7; padding: 0.25rem 0.5rem; border-radius: 0.25rem; color: #15803d;">{{ itemHistory.current_status }}</span>
+                          <div class="history-tested-status-line">
+                            <strong>Status:</strong> <span class="history-tested-status-pill">{{ itemHistory.current_status }}</span>
                           </div>
                         </div>
 
@@ -1281,53 +1262,53 @@ onMounted(async () => {
                         <div v-else>
                           <div v-if="itemHistory.timeline.length === 0" class="muted">No history events recorded.</div>
                           <div v-else>
-                            <div v-for="event in itemHistory.timeline" :key="event.id" style="padding: 1rem; margin-bottom: 0.75rem; border-radius: 0.5rem; border-left: 4px solid;" :style="getEventBorderColor(event.type)">
+                            <div v-for="event in itemHistory.timeline" :key="event.id" class="timeline-event" :style="getEventBorderColor(event.type)">
                               
                               <!-- Status Change Event -->
                               <template v-if="event.type === 'change'">
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                <div class="timeline-event-head">
                                   <div>
-                                    <strong style="font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                                    <strong class="timeline-event-title">
                                       <FilePenLine :size="16" />
                                       <span>Status Changed</span>
                                     </strong>
-                                    <div class="muted" style="font-size: 0.85rem; margin-top: 0.25rem;">
+                                    <div class="muted timeline-event-meta">
                                       {{ event.field_name }}: <strong>{{ event.old_value }}</strong> → <strong>{{ event.new_value }}</strong>
                                     </div>
                                   </div>
                                   <small class="muted">{{ new Date(event.timestamp).toLocaleString() }}</small>
                                 </div>
-                                <div style="margin-top: 0.5rem;">
+                                <div class="timeline-meta-block">
                                   <small class="muted">Changed by: <strong>{{ event.user_name }}</strong></small>
                                 </div>
-                                <div v-if="event.old_value || event.new_value" style="background: white; padding: 0.75rem; border-radius: 0.375rem; margin-top: 0.5rem; display: flex; gap: 1rem;">
-                                  <div v-if="event.old_value" style="flex: 1;">
-                                    <small style="color: #991b1b; font-weight: 500;">Previous</small>
-                                    <div style="font-family: monospace; background: #fee2e2; padding: 0.5rem; border-radius: 0.25rem; color: #991b1b; font-size: 0.85rem;">{{ event.old_value }}</div>
+                                <div v-if="event.old_value || event.new_value" class="timeline-change-grid">
+                                  <div v-if="event.old_value" class="timeline-change-col">
+                                    <small class="timeline-old-label">Previous</small>
+                                    <div class="timeline-old-value">{{ event.old_value }}</div>
                                   </div>
-                                  <div v-if="event.new_value" style="flex: 1;">
-                                    <small style="color: #15803d; font-weight: 500;">New</small>
-                                    <div style="font-family: monospace; background: #dcfce7; padding: 0.5rem; border-radius: 0.25rem; color: #15803d; font-size: 0.85rem;">{{ event.new_value }}</div>
+                                  <div v-if="event.new_value" class="timeline-change-col">
+                                    <small class="timeline-new-label">New</small>
+                                    <div class="timeline-new-value">{{ event.new_value }}</div>
                                   </div>
                                 </div>
                               </template>
 
                               <!-- Comment Event -->
                               <template v-if="event.type === 'comment'">
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                <div class="timeline-event-head">
                                   <div>
-                                    <strong style="font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                                    <strong class="timeline-event-title">
                                       <MessageCircle :size="16" />
                                       <span>Comment Added</span>
                                     </strong>
-                                    <div class="muted" style="font-size: 0.85rem; margin-top: 0.25rem;">
+                                    <div class="muted timeline-event-meta">
                                       By: <strong>{{ event.user_name }}</strong>
                                     </div>
                                   </div>
                                   <small class="muted">{{ new Date(event.timestamp).toLocaleString() }}</small>
                                 </div>
-                                <p style="margin: 0.75rem 0; padding: 0.75rem; background: white; border-radius: 0.375rem; border-left: 2px solid #7c3aed;">{{ event.content }}</p>
-                                <div v-if="event.file_name" style="padding: 0.5rem; background: #f3f4f6; border-radius: 0.25rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                                <p class="timeline-comment">{{ event.content }}</p>
+                                <div v-if="event.file_name" class="timeline-file-box">
                                   <Paperclip :size="14" />
                                   <strong>{{ event.file_name }}</strong>
                                   <span class="muted">({{ event.file_size ? (event.file_size / 1024).toFixed(2) : '?' }} KB)</span>
@@ -1336,32 +1317,32 @@ onMounted(async () => {
 
                               <!-- Test Event -->
                               <template v-if="event.type === 'test'">
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                <div class="timeline-event-head">
                                   <div>
-                                    <strong style="font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                                    <strong class="timeline-event-title">
                                       <CheckCircle2 :size="16" />
                                       <span>Item Tested</span>
                                     </strong>
-                                    <div class="muted" style="font-size: 0.85rem; margin-top: 0.25rem;">
-                                      Result: <strong style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; background: #dcfce7; color: #15803d;">{{ event.status }}</strong>
+                                    <div class="muted timeline-event-meta">
+                                      Result: <strong class="timeline-result-pill">{{ event.status }}</strong>
                                     </div>
                                   </div>
                                   <small class="muted">{{ new Date(event.timestamp).toLocaleString() }}</small>
                                 </div>
-                                <div style="margin-top: 0.5rem;">
+                                <div class="timeline-meta-block">
                                   <small class="muted">Tested by: <strong>{{ event.user_name }}</strong></small>
                                 </div>
                               </template>
 
                               <!-- Execution Failure Event -->
                               <template v-if="event.type === 'execution'">
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                <div class="timeline-event-head">
                                   <div>
-                                    <strong style="font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                                    <strong class="timeline-event-title">
                                       <ClipboardList :size="16" />
                                       <span>Execution Failed</span>
                                     </strong>
-                                    <div class="muted" style="font-size: 0.85rem; margin-top: 0.25rem;">
+                                    <div class="muted timeline-event-meta">
                                       <span v-if="event.run_id">Run: <strong>{{ event.run_id }}</strong></span>
                                       <span v-if="event.error_type"> • Type: <strong>{{ event.error_type }}</strong></span>
                                     </div>
@@ -1369,11 +1350,11 @@ onMounted(async () => {
                                   <small class="muted">{{ new Date(event.timestamp).toLocaleString() }}</small>
                                 </div>
 
-                                <p style="margin: 0.75rem 0; padding: 0.75rem; background: #fff; border-radius: 0.375rem; border-left: 2px solid #ea580c; white-space: pre-wrap;">
+                                <p class="timeline-execution-error">
                                   {{ event.error_message || 'Execution failed without an explicit error message.' }}
                                 </p>
 
-                                <div style="margin-top: 0.5rem;">
+                                <div class="timeline-meta-block">
                                   <small class="muted" v-if="event.user_name">Requested by: <strong>{{ event.user_name }}</strong></small>
                                 </div>
                               </template>
@@ -1392,14 +1373,14 @@ onMounted(async () => {
 
       <div
         v-if="runModalOpen"
-        style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); z-index: 60; display: grid; place-items: center; padding: 1rem"
+        class="run-modal-overlay"
       >
-        <div class="card stack" style="width: min(620px, 96vw)">
-          <div class="section-header" style="margin-bottom: 0">
+        <div class="card stack run-modal-card">
+          <div class="section-header section-header-tight">
             <h3>Run Test Case</h3>
           </div>
 
-          <p class="muted" style="margin-top: 0">
+          <p class="muted modal-intro">
             Provide target website info for this run.
           </p>
 
@@ -1417,18 +1398,18 @@ onMounted(async () => {
                 <input v-model="runForm.environmentName" placeholder="staging" :disabled="runSubmitBusy" />
               </div>
 
-              <div class="field" style="justify-content: end">
-                <label style="text-transform: none; letter-spacing: normal; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem">
+              <div class="field field-end-controls">
+                <label class="checkbox-label">
                   <input type="checkbox" v-model="runForm.useAuth" :disabled="runSubmitBusy" />
                   <span>Use authenticated flow</span>
                 </label>
-                <p class="muted" style="margin: 0; font-size: 0.8rem">Uncheck to run unauthenticated.</p>
+                <p class="muted checkbox-help">Uncheck to run unauthenticated.</p>
 
-                <label style="margin-top: 0.5rem; text-transform: none; letter-spacing: normal; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem">
+                <label class="checkbox-label checkbox-label-spaced">
                   <input type="checkbox" v-model="runForm.watchMode" :disabled="runSubmitBusy" />
                   <span>Watch mode (open browser window)</span>
                 </label>
-                <p class="muted" style="margin: 0; font-size: 0.8rem">Keep enabled to watch the test live in an external browser.</p>
+                <p class="muted checkbox-help">Keep enabled to watch the test live in an external browser.</p>
               </div>
             </div>
 

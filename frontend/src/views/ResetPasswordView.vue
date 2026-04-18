@@ -39,7 +39,7 @@ async function onSubmit() {
 </script>
 
 <template>
-  <section class="page" style="max-width: 460px; margin-top: 4rem">
+  <section class="page page-auth-md">
     <div class="card stack">
       <div>
         <h1>Reset password</h1>
