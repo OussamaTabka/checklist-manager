@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -64,6 +66,54 @@ class AuthController extends Controller
         return response()->json([
             'user' => $request->user(),
             'roles' => $request->user()->getRoleNames(),
+        ]);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', Rule::unique('users')->ignore($user->id)],
+        ]);
+
+        $user->fill([
+            'name' => $data['name'],
+            'email' => $data['email'],
+        ])->save();
+
+        return response()->json([
+            'user' => $user,
+            'roles' => $user->getRoleNames(),
+            'message' => 'Profile updated successfully',
+        ]);
+    }
+
+    public function changePassword(Request $request)
+    {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $data = $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => ['required', 'string', 'confirmed', 'min:8', 'different:current_password'],
+        ]);
+
+        if (!$user->password || !Hash::check($data['current_password'], $user->password)) {
+            return response()->json([
+                'message' => 'Current password is incorrect',
+            ], 422);
+        }
+
+        $user->forceFill([
+            'password' => $data['password'],
+            'remember_token' => Str::random(60),
+        ])->save();
+
+        return response()->json([
+            'message' => 'Password updated successfully',
         ]);
     }
 

@@ -36,18 +36,6 @@ const averageSuccessRate = computed(() => {
   return Number((total / projectSuccessRows.value.length).toFixed(1))
 })
 
-const averageCompletion = computed(() => {
-  if (!projectSuccessRows.value.length) return 0
-  const total = projectSuccessRows.value.reduce((sum, row) => sum + (Number(row.completion) || 0), 0)
-  return Number((total / projectSuccessRows.value.length).toFixed(1))
-})
-
-const qualityScore = computed(() => {
-  const penalty = Math.min(failedCriticalItems.value * 3, 35)
-  const weighted = (averageSuccessRate.value * 0.65) + (averageCompletion.value * 0.35)
-  return Math.max(0, Number((weighted - penalty).toFixed(1)))
-})
-
 const previousWeekSuccessRate = computed(() => {
   const previous = Math.max(0, averageSuccessRate.value - 4)
   return Number(previous.toFixed(1))

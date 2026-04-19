@@ -131,6 +131,7 @@ export const useAuthStore = defineStore('auth', () => {
       const data = await apiRequest('/me', {}, token.value)
       user.value = data.user
       roles.value = data.roles || []
+      localStorage.setItem('auth_user', JSON.stringify({ user: user.value, roles: roles.value }))
       return data
     } catch {
       clear()
@@ -138,10 +139,31 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function updateProfile(payload) {
+    const data = await apiRequest('/me', {
+      method: 'PUT',
+      body: payload,
+    }, token.value)
+
+    user.value = data.user
+    roles.value = data.roles || roles.value
+    localStorage.setItem('auth_user', JSON.stringify({ user: user.value, roles: roles.value }))
+
+    return data
+  }
+
+  async function changePassword(payload) {
+    return await apiRequest('/me/password', {
+      method: 'PUT',
+      body: payload,
+    }, token.value)
+  }
+
   async function logout() {
     try {
       await apiRequest('/logout', { method: 'POST' }, token.value)
     } catch {
+      // The local session is cleared even if the API call fails.
     }
 
     clear()
@@ -183,6 +205,8 @@ export const useAuthStore = defineStore('auth', () => {
     requestPasswordReset,
     resetPassword,
     fetchMe,
+    updateProfile,
+    changePassword,
     logout,
     hasAnyRole,
   }

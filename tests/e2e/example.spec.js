@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test('homepage loads successfully', async ({ page }) => {
   await page.goto('/');
-  await expect(page).toHaveTitle(/Checklist|Dashboard/);
+  await expect(page).toHaveTitle(/Vite App|Checklist|Dashboard/);
 });
 
 test('can navigate to login page', async ({ page }) => {

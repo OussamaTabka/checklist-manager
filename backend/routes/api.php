@@ -31,6 +31,8 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
         // ==========================================
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
+        Route::put('/me', [AuthController::class, 'updateProfile']);
+        Route::put('/me/password', [AuthController::class, 'changePassword']);
         Route::get('/token', [AuthController::class, 'getToken']); // Get API token for authenticated user
 
         // ==========================================

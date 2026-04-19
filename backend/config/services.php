@@ -45,8 +45,23 @@ return [
     ],
 
     'test_generation' => [
-        // Provider: 'local-llm' (default), 'evomaster', or 'fallback'
+        // Provider: 'openai', 'anthropic', 'local-llm', 'evomaster', or 'fallback'
         'provider' => env('TEST_GENERATION_PROVIDER', 'local-llm'),
+
+        // Shared LLM tuning
+        'timeout' => (int) env('LLM_TIMEOUT', 120),
+        'max_tokens' => (int) env('LLM_MAX_TOKENS', 1200),
+
+        // OpenAI Configuration
+        'openai_url' => env('OPENAI_API_URL', 'https://api.openai.com/v1'),
+        'openai_model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
+        'openai_api_key' => env('OPENAI_API_KEY'),
+
+        // Anthropic Configuration
+        'anthropic_url' => env('ANTHROPIC_API_URL', 'https://api.anthropic.com/v1'),
+        'anthropic_model' => env('ANTHROPIC_MODEL', 'claude-3-5-sonnet-latest'),
+        'anthropic_api_key' => env('ANTHROPIC_API_KEY'),
+        'anthropic_version' => env('ANTHROPIC_VERSION', '2023-06-01'),
         
         // Local LLM Configuration (Ollama, LM Studio, etc.)
         'llm_url' => env('LLM_API_URL', 'http://localhost:11434'),

@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, computed, ref } from 'vue'
+import { onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStoriesStore } from '@/stores/userStories'
 import { useAuthStore } from '@/stores/auth'
@@ -12,6 +12,13 @@ const auth = useAuthStore()
 
 const projectId = computed(() => route.query.projectId || null)
 const storyId = route.params.id
+const resolvedProjectId = computed(() => projectId.value || storiesStore.currentStory?.project_id || null)
+
+const linkedItemsCount = computed(() => {
+  return (storiesStore.currentStory?.checklists || []).reduce((total, checklist) => {
+    return total + (Array.isArray(checklist.items) ? checklist.items.length : 0)
+  }, 0)
+})
 
 const statusLabels = {
   backlog: 'Backlog',
@@ -68,12 +75,23 @@ async function detachChecklist(checklistId) {
 }
 
 function editStory() {
-  if (!projectId.value) return
+  if (!resolvedProjectId.value) return
 
   router.push({
     name: 'story-edit',
     params: { id: storyId },
-    query: { projectId: projectId.value },
+    query: { projectId: resolvedProjectId.value },
+  })
+}
+
+function goToProjectDetail() {
+  if (!resolvedProjectId.value) {
+    return
+  }
+
+  router.push({
+    name: 'project-detail',
+    params: { id: resolvedProjectId.value },
   })
 }
 
@@ -96,7 +114,17 @@ onMounted(() => {
       <div class="flex-1">
         <h1 class="text-2xl font-bold">{{ storiesStore.currentStory?.title || 'Chargement...' }}</h1>
         <p class="text-gray-500 text-sm">Story ID: #{{ storyId }}</p>
+        <p class="text-gray-500 text-sm">
+          Projet lié: #{{ resolvedProjectId || 'N/A' }}
+        </p>
       </div>
+      <button
+        v-if="resolvedProjectId"
+        @click="goToProjectDetail"
+        class="px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 transition"
+      >
+        Voir Projet
+      </button>
       <button
         v-if="auth.isProjectManager && storiesStore.currentStory"
         @click="editStory"
@@ -124,6 +152,11 @@ onMounted(() => {
           <span :class="['inline-block px-3 py-1 rounded-full text-sm font-medium border', priorityColors[storiesStore.currentStory.priority]]">
             {{ storiesStore.currentStory.priority.charAt(0).toUpperCase() + storiesStore.currentStory.priority.slice(1) }}
           </span>
+        </div>
+        <div>
+          <p class="text-sm text-gray-600 mb-2">Liens checklist</p>
+          <p class="text-lg font-semibold">{{ storiesStore.currentStory.checklists?.length || 0 }} checklists</p>
+          <p class="text-sm text-gray-500">{{ linkedItemsCount }} item(s) liés</p>
         </div>
       </div>
 
@@ -179,6 +212,9 @@ onMounted(() => {
             <div class="flex-1">
               <h3 class="font-semibold text-gray-900">{{ checklist.name }}</h3>
               <p class="text-sm text-gray-600 mt-1">{{ checklist.description }}</p>
+              <p class="text-xs text-gray-500 mt-2">
+                Checklist #{{ checklist.id }} | {{ checklist.items?.length || 0 }} item(s)
+              </p>
             </div>
             <button
               v-if="auth.isProjectManager"

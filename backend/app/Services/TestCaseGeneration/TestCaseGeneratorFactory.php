@@ -14,6 +14,8 @@ class TestCaseGeneratorFactory
      * Available generators
      */
     private const GENERATORS = [
+        'openai' => OpenAIGenerator::class,
+        'anthropic' => AnthropicGenerator::class,
         'evomaster' => EvoMasterGenerator::class,
         'local-llm' => LocalLLMGenerator::class,
         'fallback' => FallbackGenerator::class,
@@ -37,7 +39,8 @@ class TestCaseGeneratorFactory
                 continue;
             }
 
-            $generator = new self::GENERATORS[$generatorName]();
+            $generatorClass = self::GENERATORS[$generatorName];
+            $generator = new $generatorClass();
 
             if ($generator->isAvailable()) {
                 return $generator;

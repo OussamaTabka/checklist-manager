@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useRouter } from 'vue-router'
 import { Settings, Moon, Sun, Globe } from 'lucide-vue-next'
@@ -8,11 +8,6 @@ import { t } from '@/lib/translations'
 const router = useRouter()
 const settingsStore = useSettingsStore()
 const isOpen = ref(false)
-
-const currentLanguage = computed(() => {
-  const lang = settingsStore.languages.find(l => l.code === settingsStore.language)
-  return lang?.flag || '🇫🇷'
-})
 
 function openSettings() {
   router.push({ name: 'settings' })

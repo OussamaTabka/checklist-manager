@@ -14,12 +14,15 @@ import {
   UsersRound,
 } from 'lucide-vue-next'
 import { apiRequest, withQuery } from '@/lib/api'
+import { t } from '@/lib/translations'
 import { useAuthStore } from '@/stores/auth'
+import { useSettingsStore } from '@/stores/settings'
 import LogoHeader from '@/components/LogoHeader.vue'
 
 const SIDEBAR_STORAGE_KEY = 'ui_sidebar_collapsed'
 
 const auth = useAuthStore()
+const settingsStore = useSettingsStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -28,26 +31,52 @@ const profileInitial = computed(() => {
   const source = String(auth.user?.name || 'U').trim()
   return source ? source[0].toUpperCase() : 'U'
 })
+const primaryRoleLabel = computed(() => String(auth.roles?.[0] || 'user').toUpperCase())
 
 const isSidebarCollapsed = ref(localStorage.getItem(SIDEBAR_STORAGE_KEY) === '1')
 const showProfileMenu = ref(false)
+const showInlineSettings = ref(false)
+const showProfileEditPanel = ref(false)
+const showPasswordPanel = ref(false)
 const showSearchMenu = ref(false)
 const showNotificationPanel = ref(false)
 const globalQuery = ref('')
+
+const profileFeedback = ref('')
+const profileError = ref('')
 
 const profileMenuRef = ref(null)
 const searchMenuRef = ref(null)
 const notificationsRef = ref(null)
 
 const headerMetrics = reactive({
+  totalProjects: 0,
   testsFailed: 0,
   failedCriticalItems: 0,
+  testsRun: 0,
+})
+
+const entityTotals = reactive({
+  users: 0,
+  projects: 0,
 })
 
 const searchIndex = reactive({
   projects: [],
   checklists: [],
   users: [],
+  availableTesters: [],
+})
+
+const profileForm = reactive({
+  name: '',
+  email: '',
+})
+
+const passwordForm = reactive({
+  current_password: '',
+  password: '',
+  password_confirmation: '',
 })
 
 const sidebarSections = computed(() => {
@@ -160,6 +189,100 @@ const notificationItems = computed(() => {
   return items
 })
 
+const currentThemeLabel = computed(() =>
+  settingsStore.darkMode
+    ? t('settings.darkModeEnabled', settingsStore.language)
+    : t('settings.darkModeDisabled', settingsStore.language),
+)
+
+const testsPassed = computed(() => Math.max(0, headerMetrics.testsRun - headerMetrics.testsFailed))
+
+const testerCount = computed(() =>
+  searchIndex.availableTesters.filter((user) => user.roles.includes('testeur')).length,
+)
+
+const lastLoginLabel = computed(() => {
+  const raw = auth.user?.last_login_at
+
+  if (!raw) {
+    return t('profile.today', settingsStore.language)
+  }
+
+  const date = new Date(raw)
+  if (Number.isNaN(date.getTime())) {
+    return t('profile.today', settingsStore.language)
+  }
+
+  return new Intl.DateTimeFormat(settingsStore.language, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date)
+})
+
+const profileActivityItems = computed(() => {
+  const items = [{
+    key: 'last-login',
+    label: t('profile.lastLogin', settingsStore.language),
+    value: lastLoginLabel.value,
+  }]
+
+  if (auth.isSystemAdmin) {
+    items.push({
+      key: 'users',
+      label: t('profile.totalUsers', settingsStore.language),
+      value: entityTotals.users,
+    })
+    items.push({
+      key: 'projects',
+      label: t('profile.totalProjects', settingsStore.language),
+      value: headerMetrics.totalProjects,
+    })
+    items.push({
+      key: 'tests-total',
+      label: t('profile.totalTests', settingsStore.language),
+      value: headerMetrics.testsRun,
+    })
+    return items
+  }
+
+  if (auth.isProjectManager) {
+    items.push({
+      key: 'my-projects',
+      label: t('profile.myProjects', settingsStore.language),
+      value: headerMetrics.totalProjects,
+    })
+    items.push({
+      key: 'assigned-testers',
+      label: t('profile.assignedTesters', settingsStore.language),
+      value: testerCount.value,
+    })
+    items.push({
+      key: 'validated-tests',
+      label: t('profile.validatedTests', settingsStore.language),
+      value: testsPassed.value,
+    })
+    return items
+  }
+
+  items.push({
+    key: 'executed-tests',
+    label: t('profile.executedTests', settingsStore.language),
+    value: headerMetrics.testsRun,
+  })
+  items.push({
+    key: 'passed-tests',
+    label: t('profile.passedTests', settingsStore.language),
+    value: testsPassed.value,
+  })
+  items.push({
+    key: 'failed-tests',
+    label: t('profile.failedTests', settingsStore.language),
+    value: headerMetrics.testsFailed,
+  })
+
+  return items
+})
+
 const globalSearchResults = computed(() => {
   const q = globalQuery.value.trim().toLowerCase()
 
@@ -235,11 +358,15 @@ async function loadHeaderMetrics() {
 
   try {
     const summary = await apiRequest('/dashboard/summary', {}, auth.token)
+    headerMetrics.totalProjects = Number(summary.totalProjects || 0)
     headerMetrics.testsFailed = Number(summary.testsFailed || 0)
     headerMetrics.failedCriticalItems = Number(summary.failedCriticalItems || 0)
+    headerMetrics.testsRun = Number(summary.testsRun || 0)
   } catch {
+    headerMetrics.totalProjects = 0
     headerMetrics.testsFailed = 0
     headerMetrics.failedCriticalItems = 0
+    headerMetrics.testsRun = 0
   }
 }
 
@@ -256,18 +383,21 @@ async function loadGlobalSearchIndex() {
     auth.canManageUsers
       ? apiRequest(withQuery('/users', { page: 1 }), {}, auth.token)
       : Promise.resolve([]),
+    apiRequest('/available-testers', {}, auth.token),
   ]
 
-  const [projectsResponse, checklistsResponse, usersResponse] = await Promise.allSettled(tasks)
+  const [projectsResponse, checklistsResponse, usersResponse, availableTestersResponse] = await Promise.allSettled(tasks)
 
   if (projectsResponse.status === 'fulfilled') {
     const list = normalizeListPayload(projectsResponse.value)
+    entityTotals.projects = Number(projectsResponse.value?.total || list.length)
     searchIndex.projects = list.map((item) => ({
       id: item.id,
       name: String(item.name || `Project #${item.id}`),
       subtitle: String(item.app_url || item.description || 'Project'),
     }))
   } else {
+    entityTotals.projects = 0
     searchIndex.projects = []
   }
 
@@ -284,14 +414,43 @@ async function loadGlobalSearchIndex() {
 
   if (usersResponse.status === 'fulfilled') {
     const list = normalizeListPayload(usersResponse.value)
+    entityTotals.users = Number(usersResponse.value?.total || list.length)
     searchIndex.users = list.map((item) => ({
       id: item.id,
       name: String(item.name || `User #${item.id}`),
       email: String(item.email || ''),
     }))
   } else {
+    entityTotals.users = 0
     searchIndex.users = []
   }
+
+  if (availableTestersResponse.status === 'fulfilled') {
+    const list = normalizeListPayload(availableTestersResponse.value)
+    searchIndex.availableTesters = list.map((item) => ({
+      id: item.id,
+      name: String(item.name || `User #${item.id}`),
+      roles: Array.isArray(item.roles) ? item.roles.map((role) => String(role.name || '')) : [],
+    }))
+  } else {
+    searchIndex.availableTesters = []
+  }
+}
+
+function resetInlinePanels() {
+  showInlineSettings.value = false
+  showProfileEditPanel.value = false
+  showPasswordPanel.value = false
+  profileFeedback.value = ''
+  profileError.value = ''
+  passwordForm.current_password = ''
+  passwordForm.password = ''
+  passwordForm.password_confirmation = ''
+}
+
+function seedProfileForm() {
+  profileForm.name = String(auth.user?.name || '')
+  profileForm.email = String(auth.user?.email || '')
 }
 
 function toggleSidebar() {
@@ -300,8 +459,22 @@ function toggleSidebar() {
 }
 
 function toggleProfileMenu() {
-  showProfileMenu.value = !showProfileMenu.value
+  const isOpening = !showProfileMenu.value
+  showProfileMenu.value = isOpening
+
+  if (isOpening) {
+    seedProfileForm()
+    resetInlinePanels()
+  } else {
+    resetInlinePanels()
+  }
+
   showNotificationPanel.value = false
+}
+
+function closeProfileMenu() {
+  showProfileMenu.value = false
+  resetInlinePanels()
 }
 
 function toggleNotifications() {
@@ -322,18 +495,87 @@ async function selectSearchResult(result) {
   await router.push(result.route)
 }
 
-async function goToProfile() {
-  showProfileMenu.value = false
-  await router.push({ name: 'dashboard' })
+function toggleSettingsPanel() {
+  showProfileEditPanel.value = false
+  showPasswordPanel.value = false
+  profileFeedback.value = ''
+  profileError.value = ''
+  showInlineSettings.value = !showInlineSettings.value
 }
 
-async function goToSettings() {
-  showProfileMenu.value = false
-  await router.push({ name: 'settings' })
+function toggleEditProfilePanel() {
+  showInlineSettings.value = false
+  showPasswordPanel.value = false
+  profileFeedback.value = ''
+  profileError.value = ''
+  seedProfileForm()
+  showProfileEditPanel.value = !showProfileEditPanel.value
+}
+
+function togglePasswordPanel() {
+  showInlineSettings.value = false
+  showProfileEditPanel.value = false
+  profileFeedback.value = ''
+  profileError.value = ''
+  passwordForm.current_password = ''
+  passwordForm.password = ''
+  passwordForm.password_confirmation = ''
+  showPasswordPanel.value = !showPasswordPanel.value
+}
+
+function changeLanguage(langCode) {
+  settingsStore.setLanguage(langCode)
+}
+
+function toggleDarkMode() {
+  settingsStore.toggleDarkMode()
+}
+
+async function submitProfileUpdate() {
+  profileFeedback.value = ''
+  profileError.value = ''
+
+  try {
+    await auth.updateProfile({
+      name: profileForm.name.trim(),
+      email: profileForm.email.trim(),
+    })
+
+    profileFeedback.value = t('profile.profileUpdated', settingsStore.language)
+    showProfileEditPanel.value = false
+  } catch (error) {
+    profileError.value = error.data?.message || error.message
+  }
+}
+
+async function submitPasswordUpdate() {
+  profileFeedback.value = ''
+  profileError.value = ''
+
+  if (passwordForm.password !== passwordForm.password_confirmation) {
+    profileError.value = t('msg.error', settingsStore.language)
+    return
+  }
+
+  try {
+    await auth.changePassword({
+      current_password: passwordForm.current_password,
+      password: passwordForm.password,
+      password_confirmation: passwordForm.password_confirmation,
+    })
+
+    profileFeedback.value = t('profile.passwordUpdated', settingsStore.language)
+    showPasswordPanel.value = false
+    passwordForm.current_password = ''
+    passwordForm.password = ''
+    passwordForm.password_confirmation = ''
+  } catch (error) {
+    profileError.value = error.data?.message || error.message
+  }
 }
 
 async function handleLogout() {
-  showProfileMenu.value = false
+  closeProfileMenu()
   await auth.logout()
   await router.push({ name: 'login' })
 }
@@ -343,7 +585,7 @@ function onGlobalSearchFocus() {
 }
 
 function closePanelsOnRouteChange() {
-  showProfileMenu.value = false
+  closeProfileMenu()
   showNotificationPanel.value = false
   showSearchMenu.value = false
 }
@@ -352,7 +594,7 @@ function handleDocumentClick(event) {
   const target = event.target
 
   if (profileMenuRef.value && !profileMenuRef.value.contains(target)) {
-    showProfileMenu.value = false
+    closeProfileMenu()
   }
 
   if (notificationsRef.value && !notificationsRef.value.contains(target)) {
@@ -388,6 +630,9 @@ watch(
     searchIndex.projects = []
     searchIndex.checklists = []
     searchIndex.users = []
+    searchIndex.availableTesters = []
+    entityTotals.projects = 0
+    entityTotals.users = 0
   },
 )
 
@@ -470,9 +715,92 @@ watch(
             </button>
 
             <div v-if="showProfileMenu" class="profile-menu">
-              <button type="button" class="profile-menu-item" @click="goToProfile">Profile</button>
-              <button type="button" class="profile-menu-item" @click="goToSettings">Settings</button>
-              <button type="button" class="profile-menu-item danger" @click="handleLogout">Logout</button>
+              <div class="profile-identity-card">
+                <div class="profile-identity-avatar">{{ profileInitial }}</div>
+                <div class="profile-identity-meta">
+                  <strong>{{ auth.user?.name }}</strong>
+                  <span>{{ auth.user?.email }}</span>
+                </div>
+                <span class="profile-role-chip">{{ primaryRoleLabel }}</span>
+              </div>
+
+              <div class="profile-actions-grid">
+                <button type="button" class="profile-action-btn" @click="toggleEditProfilePanel">
+                  {{ t('profile.editProfile', settingsStore.language) }}
+                </button>
+                <button type="button" class="profile-action-btn" @click="togglePasswordPanel">
+                  {{ t('profile.changePassword', settingsStore.language) }}
+                </button>
+              </div>
+
+              <div v-if="showProfileEditPanel" class="profile-inline-panel">
+                <input v-model="profileForm.name" type="text" class="profile-inline-input" :placeholder="t('common.name', settingsStore.language)" />
+                <input v-model="profileForm.email" type="email" class="profile-inline-input" :placeholder="t('common.email', settingsStore.language)" />
+                <button type="button" class="profile-inline-submit" @click="submitProfileUpdate">
+                  {{ t('profile.saveProfile', settingsStore.language) }}
+                </button>
+              </div>
+
+              <div v-if="showPasswordPanel" class="profile-inline-panel">
+                <input v-model="passwordForm.current_password" type="password" class="profile-inline-input" :placeholder="t('profile.currentPassword', settingsStore.language)" />
+                <input v-model="passwordForm.password" type="password" class="profile-inline-input" :placeholder="t('profile.newPassword', settingsStore.language)" />
+                <input v-model="passwordForm.password_confirmation" type="password" class="profile-inline-input" :placeholder="t('profile.confirmPassword', settingsStore.language)" />
+                <button type="button" class="profile-inline-submit" @click="submitPasswordUpdate">
+                  {{ t('profile.changePassword', settingsStore.language) }}
+                </button>
+              </div>
+
+              <p v-if="profileFeedback" class="profile-feedback success">{{ profileFeedback }}</p>
+              <p v-if="profileError" class="profile-feedback error">{{ profileError }}</p>
+
+              <button type="button" class="profile-menu-item profile-menu-parent" @click="toggleSettingsPanel">
+                <span>{{ t('settings.title', settingsStore.language) }}</span>
+                <ChevronDown :size="14" :stroke-width="2.4" class="profile-menu-chevron" :class="{ 'is-open': showInlineSettings }" />
+              </button>
+
+              <div v-if="showInlineSettings" class="profile-settings-panel">
+                <div class="profile-setting-row">
+                  <span class="profile-setting-label">{{ t('settings.language', settingsStore.language) }}</span>
+                  <div class="profile-language-options">
+                    <button
+                      v-for="lang in settingsStore.languages"
+                      :key="lang.code"
+                      type="button"
+                      class="profile-language-option"
+                      :class="{ active: settingsStore.language === lang.code }"
+                      @click="changeLanguage(lang.code)"
+                    >
+                      {{ lang.code.toUpperCase() }}
+                    </button>
+                  </div>
+                </div>
+
+                <div class="profile-setting-row">
+                  <span class="profile-setting-label">{{ t('settings.darkMode', settingsStore.language) }}</span>
+                  <button
+                    type="button"
+                    class="profile-toggle"
+                    :class="{ active: settingsStore.darkMode }"
+                    @click="toggleDarkMode"
+                  >
+                    <span class="profile-toggle-knob" :class="{ active: settingsStore.darkMode }" />
+                  </button>
+                </div>
+
+                <p class="profile-setting-hint">{{ currentThemeLabel }}</p>
+              </div>
+
+              <div class="profile-activity-panel">
+                <p class="profile-activity-title">{{ t('profile.activity', settingsStore.language) }}</p>
+                <div v-for="item in profileActivityItems" :key="item.key" class="profile-activity-item">
+                  <span>{{ item.label }}</span>
+                  <strong>{{ item.value }}</strong>
+                </div>
+              </div>
+
+              <button type="button" class="profile-menu-item danger" @click="handleLogout">
+                {{ t('nav.logout', settingsStore.language) }}
+              </button>
             </div>
           </div>
         </div>

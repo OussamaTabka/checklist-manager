@@ -26,7 +26,11 @@ class UserStoryController extends Controller
         $this->authorize('view', $project);
 
         $userStories = $project->userStories()
-            ->with(['creator', 'checklists'])
+            ->with([
+                'creator:id,name,email',
+                'checklists:id,name',
+                'checklists.items:id,checklist_id',
+            ])
             ->orderBy('priority', 'desc')
             ->orderBy('created_at', 'desc')
             ->get();
@@ -55,7 +59,11 @@ class UserStoryController extends Controller
 
         $userStory = UserStory::create($validated);
 
-        return response()->json($userStory->load(['creator', 'checklists']), 201);
+        return response()->json($userStory->load([
+            'creator:id,name,email',
+            'checklists:id,name',
+            'checklists.items:id,checklist_id',
+        ]), 201);
     }
 
     /**
@@ -94,7 +102,11 @@ class UserStoryController extends Controller
 
         $userStory->update($validated);
 
-        return response()->json($userStory->load(['creator', 'checklists']));
+        return response()->json($userStory->load([
+            'creator:id,name,email',
+            'checklists:id,name',
+            'checklists.items:id,checklist_id',
+        ]));
     }
 
     /**
@@ -132,7 +144,11 @@ class UserStoryController extends Controller
             return response()->json([
                 'message' => 'Checklist generated successfully',
                 'checklist' => $checklist->load('items'),
-                'user_story' => $userStory->load(['creator', 'checklists']),
+                'user_story' => $userStory->load([
+                    'creator:id,name,email',
+                    'checklists:id,name',
+                    'checklists.items:id,checklist_id',
+                ]),
                 'available_generators' => $this->testCaseGenerator->getAvailableGenerators(),
             ], 201);
         } catch (\Exception $e) {
@@ -166,7 +182,11 @@ class UserStoryController extends Controller
 
         $userStory->checklists()->attach($validated['checklist_id'], ['is_generated_from_arxis' => false]);
 
-        return response()->json($userStory->load(['creator', 'checklists']), 201);
+        return response()->json($userStory->load([
+            'creator:id,name,email',
+            'checklists:id,name',
+            'checklists.items:id,checklist_id',
+        ]), 201);
     }
 
     /**
@@ -182,7 +202,11 @@ class UserStoryController extends Controller
 
         $userStory->checklists()->detach($checklistId);
 
-        return response()->json($userStory->load(['creator', 'checklists']));
+        return response()->json($userStory->load([
+            'creator:id,name,email',
+            'checklists:id,name',
+            'checklists.items:id,checklist_id',
+        ]));
     }
 
     /**
