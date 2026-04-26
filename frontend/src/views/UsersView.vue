@@ -33,6 +33,12 @@ const roleOptions = computed(() => {
   ]
 })
 
+const usersPageCopy = computed(() => ({
+  kicker: 'Admin Workspace',
+  title: 'Users & Roles',
+  description: 'Invite team members, control access, and keep the platform permissions model clean and predictable.',
+}))
+
 function resetForm() {
   form.id = null
   form.name = ''
@@ -135,8 +141,12 @@ onMounted(async () => {
 
 <template>
   <section class="page stack">
-    <div class="section-header">
-      <h1>Users</h1>
+    <div class="dashboard-command">
+      <div>
+        <p class="dashboard-eyebrow">{{ usersPageCopy.kicker }}</p>
+        <h1>{{ usersPageCopy.title }}</h1>
+        <p class="muted page-subtitle">{{ usersPageCopy.description }}</p>
+      </div>
     </div>
 
     <div class="card stack">

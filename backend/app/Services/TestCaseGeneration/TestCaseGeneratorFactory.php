@@ -28,24 +28,55 @@ class TestCaseGeneratorFactory
      */
     public static function make(): TestCaseGeneratorInterface
     {
-        $preferred = config('services.test_generation.provider', 'local-llm');
-        $order = array_merge([$preferred], array_keys(self::GENERATORS));
-        $order = array_unique($order);
+        foreach (self::orderedGeneratorNames() as $generatorName) {
+            $generator = self::makeByName($generatorName);
 
-        foreach ($order as $generatorName) {
-            if (!isset(self::GENERATORS[$generatorName])) {
-                continue;
-            }
-
-            $generator = new self::GENERATORS[$generatorName]();
-
-            if ($generator->isAvailable()) {
+            if ($generator && $generator->isAvailable()) {
                 return $generator;
             }
         }
 
-        // Fallback to basic generator if nothing works
         return new FallbackGenerator();
+    }
+
+    /**
+     * Get generators in configured preference order.
+     *
+     * @return TestCaseGeneratorInterface[]
+     */
+    public static function orderedAvailableGenerators(): array
+    {
+        $generators = [];
+
+        foreach (self::orderedGeneratorNames() as $generatorName) {
+            $generator = self::makeByName($generatorName);
+
+            if (!$generator) {
+                continue;
+            }
+
+            if ($generator instanceof FallbackGenerator || $generator->isAvailable()) {
+                $generators[] = $generator;
+            }
+        }
+
+        return $generators ?: [new FallbackGenerator()];
+    }
+
+    private static function orderedGeneratorNames(): array
+    {
+        $preferred = config('services.test_generation.provider', 'local-llm');
+        return array_values(array_unique(array_merge([$preferred], array_keys(self::GENERATORS), ['fallback'])));
+    }
+
+    private static function makeByName(string $generatorName): ?TestCaseGeneratorInterface
+    {
+        if (!isset(self::GENERATORS[$generatorName])) {
+            return null;
+        }
+
+        $generatorClass = self::GENERATORS[$generatorName];
+        return new $generatorClass();
     }
 
     /**

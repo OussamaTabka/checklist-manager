@@ -45,6 +45,15 @@ const form = reactive({
   items: [defaultItem()],
 })
 
+const checklistPageCopy = computed(() => ({
+  kicker: auth.primaryRole === 'admin' ? 'Admin Workspace' : 'Chef Workspace',
+  title: 'Checklist Templates',
+  description:
+    auth.primaryRole === 'admin'
+      ? 'Govern the reusable quality library, review template status, and keep checklist standards consistent.'
+      : 'Build and refine reusable checklist templates that teams can attach to user stories and projects.',
+}))
+
 const addableExistingItems = computed(() => {
   const usedSignatures = new Set(
     form.items.map((item) => `${item.title}|${item.description || ''}|${item.priority}|${item.criticality}`)
@@ -345,8 +354,24 @@ watch(
 
 <template>
   <section class="page stack">
-    <div class="section-header">
-      <h1>Checklists</h1>
+    <div class="dashboard-command">
+      <div>
+        <p class="dashboard-eyebrow">{{ checklistPageCopy.kicker }}</p>
+        <h1>{{ checklistPageCopy.title }}</h1>
+        <p class="muted page-subtitle">{{ checklistPageCopy.description }}</p>
+      </div>
+
+      <div class="dashboard-command-actions">
+        <button
+          v-if="auth.canManageChecklists"
+          class="btn btn-primary create-project-btn"
+          type="button"
+          @click="openCreateChecklistForm"
+        >
+          <CirclePlus :size="16" />
+          <span>Create Checklist</span>
+        </button>
+      </div>
     </div>
 
     <div v-if="!auth.canManageChecklists" class="card error">
@@ -360,15 +385,6 @@ watch(
           <input v-model="filters.search" placeholder="Search checklists..." class="search-input" />
         </div>
 
-        <button
-          v-if="auth.canManageChecklists"
-          class="btn btn-primary create-project-btn"
-          type="button"
-          @click="openCreateChecklistForm"
-        >
-          <CirclePlus :size="16" />
-          <span>Create Checklist</span>
-        </button>
       </div>
 
       <div class="actions actions-between">

@@ -5,10 +5,14 @@ import {
   AlertTriangle,
   BriefcaseBusiness,
   CheckCircle2,
+  ClipboardCheck,
   Filter,
+  FolderKanban,
   Search,
   TrendingUp,
   Workflow,
+  ArrowRight,
+  Sparkles,
 } from 'lucide-vue-next'
 import { apiRequest } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
@@ -48,10 +52,82 @@ const qualityScore = computed(() => {
   return Math.max(0, Number((weighted - penalty).toFixed(1)))
 })
 
+const roleDashboardCopy = computed(() => {
+  switch (auth.primaryRole) {
+    case 'admin':
+      return {
+        eyebrow: 'Admin Workspace',
+        title: 'Platform Control Center',
+        description:
+          'Supervise platform health, account activity, project delivery, and test governance from one place.',
+        tableKicker: 'System overview',
+        tableTitle: 'Projects ranked by operational health',
+      }
+    case 'testeur':
+      return {
+        eyebrow: 'Execution Workspace',
+        title: 'Testing Operations Center',
+        description:
+          'Follow assigned delivery health, monitor failures, and move quickly from alerts to execution work.',
+        tableKicker: 'Execution overview',
+        tableTitle: 'Projects ranked by execution health',
+      }
+    default:
+      return {
+        eyebrow: 'Chef Workspace',
+        title: 'Project Command Center',
+        description:
+          'Track delivery health, spot risk early, and jump directly into the next decision across projects, stories, and checklist templates.',
+        tableKicker: 'Portfolio overview',
+        tableTitle: 'Projects ranked by execution health',
+      }
+  }
+})
+
 const previousWeekSuccessRate = computed(() => {
   const previous = Math.max(0, averageSuccessRate.value - 4)
   return Number(previous.toFixed(1))
 })
+
+const projectStatusBreakdown = computed(() => {
+  return rowsWithStatus.value.reduce(
+    (acc, row) => {
+      acc[row.status.tone] = (acc[row.status.tone] || 0) + 1
+      return acc
+    },
+    {
+      perfect: 0,
+      'in-progress': 0,
+      delayed: 0,
+      'at-risk': 0,
+      'not-started': 0,
+    },
+  )
+})
+
+const focusCards = computed(() => [
+  {
+    title: 'Projects needing attention',
+    value: projectStatusBreakdown.value['at-risk'] + projectStatusBreakdown.value.delayed,
+    caption: 'At risk or delayed',
+    tone: 'warm',
+    icon: AlertTriangle,
+  },
+  {
+    title: 'Ready to scale',
+    value: projectStatusBreakdown.value.perfect,
+    caption: 'Projects with excellent health',
+    tone: 'cool',
+    icon: Sparkles,
+  },
+  {
+    title: 'Checklist library',
+    value: totalChecklists.value ?? 0,
+    caption: 'Reusable testing templates',
+    tone: 'mint',
+    icon: ClipboardCheck,
+  },
+])
 
 function getProjectStatus(row) {
   const completion = pct(row.completion)
@@ -162,9 +238,20 @@ onMounted(async () => {
 
 <template>
   <section class="page stack dashboard-page">
-    <div class="section-header dashboard-header">
-      <h1>Project Success Rate</h1>
-      <button class="btn btn-secondary btn-sm" @click="loadDashboard" data-testid="dashboard-btn-refresh">Refresh</button>
+    <div class="dashboard-command">
+      <div class="dashboard-command-copy">
+        <p class="dashboard-eyebrow">{{ roleDashboardCopy.eyebrow }}</p>
+        <h1>{{ roleDashboardCopy.title }}</h1>
+        <p class="dashboard-command-text">{{ roleDashboardCopy.description }}</p>
+      </div>
+
+      <div class="dashboard-command-actions">
+        <button class="btn btn-secondary btn-sm" @click="loadDashboard" data-testid="dashboard-btn-refresh">Refresh</button>
+        <RouterLink v-if="auth.canManageProjects" :to="{ name: 'projects', query: { create: '1' } }" class="btn btn-primary btn-sm">
+          <FolderKanban :size="16" />
+          <span>New Project</span>
+        </RouterLink>
+      </div>
     </div>
 
     <p v-if="errorMessage" class="error" data-testid="dashboard-msg-error">{{ errorMessage }}</p>
@@ -172,7 +259,10 @@ onMounted(async () => {
 
     <div class="card stack dashboard-summary-card" v-if="!loading" data-testid="dashboard-stats">
       <div class="dashboard-toolbar">
-        <h2>Project Success Rate</h2>
+        <div>
+          <p class="dashboard-section-kicker">{{ roleDashboardCopy.tableKicker }}</p>
+          <h2>Delivery performance at a glance</h2>
+        </div>
 
         <div class="dashboard-toolbar-actions">
           <div class="search-input-wrap dashboard-search-box">
@@ -251,11 +341,31 @@ onMounted(async () => {
           </div>
         </article>
       </div>
+
+      <div class="dashboard-focus-grid">
+        <article v-for="card in focusCards" :key="card.title" class="dashboard-focus-card" :class="`focus-${card.tone}`">
+          <div class="dashboard-focus-icon">
+            <component :is="card.icon" :size="18" />
+          </div>
+          <div class="dashboard-focus-copy">
+            <p>{{ card.title }}</p>
+            <strong>{{ card.value }}</strong>
+            <span>{{ card.caption }}</span>
+          </div>
+        </article>
+      </div>
     </div>
 
     <div class="card stack" v-if="!loading" data-testid="dashboard-project-success">
       <div class="section-header">
-        <h2>Project Success Rate</h2>
+        <div>
+          <p class="dashboard-section-kicker">Live table</p>
+          <h2>{{ roleDashboardCopy.tableTitle }}</h2>
+        </div>
+        <RouterLink :to="{ name: 'stories' }" class="dashboard-inline-link">
+          <span>Open user stories</span>
+          <ArrowRight :size="15" />
+        </RouterLink>
       </div>
 
       <div class="table-wrap">
@@ -314,7 +424,7 @@ onMounted(async () => {
       </div>
 
       <div class="dashboard-table-footer">
-        <RouterLink :to="{ name: 'projects' }">View All Projects</RouterLink>
+        <RouterLink :to="{ name: 'projects' }">View all projects</RouterLink>
       </div>
     </div>
   </section>

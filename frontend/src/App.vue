@@ -6,11 +6,14 @@ import {
   ChevronDown,
   ClipboardCheck,
   FolderKanban,
+  Gauge,
   Home,
   Menu,
   NotebookPen,
   Plus,
   Search,
+  Sparkles,
+  TriangleAlert,
   UsersRound,
 } from 'lucide-vue-next'
 import { apiRequest, withQuery } from '@/lib/api'
@@ -24,6 +27,12 @@ const router = useRouter()
 const route = useRoute()
 
 const roleLabel = computed(() => auth.roles.join(', '))
+const workspaceLabel = computed(() => {
+  if (auth.roles.includes('chef')) return 'Project Command'
+  if (auth.roles.includes('admin')) return 'Admin Control'
+  if (auth.roles.includes('testeur')) return 'Execution Space'
+  return 'Workspace'
+})
 const profileInitial = computed(() => {
   const source = String(auth.user?.name || 'U').trim()
   return source ? source[0].toUpperCase() : 'U'
@@ -66,7 +75,7 @@ const sidebarSections = computed(() => {
           label: 'User Stories',
           route: { name: 'stories' },
           icon: NotebookPen,
-          show: auth.hasAnyRole(['admin', 'chef']),
+          show: auth.hasAnyRole(['admin', 'chef', 'testeur']),
         },
         {
           label: 'Checklist Templates',
@@ -99,6 +108,7 @@ const sidebarSections = computed(() => {
 
 const quickActions = computed(() => {
   const actions = []
+  const currentProjectId = String(route.query.projectId || route.params.id || '').trim()
 
   if (auth.canManageProjects) {
     actions.push({
@@ -111,6 +121,15 @@ const quickActions = computed(() => {
     actions.push({
       label: 'New Checklist',
       route: { name: 'checklists', query: { create: '1' } },
+    })
+  }
+
+  if (auth.canManageStories) {
+    actions.push({
+      label: 'New Story',
+      route: currentProjectId
+        ? { name: 'story-create', query: { projectId: currentProjectId } }
+        : { name: 'stories' },
     })
   }
 
@@ -159,6 +178,27 @@ const notificationItems = computed(() => {
 
   return items
 })
+
+const workspaceSignals = computed(() => [
+  {
+    label: 'Alerts',
+    value: notificationBadge.value,
+    tone: failedAlertCount.value > 0 ? 'danger' : 'neutral',
+    icon: TriangleAlert,
+  },
+  {
+    label: 'Critical',
+    value: String(headerMetrics.failedCriticalItems || 0),
+    tone: Number(headerMetrics.failedCriticalItems || 0) > 0 ? 'warning' : 'neutral',
+    icon: Gauge,
+  },
+  {
+    label: 'Search',
+    value: `${searchIndex.projects.length + searchIndex.checklists.length}`,
+    tone: 'neutral',
+    icon: Sparkles,
+  },
+])
 
 const globalSearchResults = computed(() => {
   const q = globalQuery.value.trim().toLowerCase()
@@ -490,6 +530,32 @@ watch(
             >
               <Menu :size="16" />
             </button>
+          </div>
+
+          <div class="sidebar-workspace-card" v-show="!isSidebarCollapsed">
+            <div class="sidebar-workspace-top">
+              <div class="sidebar-workspace-avatar">{{ profileInitial }}</div>
+              <div class="sidebar-workspace-copy">
+                <p class="sidebar-workspace-label">{{ workspaceLabel }}</p>
+                <strong>{{ auth.user?.name }}</strong>
+                <span>{{ roleLabel }}</span>
+              </div>
+            </div>
+
+            <div class="sidebar-workspace-signals">
+              <div
+                v-for="signal in workspaceSignals"
+                :key="signal.label"
+                class="workspace-signal"
+                :class="`workspace-signal-${signal.tone}`"
+              >
+                <component :is="signal.icon" :size="14" />
+                <div class="workspace-signal-copy">
+                  <span>{{ signal.label }}</span>
+                  <strong>{{ signal.value }}</strong>
+                </div>
+              </div>
+            </div>
           </div>
 
           <nav class="sidebar-sections">

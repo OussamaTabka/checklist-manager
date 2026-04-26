@@ -79,7 +79,7 @@ const router = createRouter({
       path: '/stories',
       name: 'stories',
       component: UserStoriesListView,
-      meta: { requiresAuth: true, roles: ['admin', 'chef'] },
+      meta: { requiresAuth: true, roles: ['admin', 'chef', 'testeur'] },
     },
     {
       path: '/stories/create',
@@ -97,7 +97,7 @@ const router = createRouter({
       path: '/stories/:id',
       name: 'story-detail',
       component: UserStoryDetailView,
-      meta: { requiresAuth: true, roles: ['admin', 'chef'] },
+      meta: { requiresAuth: true, roles: ['admin', 'chef', 'testeur'] },
     },
     {
       path: '/stories/:id/edit',

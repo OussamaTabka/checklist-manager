@@ -76,11 +76,15 @@ class ProjectController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        $query = Project::with(['creator:id,name,email']);
+        $query = Project::with(['creator:id,name,email', 'checklists:id,name,description', 'testers:id,name,email']);
 
-        // Chef voit seulement ses projets, Admin voit tous, Testeur voit tous
+        // Chef voit seulement ses projets, Admin voit tous, Testeur voit seulement les projets assignés
         if ($user->hasRole('chef') && !$user->hasRole('admin')) {
             $query->where('created_by', $user->id);
+        }
+
+        if ($user->hasRole('testeur') && !$user->hasRole('admin') && !$user->hasRole('chef')) {
+            $query->whereHas('testers', fn ($testerQuery) => $testerQuery->where('users.id', $user->id));
         }
 
         return response()->json(
@@ -121,8 +125,9 @@ class ProjectController extends Controller
                 'versions' => fn ($q) => $q->orderByDesc('version_number'),
                 'versions.checklist:id,name',
                 'versions.items' => fn ($q) => $q->orderBy('order'),
-                'checklists:id,name,description',
+                'checklists:id,name,description,template_scope,lifecycle_status,generated_from',
                 'testers:id,name,email',
+                'userStories' => fn ($q) => $q->with(['creator:id,name,email', 'checklists:id,name,lifecycle_status,generated_from'])->orderByDesc('priority')->orderByDesc('created_at'),
             ])
         );
     }
@@ -136,35 +141,39 @@ class ProjectController extends Controller
             'name' => ['required', 'string'],
             'description' => ['nullable', 'string'],
             'app_url' => ['required', 'url', 'max:2048'],
-            'checklist_id' => ['required', 'integer', 'exists:checklists,id'], // Primary checklist for version 1
+            'checklist_id' => ['nullable', 'integer', 'exists:checklists,id'], // Optional initial checklist
             'checklist_ids' => ['nullable', 'array'], // Additional checklists to assign
             'checklist_ids.*' => ['integer', 'exists:checklists,id'],
             'tester_ids' => ['nullable', 'array'], // Testers to assign
             'tester_ids.*' => ['integer', 'exists:users,id'],
         ]);
 
-        // Validate primary checklist is active
-        $primaryChecklist = Checklist::where('id', $data['checklist_id'])
-            ->where('is_active', true)
-            ->with(['items' => fn ($q) => $q->orderBy('order')])
-            ->first();
+        $primaryChecklist = null;
+        if (!empty($data['checklist_id'])) {
+            $primaryChecklist = Checklist::where('id', $data['checklist_id'])
+                ->where('is_active', true)
+                ->with(['items' => fn ($q) => $q->orderBy('order')])
+                ->first();
 
-        if (!$primaryChecklist) {
-            return response()->json(['message' => 'Checklist not found or not active'], 422);
+            if (!$primaryChecklist) {
+                return response()->json(['message' => 'Checklist not found or not active'], 422);
+            }
         }
 
         // Validate additional checklists if provided
         $additionalChecklistIds = $data['checklist_ids'] ?? [];
-        if (!in_array($data['checklist_id'], $additionalChecklistIds)) {
+        if (!empty($data['checklist_id']) && !in_array($data['checklist_id'], $additionalChecklistIds)) {
             $additionalChecklistIds[] = $data['checklist_id'];
         }
 
-        $checklists = Checklist::whereIn('id', $additionalChecklistIds)
-            ->where('is_active', true)
-            ->get();
+        if (!empty($additionalChecklistIds)) {
+            $checklists = Checklist::whereIn('id', $additionalChecklistIds)
+                ->where('is_active', true)
+                ->get();
 
-        if ($checklists->count() !== count($additionalChecklistIds)) {
-            return response()->json(['message' => 'One or more checklists not found or not active'], 422);
+            if ($checklists->count() !== count($additionalChecklistIds)) {
+                return response()->json(['message' => 'One or more checklists not found or not active'], 422);
+            }
         }
 
         // Validate testers if provided
@@ -190,31 +199,33 @@ class ProjectController extends Controller
             ]);
 
             // Attach all checklists to project
-            $project->checklists()->attach($additionalChecklistIds);
+            if (!empty($additionalChecklistIds)) {
+                $project->checklists()->attach($additionalChecklistIds);
+            }
 
             // Attach testers to project
             if (!empty($testerIds)) {
                 $project->testers()->attach($testerIds);
             }
 
-            // Create version 1 with primary checklist
-            $version = ProjectVersion::create([
-                'project_id' => $project->id,
-                'checklist_id' => $primaryChecklist->id,
-                'version_number' => 1,
-            ]);
-
-            // Create version items from primary checklist
-            foreach ($primaryChecklist->items as $item) {
-                VersionItem::create([
-                    'project_version_id' => $version->id,
-                    'title' => $item->title,
-                    'description' => $item->description,
-                    'priority' => $item->priority,
-                    'criticality' => $item->criticality,
-                    'order' => $item->order,
-                    'status' => 'Not Tested',
+            if ($primaryChecklist) {
+                $version = ProjectVersion::create([
+                    'project_id' => $project->id,
+                    'checklist_id' => $primaryChecklist->id,
+                    'version_number' => 1,
                 ]);
+
+                foreach ($primaryChecklist->items as $item) {
+                    VersionItem::create([
+                        'project_version_id' => $version->id,
+                        'title' => $item->title,
+                        'description' => $item->description,
+                        'priority' => $item->priority,
+                        'criticality' => $item->criticality,
+                        'order' => $item->order,
+                        'status' => 'Not Tested',
+                    ]);
+                }
             }
 
             DB::commit();

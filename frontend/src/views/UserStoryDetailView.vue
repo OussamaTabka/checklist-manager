@@ -34,23 +34,28 @@ const criticalities = {
   'Low': 'bg-green-100 text-green-800',
 }
 
+const currentSuggestions = computed(() => storiesStore.suggestionsByStoryId?.[storyId] || null)
+const currentAgentResult = computed(() => storiesStore.agentResultsByStoryId?.[storyId] || null)
+
 async function loadStory() {
   if (!projectId.value) {
     return
   }
 
-  await storiesStore.fetchStory(projectId.value, storyId)
-  await storiesStore.fetchGeneratorStatus(projectId.value)
+  await Promise.all([
+    storiesStore.fetchStory(projectId.value, storyId),
+    storiesStore.fetchGeneratorStatus(projectId.value),
+    storiesStore.fetchChecklistSuggestions(projectId.value, storyId),
+  ])
 }
 
 async function generateChecklist() {
-  if (!confirm('Générer une liste de vérification automatiquement avec l\'IA locale ?')) return
+  if (!confirm('Lancer l\'agent de génération ? Il va réutiliser les checklists approuvées puis générer les éléments manquants.')) return
   if (!projectId.value) return
   
   try {
-    await storiesStore.generateChecklistFromLLM(projectId.value, storyId)
-    // Reload to see updated checklists
-    await storiesStore.fetchStory(projectId.value, storyId)
+    await storiesStore.generateChecklistWithAgent(projectId.value, storyId)
+    await loadStory()
   } catch (err) {
     alert('Erreur lors de la génération: ' + err.message)
   }
@@ -62,6 +67,18 @@ async function detachChecklist(checklistId) {
   
   try {
     await storiesStore.detachChecklist(projectId.value, storyId, checklistId)
+    await storiesStore.fetchChecklistSuggestions(projectId.value, storyId)
+  } catch (err) {
+    alert('Erreur: ' + err.message)
+  }
+}
+
+async function attachSuggestedChecklist(checklistId) {
+  if (!projectId.value) return
+
+  try {
+    await storiesStore.attachChecklist(projectId.value, storyId, checklistId)
+    await loadStory()
   } catch (err) {
     alert('Erreur: ' + err.message)
   }
@@ -141,28 +158,85 @@ onMounted(() => {
         </div>
       </div>
 
+      <div v-if="currentSuggestions" class="bg-white rounded-lg shadow p-6 space-y-4">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h2 class="text-lg font-semibold">Suggestions de Checklists</h2>
+            <p class="text-sm text-gray-600">
+              L'agent cherche d'abord dans les checklists approuvÃ©es pour favoriser la rÃ©utilisation.
+            </p>
+          </div>
+          <span class="text-xs font-semibold uppercase tracking-wide text-blue-700 bg-blue-50 px-3 py-2 rounded-full">
+            Action recommandÃ©e: {{ currentSuggestions.summary?.recommended_action || 'create_new_draft' }}
+          </span>
+        </div>
+
+        <div v-if="currentSuggestions.suggestions?.length" class="space-y-3">
+          <div
+            v-for="suggestion in currentSuggestions.suggestions"
+            :key="suggestion.id"
+            class="border border-gray-200 rounded-lg p-4"
+          >
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="font-semibold text-gray-900">{{ suggestion.name }}</p>
+                <p class="text-sm text-gray-600 mt-1">{{ suggestion.description || 'No description' }}</p>
+                <p class="text-xs text-gray-500 mt-2">
+                  Score: {{ suggestion.score }} • {{ suggestion.items_count }} items • {{ suggestion.lifecycle_status }}
+                </p>
+                <p v-if="suggestion.matched_terms?.length" class="text-xs text-gray-500 mt-1">
+                  Matchs: {{ suggestion.matched_terms.join(', ') }}
+                </p>
+              </div>
+              <button
+                v-if="auth.canCurateStoryChecklists"
+                @click="attachSuggestedChecklist(suggestion.id)"
+                class="px-4 py-2 border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-50 transition"
+              >
+                Attacher
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <p v-else class="text-sm text-gray-500">
+          Aucune checklist approuvÃ©e n'est assez proche. La prochaine Ã©tape recommandÃ©e est de gÃ©nÃ©rer un nouveau brouillon.
+        </p>
+      </div>
+
       <!-- Generate Checklist Button -->
       <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border-2 border-blue-200 p-6">
         <div class="flex items-center justify-between">
           <div>
             <h3 class="text-lg font-semibold flex items-center gap-2 mb-2">
               <Zap :size="20" class="text-blue-600" />
-              Génération Automatique d'IA
+              Agent de Génération de Checklist
             </h3>
             <p class="text-gray-600 text-sm">
-              Utilisez le modèle LLM local pour générer automatiquement une liste de vérification
-              avec des cas de test basés sur les critères d'acceptation.
+              L'agent cherche d'abord dans les modèles approuvés, réutilise les items pertinents,
+              puis génère uniquement les cas de test manquants.
             </p>
             <p class="text-gray-500 text-xs mt-2">
               Générateur actif: <span class="font-semibold">{{ storiesStore.generatorStatus.current || 'Détermination...' }}</span>
             </p>
+            <div v-if="currentAgentResult?.reuse_summary" class="mt-3 grid grid-cols-3 gap-2 text-xs">
+              <span class="rounded bg-white/70 px-3 py-2 text-gray-700">
+                Réutilisés: <strong>{{ currentAgentResult.reuse_summary.reused_items }}</strong>
+              </span>
+              <span class="rounded bg-white/70 px-3 py-2 text-gray-700">
+                Générés: <strong>{{ currentAgentResult.reuse_summary.generated_items }}</strong>
+              </span>
+              <span class="rounded bg-white/70 px-3 py-2 text-gray-700">
+                Final: <strong>{{ currentAgentResult.reuse_summary.final_items }}</strong>
+              </span>
+            </div>
           </div>
           <button
             @click="generateChecklist"
             :disabled="storiesStore.isGenerating"
             class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium whitespace-nowrap ml-4"
           >
-            {{ storiesStore.isGenerating ? 'Génération...' : 'Générer Checklist' }}
+            {{ storiesStore.isGenerating ? 'Agent en cours...' : 'Lancer l\'Agent' }}
           </button>
         </div>
       </div>
@@ -208,7 +282,7 @@ onMounted(() => {
           </div>
 
           <!-- Creator Badge -->
-          <div v-if="checklist.is_generated_from_arxis" class="mt-4 flex items-center gap-2 text-sm text-blue-600 bg-blue-50 p-3 rounded">
+          <div v-if="checklist.pivot?.is_generated_from_arxis" class="mt-4 flex items-center gap-2 text-sm text-blue-600 bg-blue-50 p-3 rounded">
             <Zap :size="16" />
             Généré automatiquement par IA
           </div>

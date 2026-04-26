@@ -1,12 +1,14 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import { CheckCircle2, ClipboardList, FilePenLine, MessageCircle, Paperclip } from 'lucide-vue-next'
 import { API_BASE_URL, apiRequest, ensureCsrfCookie } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
+import { useUserStoriesStore } from '@/stores/userStories'
 
 const route = useRoute()
 const auth = useAuthStore()
+const storiesStore = useUserStoriesStore()
 
 const project = ref(null)
 const loading = ref(false)
@@ -44,6 +46,13 @@ const runForm = reactive({
 const versionForm = reactive({
   checklist_id: '',
 })
+
+const storyStatusLabels = {
+  backlog: 'Backlog',
+  in_progress: 'In Progress',
+  ready_for_test: 'Ready for Test',
+  completed: 'Completed',
+}
 
 // Inline checklist editor state
 const showChecklistEditor = ref(false)
@@ -377,6 +386,14 @@ async function loadProject() {
     pageError.value = error.data?.message || error.message
   } finally {
     loading.value = false
+  }
+}
+
+async function loadUserStories() {
+  try {
+    await storiesStore.fetchStories(route.params.id)
+  } catch {
+    // Store error is enough for this embedded view.
   }
 }
 
@@ -827,11 +844,11 @@ onBeforeUnmount(() => {
 
 onMounted(async () => {
   if (auth.canManageChecklists) {
-    await Promise.all([loadProject(), loadChecklists(), loadAvailableItems()])
+    await Promise.all([loadProject(), loadChecklists(), loadAvailableItems(), loadUserStories()])
     return
   }
 
-  await Promise.all([loadProject(), loadChecklists()])
+  await Promise.all([loadProject(), loadChecklists(), loadUserStories()])
 })
 </script>
 
@@ -854,6 +871,62 @@ onMounted(async () => {
           <span v-else>-</span>
         </p>
         <p class="muted">Created by: {{ project.creator?.name || '-' }}</p>
+      </div>
+
+      <div class="card stack">
+        <div class="section-header">
+          <div>
+            <h3>User stories</h3>
+            <p class="muted">Assigned testers can review each story before creating or generating checklist drafts.</p>
+          </div>
+          <RouterLink
+            v-if="auth.canManageStories"
+            class="btn btn-secondary btn-sm"
+            :to="{ name: 'story-create', query: { projectId: project.id } }"
+          >
+            New story
+          </RouterLink>
+        </div>
+
+        <p v-if="storiesStore.error" class="error">{{ storiesStore.error }}</p>
+        <p v-else-if="storiesStore.loading" class="muted">Loading user stories...</p>
+
+        <div v-else-if="storiesStore.stories.length > 0" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Story</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Checklists</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="story in storiesStore.stories" :key="story.id">
+                <td>
+                  <div class="stack stack-xs">
+                    <strong>{{ story.title }}</strong>
+                    <span class="muted">{{ story.description || 'No description' }}</span>
+                  </div>
+                </td>
+                <td>{{ storyStatusLabels[story.status] || story.status }}</td>
+                <td>{{ story.priority }}</td>
+                <td>{{ story.checklists?.length || 0 }}</td>
+                <td>
+                  <RouterLink
+                    class="btn btn-secondary btn-sm"
+                    :to="{ name: 'story-detail', params: { id: story.id }, query: { projectId: project.id } }"
+                  >
+                    Open
+                  </RouterLink>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p v-else class="muted">No user stories yet. Start with stories, then build checklist drafts from them.</p>
       </div>
 
       <div v-if="auth.canManageProjects" class="card stack">

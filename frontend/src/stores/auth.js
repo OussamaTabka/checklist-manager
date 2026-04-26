@@ -27,6 +27,11 @@ export const useAuthStore = defineStore('auth', () => {
   const canManageChecklists = computed(
     () => roles.value.includes('chef') || roles.value.includes('admin')
   )
+
+  const canManageStories = computed(() => roles.value.includes('chef') || roles.value.includes('admin'))
+  const canCurateStoryChecklists = computed(
+    () => roles.value.includes('chef') || roles.value.includes('admin') || roles.value.includes('testeur')
+  )
   
   // Peut gérer les utilisateurs (Admin Système uniquement)
   const canManageUsers = computed(() => roles.value.includes('admin'))
@@ -40,6 +45,12 @@ export const useAuthStore = defineStore('auth', () => {
   
   // Ancien alias - garder pour compatibilité
   const isAdmin = computed(() => isSystemAdmin.value)
+  const primaryRole = computed(() => {
+    if (roles.value.includes('admin')) return 'admin'
+    if (roles.value.includes('chef')) return 'chef'
+    if (roles.value.includes('testeur')) return 'testeur'
+    return 'user'
+  })
 
   function clear() {
     token.value = ''
@@ -169,10 +180,13 @@ export const useAuthStore = defineStore('auth', () => {
     isProjectManager,
     isTester,
     isAdmin, // Alias pour compatibilité
+    primaryRole,
     
     // Computed Properties - Permissions
     canManageProjects,
     canManageChecklists,
+    canManageStories,
+    canCurateStoryChecklists,
     canManageUsers,
     canTest,
     

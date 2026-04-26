@@ -100,8 +100,8 @@ Step 4: DISPLAY RESULTS
 │ ├─ Parse test results                   │
 │ ├─ Progress: 100%                       │
 │ ├─ Show results UI                      │
-│ │  ├─ ✅ Passed: 5                      │
-│ │  ├─ ❌ Failed: 2                      │
+│ │  ├─ ✅ Passed: 5                     │
+│ │  ├─ ❌ Failed: 2                     │
 │ │  └─ 🕐 Timestamp                      │
 │ ├─ Emit 'tests-complete' event          │
 │ └─ Clear loading state                  │

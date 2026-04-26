@@ -51,6 +51,7 @@ return [
         // Local LLM Configuration (Ollama, LM Studio, etc.)
         'llm_url' => env('LLM_API_URL', 'http://localhost:11434'),
         'llm_model' => env('LLM_MODEL', 'mistral'), // mistral, llama2, neural-chat, etc.
+        'llm_timeout' => env('LLM_TIMEOUT', 5),
         
         // EvoMaster Configuration
         'evomaster_url' => env('EVOMASTER_URL', 'http://localhost'),

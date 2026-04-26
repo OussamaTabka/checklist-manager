@@ -62,6 +62,29 @@ const form = reactive({
   tester_ids: [], // assigned testers
 })
 
+const projectPageCopy = computed(() => {
+  switch (auth.primaryRole) {
+    case 'admin':
+      return {
+        kicker: 'Admin Workspace',
+        title: 'Projects',
+        description: 'Audit delivery structure, review ownership, and oversee how projects are configured across the platform.',
+      }
+    case 'testeur':
+      return {
+        kicker: 'Execution Workspace',
+        title: 'Assigned Projects',
+        description: 'See the projects linked to you, understand their scope, and move directly toward execution details.',
+      }
+    default:
+      return {
+        kicker: 'Chef Workspace',
+        title: 'Projects',
+        description: 'Manage testing projects, assign checklists and testers, and track execution progress.',
+      }
+  }
+})
+
 const creatorFilterOptions = computed(() => {
   const creators = projects.value
     .map((project) => project.creator)
@@ -206,9 +229,12 @@ async function submitProject() {
       // Create new project with testers and checklists
       const createPayload = {
         ...payload,
-        checklist_id: Number(form.checklist_id),
         tester_ids: form.tester_ids.map((id) => Number(id)),
         checklist_ids: form.checklist_ids.map((id) => Number(id)),
+      }
+
+      if (form.checklist_id) {
+        createPayload.checklist_id = Number(form.checklist_id)
       }
 
       await apiRequest(
@@ -371,26 +397,18 @@ watch(
 
 <template>
   <section class="page stack">
-    <div class="section-header section-header-start">
+    <div class="dashboard-command">
       <div>
+        <p class="dashboard-eyebrow">{{ projectPageCopy.kicker }}</p>
         <h1 class="page-title-icon">
           <Rocket :size="30" :stroke-width="2.3" />
-          <span>Projects</span>
+          <span>{{ projectPageCopy.title }}</span>
         </h1>
         <p class="muted page-subtitle">
-          Manage testing projects, assign checklists and testers, and track execution progress.
+          {{ projectPageCopy.description }}
         </p>
       </div>
-
-    </div>
-
-    <div class="card stack stack-gap-sm">
-      <div class="search-top-row">
-        <div class="search-input-wrap">
-          <Search :size="18" :stroke-width="2.1" />
-          <input v-model="filters.query" placeholder="Search projects..." class="search-input" />
-        </div>
-
+      <div class="dashboard-command-actions">
         <button
           v-if="auth.canManageProjects"
           class="btn btn-primary create-project-btn"
@@ -400,6 +418,16 @@ watch(
           <CirclePlus :size="16" />
           <span>Create Project</span>
         </button>
+      </div>
+    </div>
+
+    <div class="card stack stack-gap-sm">
+      <div class="search-top-row">
+        <div class="search-input-wrap">
+          <Search :size="18" :stroke-width="2.1" />
+          <input v-model="filters.query" placeholder="Search projects..." class="search-input" />
+        </div>
+
       </div>
 
       <div class="actions actions-between">
@@ -545,17 +573,17 @@ watch(
           <div class="field">
             <label class="label-with-icon">
               <ClipboardList :size="18" :stroke-width="2.1" />
-              Primary Checklist <span class="label-required">*</span>
+              Initial Checklist
             </label>
-            <select v-model="form.checklist_id" required class="select-top-gap">
-              <option disabled value="">Select primary checklist for version 1</option>
+            <select v-model="form.checklist_id" class="select-top-gap">
+              <option value="">Start without a checklist</option>
               <option v-for="checklist in checklists" :key="checklist.id" :value="checklist.id">
                 {{ checklist.name }}{{ checklist.description ? ' - ' + checklist.description : '' }}
               </option>
             </select>
             <p class="muted helper-text-info">
               <Info :size="14" class="icon-inline-top" />
-              <span>Used to create project version 1. You can add more checklists below.</span>
+              <span>Optional. Leave this empty for a story-first project, then create versions after user stories are ready.</span>
             </p>
           </div>
 

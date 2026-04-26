@@ -20,11 +20,13 @@ class LocalLLMGenerator implements TestCaseGeneratorInterface
 {
     private string $baseUrl;
     private string $model;
+    private int $timeout;
 
     public function __construct()
     {
         $this->baseUrl = config('services.test_generation.llm_url', 'http://localhost:11434');
         $this->model = config('services.test_generation.llm_model', 'mistral');
+        $this->timeout = min(5, max(3, (int) config('services.test_generation.llm_timeout', 5)));
     }
 
     /**
@@ -44,7 +46,7 @@ class LocalLLMGenerator implements TestCaseGeneratorInterface
             $prompt = $this->buildPrompt($userStory);
 
             // Call local LLM API (Ollama format)
-            $response = Http::timeout(120)->post(
+            $response = Http::timeout($this->timeout)->post(
                 "{$this->baseUrl}/api/generate",
                 [
                     'model' => $this->model,

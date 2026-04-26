@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\UserStory;
 use App\Models\Project;
+use App\Services\ChecklistGenerationAgentService;
+use App\Services\ChecklistRecommendationService;
 use App\Services\TestCaseGenerationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,10 +14,18 @@ use Illuminate\Support\Facades\Auth;
 class UserStoryController extends Controller
 {
     private TestCaseGenerationService $testCaseGenerator;
+    private ChecklistRecommendationService $checklistRecommendations;
+    private ChecklistGenerationAgentService $checklistGenerationAgent;
 
-    public function __construct(TestCaseGenerationService $testCaseGenerator)
+    public function __construct(
+        TestCaseGenerationService $testCaseGenerator,
+        ChecklistRecommendationService $checklistRecommendations,
+        ChecklistGenerationAgentService $checklistGenerationAgent
+    )
     {
         $this->testCaseGenerator = $testCaseGenerator;
+        $this->checklistRecommendations = $checklistRecommendations;
+        $this->checklistGenerationAgent = $checklistGenerationAgent;
     }
 
     /**
@@ -118,26 +128,28 @@ class UserStoryController extends Controller
      */
     public function generateChecklistFromArxis(Request $request, Project $project, UserStory $userStory)
     {
-        $this->authorize('update', $project);
+        return $this->generateChecklistWithAgent($request, $project, $userStory);
+    }
+
+    /**
+     * Generate a reusable checklist draft using the checklist agent.
+     */
+    public function generateChecklistWithAgent(Request $request, Project $project, UserStory $userStory)
+    {
+        $this->authorize('view', $project);
 
         if ($userStory->project_id !== $project->id) {
             return response()->json(['error' => 'User story not found in this project'], 404);
         }
 
         try {
-            $checklist = $this->testCaseGenerator->generateChecklistFromUserStory($userStory);
-
-            $userStory->checklists()->attach($checklist->id, ['is_generated_from_arxis' => true]);
-
-            return response()->json([
-                'message' => 'Checklist generated successfully',
-                'checklist' => $checklist->load('items'),
-                'user_story' => $userStory->load(['creator', 'checklists']),
-                'available_generators' => $this->testCaseGenerator->getAvailableGenerators(),
-            ], 201);
+            return response()->json(
+                $this->checklistGenerationAgent->generateDraftForUserStory($userStory),
+                201
+            );
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Failed to generate checklist',
+                'error' => 'Failed to generate checklist with agent',
                 'message' => $e->getMessage(),
                 'available_generators' => $this->testCaseGenerator->getAvailableGenerators(),
             ], 500);
@@ -149,7 +161,7 @@ class UserStoryController extends Controller
      */
     public function attachChecklist(Request $request, Project $project, UserStory $userStory)
     {
-        $this->authorize('update', $project);
+        $this->authorize('view', $project);
 
         if ($userStory->project_id !== $project->id) {
             return response()->json(['error' => 'User story not found in this project'], 404);
@@ -164,7 +176,15 @@ class UserStoryController extends Controller
             return response()->json(['error' => 'Checklist is already attached to this user story'], 409);
         }
 
-        $userStory->checklists()->attach($validated['checklist_id'], ['is_generated_from_arxis' => false]);
+        $recommendations = $this->checklistRecommendations->suggestForUserStory($userStory);
+        $selectedSuggestion = collect($recommendations['suggestions'] ?? [])
+            ->firstWhere('id', (int) $validated['checklist_id']);
+
+        $userStory->checklists()->attach($validated['checklist_id'], [
+            'is_generated_from_arxis' => false,
+            'relevance_score' => $selectedSuggestion['score'] ?? null,
+            'link_type' => 'attached',
+        ]);
 
         return response()->json($userStory->load(['creator', 'checklists']), 201);
     }
@@ -197,5 +217,21 @@ class UserStoryController extends Controller
             'configured_provider' => config('services.test_generation.provider', 'local-llm'),
             'configured_model' => config('services.test_generation.llm_model', 'mistral'),
         ]);
+    }
+
+    /**
+     * Suggest reusable checklists for the given user story before generating a new one.
+     */
+    public function suggestChecklists(Project $project, UserStory $userStory)
+    {
+        $this->authorize('view', $project);
+
+        if ($userStory->project_id !== $project->id) {
+            return response()->json(['error' => 'User story not found in this project'], 404);
+        }
+
+        return response()->json(
+            $this->checklistRecommendations->suggestForUserStory($userStory)
+        );
     }
 }

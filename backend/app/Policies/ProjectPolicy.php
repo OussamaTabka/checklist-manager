@@ -25,8 +25,8 @@ class ProjectPolicy
             return true;
         }
 
-        // Testeur voit tous (pour tester)
-        if ($user->hasRole('testeur')) {
+        // Testeur voit seulement les projets qui lui sont assignés
+        if ($user->hasRole('testeur') && $project->testers()->where('users.id', $user->id)->exists()) {
             return true;
         }
 

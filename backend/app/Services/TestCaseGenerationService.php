@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\UserStory;
 use App\Models\Checklist;
 use App\Models\ChecklistItem;
+use App\Services\TestCaseGeneration\TestCaseGeneratorInterface;
 use App\Services\TestCaseGeneration\TestCaseGeneratorFactory;
 use Illuminate\Support\Facades\Auth;
 use Exception;
@@ -28,11 +29,9 @@ class TestCaseGenerationService
      */
     public function generateChecklistFromUserStory(UserStory $userStory): Checklist
     {
-        // Get the best available generator
-        $generator = TestCaseGeneratorFactory::make();
-
-        // Generate test cases
-        $testCases = $generator->generateTestCases($userStory);
+        $generation = $this->generateTestCasesForUserStory($userStory);
+        $generator = $generation['generator'];
+        $testCases = $generation['test_cases'];
 
         if (empty($testCases)) {
             throw new Exception('No test cases generated');
@@ -45,21 +44,58 @@ class TestCaseGenerationService
             'category' => 'ai-generated',
             'is_active' => true,
             'created_by' => Auth::id(),
+            'template_scope' => 'global',
+            'lifecycle_status' => 'draft',
+            'generated_from' => 'ai',
+            'source_user_story_id' => $userStory->id,
         ]);
 
         // Add test cases as checklist items
         foreach ($testCases as $index => $testCase) {
             ChecklistItem::create([
                 'checklist_id' => $checklist->id,
-                'name' => $testCase['name'] ?? 'Test Case ' . ($index + 1),
-                'description' => $testCase['description'] ?? '',
-                'expected_result' => $testCase['expected_result'] ?? '',
+                'title' => $testCase['name'] ?? 'Test Case ' . ($index + 1),
+                'description' => $this->buildItemDescription($testCase),
+                'priority' => $this->mapSeverityToPriority($testCase['severity'] ?? 'medium'),
                 'criticality' => $this->mapSeveritytoCriticality($testCase['severity'] ?? 'medium'),
                 'order' => $index + 1,
             ]);
         }
 
         return $checklist;
+    }
+
+    /**
+     * Generate raw test cases without persisting a checklist.
+     *
+     * @param UserStory $userStory
+     * @return array{generator: TestCaseGeneratorInterface, generator_name: string, test_cases: array}
+     * @throws Exception
+     */
+    public function generateTestCasesForUserStory(UserStory $userStory): array
+    {
+        $errors = [];
+
+        foreach (TestCaseGeneratorFactory::orderedAvailableGenerators() as $generator) {
+            try {
+                $testCases = $generator->generateTestCases($userStory);
+
+                if (!empty($testCases)) {
+                    return [
+                        'generator' => $generator,
+                        'generator_name' => $generator->getName(),
+                        'test_cases' => $testCases,
+                        'fallback_errors' => $errors,
+                    ];
+                }
+
+                $errors[] = "{$generator->getName()}: no test cases generated";
+            } catch (Exception $e) {
+                $errors[] = "{$generator->getName()}: {$e->getMessage()}";
+            }
+        }
+
+        throw new Exception('No test cases generated. ' . implode(' | ', $errors));
     }
 
     /**
@@ -82,12 +118,36 @@ class TestCaseGenerationService
     {
         $mapping = [
             'critical' => 'Critical',
+            'high' => 'Critical',
+            'medium' => 'Major',
+            'low' => 'Minor',
+        ];
+
+        return $mapping[strtolower($severity)] ?? 'Major';
+    }
+
+    private function mapSeverityToPriority(string $severity): string
+    {
+        $mapping = [
+            'critical' => 'High',
             'high' => 'High',
             'medium' => 'Medium',
             'low' => 'Low',
         ];
 
         return $mapping[strtolower($severity)] ?? 'Medium';
+    }
+
+    private function buildItemDescription(array $testCase): string
+    {
+        $description = trim((string) ($testCase['description'] ?? ''));
+        $expected = trim((string) ($testCase['expected_result'] ?? ''));
+
+        if ($expected === '') {
+            return $description;
+        }
+
+        return trim($description . "\n\nExpected result: " . $expected);
     }
 
     /**

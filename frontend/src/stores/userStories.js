@@ -12,7 +12,8 @@ export const useUserStoriesStore = defineStore('userStories', () => {
     current: null,
     error: null,
   })
-  
+  const suggestionsByStoryId = ref({})
+  const agentResultsByStoryId = ref({})
   const isGenerating = ref(false)
 
   const groupedByStatus = computed(() => {
@@ -135,26 +136,49 @@ export const useUserStoriesStore = defineStore('userStories', () => {
   }
 
   async function generateChecklistFromLLM(projectId, storyId) {
+    return generateChecklistWithAgent(projectId, storyId)
+  }
+
+  async function generateChecklistWithAgent(projectId, storyId) {
     isGenerating.value = true
     error.value = null
     
     try {
       const response = await apiRequest(
-        `/projects/${projectId}/user-stories/${storyId}/generate-from-arxis`,
+        `/projects/${projectId}/user-stories/${storyId}/agent/generate-checklist`,
         { method: 'POST', body: {} }
       )
-      
-      // Update the current story with new checklist
-      if (currentStory.value?.id === storyId) {
-        currentStory.value.checklists = response.checklists || []
+
+      if (response?.suggestions) {
+        suggestionsByStoryId.value = {
+          ...suggestionsByStoryId.value,
+          [storyId]: response.suggestions,
+        }
       }
-      
-      // Update in list
+
+      agentResultsByStoryId.value = {
+        ...agentResultsByStoryId.value,
+        [storyId]: {
+          decision: response?.decision || null,
+          reuse_summary: response?.reuse_summary || null,
+          checklist: response?.checklist || null,
+        },
+      }
+
+      const updatedStory = response.user_story || null
+
+      if (currentStory.value?.id === storyId && updatedStory) {
+        currentStory.value = updatedStory
+      }
+
       const index = stories.value.findIndex(s => s.id === storyId)
-      if (index !== -1) {
-        stories.value[index].checklists = response.checklists || []
+      if (index !== -1 && updatedStory) {
+        stories.value[index] = {
+          ...stories.value[index],
+          ...updatedStory,
+        }
       }
-      
+
       return response
     } catch (err) {
       error.value = err.message || 'Failed to generate checklist'
@@ -198,12 +222,12 @@ export const useUserStoriesStore = defineStore('userStories', () => {
       )
       
       if (currentStory.value?.id === storyId) {
-        currentStory.value.checklists = response.checklists || []
+        currentStory.value = response
       }
       
       const index = stories.value.findIndex(s => s.id === storyId)
       if (index !== -1) {
-        stories.value[index].checklists = response.checklists || []
+        stories.value[index] = response
       }
       
       return response
@@ -226,12 +250,12 @@ export const useUserStoriesStore = defineStore('userStories', () => {
       )
       
       if (currentStory.value?.id === storyId) {
-        currentStory.value.checklists = response.checklists || []
+        currentStory.value = response
       }
       
       const index = stories.value.findIndex(s => s.id === storyId)
       if (index !== -1) {
-        stories.value[index].checklists = response.checklists || []
+        stories.value[index] = response
       }
       
       return response
@@ -247,6 +271,24 @@ export const useUserStoriesStore = defineStore('userStories', () => {
     currentStory.value = null
   }
 
+  async function fetchChecklistSuggestions(projectId, storyId) {
+    try {
+      const response = await apiRequest(
+        `/projects/${projectId}/user-stories/${storyId}/suggest-checklists`
+      )
+
+      suggestionsByStoryId.value = {
+        ...suggestionsByStoryId.value,
+        [storyId]: response,
+      }
+
+      return response
+    } catch (err) {
+      error.value = err.message || 'Failed to fetch checklist suggestions'
+      throw err
+    }
+  }
+
   function clearError() {
     error.value = null
   }
@@ -259,6 +301,8 @@ export const useUserStoriesStore = defineStore('userStories', () => {
     error,
     isGenerating,
     generatorStatus,
+    suggestionsByStoryId,
+    agentResultsByStoryId,
     
     // Computed
     groupedByStatus,
@@ -271,6 +315,8 @@ export const useUserStoriesStore = defineStore('userStories', () => {
     updateStory,
     deleteStory,
     generateChecklistFromLLM,
+    generateChecklistWithAgent,
+    fetchChecklistSuggestions,
     fetchGeneratorStatus,
     attachChecklist,
     detachChecklist,

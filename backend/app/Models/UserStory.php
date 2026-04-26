@@ -54,6 +54,6 @@ class UserStory extends Model
             'user_story_checklists',
             'user_story_id',
             'checklist_id'
-        )->withPivot('is_generated_from_arxis')->withTimestamps();
+        )->withPivot(['is_generated_from_arxis', 'relevance_score', 'link_type'])->withTimestamps();
     }
 }

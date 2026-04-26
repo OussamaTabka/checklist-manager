@@ -18,7 +18,15 @@ class Checklist extends Model
         'description',
         'category',
         'is_active',
-        'created_by'
+        'created_by',
+        'template_scope',
+        'lifecycle_status',
+        'generated_from',
+        'source_user_story_id',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
     ];
 
     // Relation : une checklist a plusieurs items
@@ -43,6 +51,14 @@ class Checklist extends Model
             'user_story_checklists',
             'checklist_id',
             'user_story_id'
-        )->withPivot('is_generated_from_arxis')->withTimestamps();
+        )->withPivot(['is_generated_from_arxis', 'relevance_score', 'link_type'])->withTimestamps();
+    }
+
+    /**
+     * User story that originated this checklist draft, when applicable.
+     */
+    public function sourceUserStory()
+    {
+        return $this->belongsTo(UserStory::class, 'source_user_story_id');
     }
 }
