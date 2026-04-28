@@ -15,7 +15,16 @@ class UserStory extends Model
         'project_id',
         'title',
         'description',
+        'as_a',
+        'i_want_that',
+        'so_that',
         'acceptance_criteria',
+        'business_rules',
+        'scenarios',
+        'effort_points',
+        'business_value',
+        'start_date',
+        'target_completion_date',
         'status',
         'priority',
         'story_id',
@@ -23,6 +32,10 @@ class UserStory extends Model
     ];
 
     protected $casts = [
+        'business_rules' => 'array',
+        'scenarios' => 'array',
+        'start_date' => 'date',
+        'target_completion_date' => 'date',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',

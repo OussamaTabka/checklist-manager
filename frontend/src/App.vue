@@ -18,20 +18,27 @@ import {
 } from 'lucide-vue-next'
 import { apiRequest, withQuery } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
+import { useSettingsStore } from '@/stores/settings'
+import { translatePhrase } from '@/lib/runtimeTranslations'
 import LogoHeader from '@/components/LogoHeader.vue'
 
 const SIDEBAR_STORAGE_KEY = 'ui_sidebar_collapsed'
 
 const auth = useAuthStore()
+const settings = useSettingsStore()
 const router = useRouter()
 const route = useRoute()
 
+function tr(text) {
+  return translatePhrase(text, settings.language)
+}
+
 const roleLabel = computed(() => auth.roles.join(', '))
 const workspaceLabel = computed(() => {
-  if (auth.roles.includes('chef')) return 'Project Command'
-  if (auth.roles.includes('admin')) return 'Admin Control'
-  if (auth.roles.includes('testeur')) return 'Execution Space'
-  return 'Workspace'
+  if (auth.roles.includes('chef')) return tr('Project Command')
+  if (auth.roles.includes('admin')) return tr('Admin Control')
+  if (auth.roles.includes('testeur')) return tr('Execution Space')
+  return tr('Workspace')
 })
 const profileInitial = computed(() => {
   const source = String(auth.user?.name || 'U').trim()
@@ -62,34 +69,34 @@ const searchIndex = reactive({
 const sidebarSections = computed(() => {
   const sections = [
     {
-      title: 'MAIN',
+      title: tr('MAIN'),
       items: [
-        { label: 'Dashboard', route: { name: 'dashboard' }, icon: Home, show: true },
-        { label: 'Projects', route: { name: 'projects' }, icon: FolderKanban, show: true },
+        { label: tr('Dashboard'), route: { name: 'dashboard' }, icon: Home, show: true },
+        { label: tr('Projects'), route: { name: 'projects' }, icon: FolderKanban, show: true },
       ],
     },
     {
-      title: 'TEST MANAGEMENT',
+      title: tr('TEST MANAGEMENT'),
       items: [
         {
-          label: 'User Stories',
+          label: tr('User Stories'),
           route: { name: 'stories' },
           icon: NotebookPen,
           show: auth.hasAnyRole(['admin', 'chef', 'testeur']),
         },
         {
-          label: 'Checklist Templates',
+          label: tr('Checklist Templates'),
           route: { name: 'checklists' },
           icon: ClipboardCheck,
-          show: auth.canManageChecklists,
+          show: auth.canManageChecklists || auth.canTest,
         },
       ],
     },
     {
-      title: 'ADMIN',
+      title: tr('ADMIN'),
       items: [
         {
-          label: 'Users & Roles',
+          label: tr('Users & Roles'),
           route: { name: 'users' },
           icon: UsersRound,
           show: auth.canManageUsers,
@@ -112,21 +119,21 @@ const quickActions = computed(() => {
 
   if (auth.canManageProjects) {
     actions.push({
-      label: 'New Project',
+      label: tr('New Project'),
       route: { name: 'projects', query: { create: '1' } },
     })
   }
 
   if (auth.canManageChecklists) {
     actions.push({
-      label: 'New Checklist',
+      label: tr('New Checklist'),
       route: { name: 'checklists', query: { create: '1' } },
     })
   }
 
   if (auth.canManageStories) {
     actions.push({
-      label: 'New Story',
+      label: tr('New Story'),
       route: currentProjectId
         ? { name: 'story-create', query: { projectId: currentProjectId } }
         : { name: 'stories' },
@@ -156,7 +163,7 @@ const notificationItems = computed(() => {
     items.push({
       key: 'tests-failed',
       tone: 'danger',
-      text: `${headerMetrics.testsFailed} test(s) failed recently`,
+      text: `${headerMetrics.testsFailed} ${tr('test(s) failed recently')}`,
     })
   }
 
@@ -164,7 +171,7 @@ const notificationItems = computed(() => {
     items.push({
       key: 'critical-failed',
       tone: 'warning',
-      text: `${headerMetrics.failedCriticalItems} critical item(s) are failing`,
+      text: `${headerMetrics.failedCriticalItems} ${tr('critical item(s) are failing')}`,
     })
   }
 
@@ -172,7 +179,7 @@ const notificationItems = computed(() => {
     items.push({
       key: 'all-good',
       tone: 'info',
-      text: 'No active alerts for now',
+      text: tr('No active alerts for now'),
     })
   }
 
@@ -181,19 +188,19 @@ const notificationItems = computed(() => {
 
 const workspaceSignals = computed(() => [
   {
-    label: 'Alerts',
+    label: tr('Alerts'),
     value: notificationBadge.value,
     tone: failedAlertCount.value > 0 ? 'danger' : 'neutral',
     icon: TriangleAlert,
   },
   {
-    label: 'Critical',
+    label: tr('Critical'),
     value: String(headerMetrics.failedCriticalItems || 0),
     tone: Number(headerMetrics.failedCriticalItems || 0) > 0 ? 'warning' : 'neutral',
     icon: Gauge,
   },
   {
-    label: 'Search',
+    label: tr('Search'),
     value: `${searchIndex.projects.length + searchIndex.checklists.length}`,
     tone: 'neutral',
     icon: Sparkles,
@@ -214,7 +221,7 @@ const globalSearchResults = computed(() => {
       if (item.label.toLowerCase().includes(q)) {
         scoped.push({
           key: `nav-${item.label}`,
-          type: 'Navigation',
+          type: tr('Navigation'),
           label: item.label,
           subtitle: section.title,
           route: item.route,
@@ -227,7 +234,7 @@ const globalSearchResults = computed(() => {
     .filter((item) => item.name.toLowerCase().includes(q))
     .map((item) => ({
       key: `project-${item.id}`,
-      type: 'Project',
+      type: tr('Project'),
       label: item.name,
       subtitle: item.subtitle,
       route: { name: 'project-detail', params: { id: item.id } },
@@ -237,7 +244,7 @@ const globalSearchResults = computed(() => {
     .filter((item) => item.name.toLowerCase().includes(q))
     .map((item) => ({
       key: `checklist-${item.id}`,
-      type: 'Checklist',
+      type: tr('Checklist'),
       label: item.name,
       subtitle: item.subtitle,
       route: { name: 'checklists' },
@@ -247,7 +254,7 @@ const globalSearchResults = computed(() => {
     .filter((item) => item.name.toLowerCase().includes(q) || item.email.toLowerCase().includes(q))
     .map((item) => ({
       key: `user-${item.id}`,
-      type: 'User',
+      type: tr('User'),
       label: item.name,
       subtitle: item.email,
       route: { name: 'users' },
@@ -305,7 +312,7 @@ async function loadGlobalSearchIndex() {
     searchIndex.projects = list.map((item) => ({
       id: item.id,
       name: String(item.name || `Project #${item.id}`),
-      subtitle: String(item.app_url || item.description || 'Project'),
+      subtitle: String(item.app_url || item.description || tr('Project')),
     }))
   } else {
     searchIndex.projects = []
@@ -316,7 +323,7 @@ async function loadGlobalSearchIndex() {
     searchIndex.checklists = list.map((item) => ({
       id: item.id,
       name: String(item.name || `Checklist #${item.id}`),
-      subtitle: String(item.category || 'Checklist template'),
+      subtitle: String(item.category || tr('Checklist')),
     }))
   } else {
     searchIndex.checklists = []
@@ -453,7 +460,7 @@ watch(
             <input
               v-model="globalQuery"
               type="text"
-              placeholder="Search projects, users, checklists..."
+              :placeholder="tr('Search projects, users, checklists...')"
               @focus="onGlobalSearchFocus"
             />
           </form>
@@ -472,20 +479,20 @@ watch(
             </button>
 
             <p v-if="globalSearchResults.length === 0" class="search-result-empty">
-              No matching result.
+              {{ tr('No matching result.') }}
             </p>
           </div>
         </div>
 
         <div class="topbar-right">
           <div class="notifications-wrap" ref="notificationsRef">
-            <button class="icon-btn" type="button" @click="toggleNotifications" title="Notifications">
+            <button class="icon-btn" type="button" @click="toggleNotifications" :title="tr('Notifications')">
               <Bell :size="18" :stroke-width="2.2" />
               <span v-if="failedAlertCount > 0" class="icon-badge">{{ notificationBadge }}</span>
             </button>
 
             <div v-if="showNotificationPanel" class="notifications-panel">
-              <div class="notifications-title">Alerts</div>
+              <div class="notifications-title">{{ tr('Alerts') }}</div>
               <div class="notifications-list">
                 <div
                   v-for="item in notificationItems"
@@ -510,9 +517,9 @@ watch(
             </button>
 
             <div v-if="showProfileMenu" class="profile-menu">
-              <button type="button" class="profile-menu-item" @click="goToProfile">Profile</button>
-              <button type="button" class="profile-menu-item" @click="goToSettings">Settings</button>
-              <button type="button" class="profile-menu-item danger" @click="handleLogout">Logout</button>
+              <button type="button" class="profile-menu-item" @click="goToProfile">{{ tr('Profile') }}</button>
+              <button type="button" class="profile-menu-item" @click="goToSettings">{{ tr('Settings') }}</button>
+              <button type="button" class="profile-menu-item danger" @click="handleLogout">{{ tr('Logout') }}</button>
             </div>
           </div>
         </div>
@@ -521,12 +528,12 @@ watch(
       <div class="portal-layout" :class="{ 'sidebar-collapsed': isSidebarCollapsed }">
         <aside class="sidebar">
           <div class="sidebar-head">
-            <div class="sidebar-title" v-show="!isSidebarCollapsed">Navigation</div>
+            <div class="sidebar-title" v-show="!isSidebarCollapsed">{{ tr('Navigation') }}</div>
             <button
               class="sidebar-toggle"
               type="button"
               @click="toggleSidebar"
-              :title="isSidebarCollapsed ? 'Expand' : 'Collapse'"
+              :title="isSidebarCollapsed ? tr('Expand') : tr('Collapse')"
             >
               <Menu :size="16" />
             </button>
@@ -575,7 +582,7 @@ watch(
           </nav>
 
           <div class="sidebar-quick" v-if="quickActions.length > 0">
-            <p class="sidebar-group" v-show="!isSidebarCollapsed">QUICK ACTIONS</p>
+            <p class="sidebar-group" v-show="!isSidebarCollapsed">{{ tr('QUICK ACTIONS') }}</p>
             <RouterLink
               v-for="action in quickActions"
               :key="action.label"

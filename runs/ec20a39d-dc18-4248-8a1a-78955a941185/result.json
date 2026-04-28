@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "run_id": "ec20a39d-dc18-4248-8a1a-78955a941185",
+  "runner_run_id": "runner-1777390422268",
+  "base_url_used": "https://www.apple.com/tn",
+  "status": "done",
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 51,
+      "status": "passed",
+      "attempt": 1,
+      "duration_ms": 15044,
+      "error_type": null,
+      "error_message": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      },
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://www.apple.com/tn -> ok (1930ms)",
+        "[chrome] Assert 1: expect_visible css=body -> ok (40ms)",
+        "[chrome] Assert 2: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

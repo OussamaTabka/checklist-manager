@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "ec20a39d-dc18-4248-8a1a-78955a941185",
+  "status": "done",
+  "updated_at": "2026-04-28T15:33:58.537Z",
+  "cases": [
+    {
+      "external_id": 51,
+      "title": "TC-01 | Cas nominal",
+      "status": "passed",
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://www.apple.com/tn -> ok (1930ms)",
+        "[chrome] Assert 1: expect_visible css=body -> ok (40ms)",
+        "[chrome] Assert 2: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

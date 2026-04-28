@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use App\Models\ChecklistItem;
+use App\Models\ChecklistItemHistory;
 use App\Models\ItemChange;
 use App\Models\TestResult;
 use App\Models\TestRun;
@@ -33,7 +35,10 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
 
         $payload = is_array($run->request_payload) ? $run->request_payload : [];
         $testCaseId = (int) ($payload['test_case_id'] ?? 0);
-        $item = VersionItem::find($testCaseId);
+        $targetType = (string) ($payload['target_type'] ?? 'version_item');
+        $item = $targetType === 'checklist_item'
+            ? ChecklistItem::find($testCaseId)
+            : VersionItem::find($testCaseId);
 
         if (!$item) {
             $this->markBlocked($run, null, 'test_case_not_found', 'Selected test case could not be found.');
@@ -53,7 +58,9 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
         $priority = trim((string) ($payload['priority'] ?? ($item->priority ?? '')));
         $criticality = trim((string) ($payload['criticality'] ?? ($item->criticality ?? '')));
         $currentStatus = trim((string) ($payload['current_status'] ?? ($item->status ?? '')));
-        $projectVersionId = (int) ($payload['project_version_id'] ?? $item->project_version_id);
+        $projectVersionId = $item instanceof VersionItem
+            ? (int) ($payload['project_version_id'] ?? $item->project_version_id)
+            : null;
         $watchMode = (bool) ($payload['watch_mode'] ?? true);
 
         try {
@@ -108,6 +115,7 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
                 'criticality' => $criticality,
                 'current_status' => $currentStatus,
                 'project_version_id' => $projectVersionId,
+                'target_type' => $targetType,
             ];
 
             file_put_contents($agentInputPath, json_encode($agentInput, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
@@ -263,7 +271,7 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
         }
     }
 
-    private function persistResult(TestRun $run, VersionItem $item, array $resultPayload): void
+    private function persistResult(TestRun $run, VersionItem|ChecklistItem $item, array $resultPayload): void
     {
         $summary = is_array($resultPayload['summary'] ?? null) ? $resultPayload['summary'] : [];
         $results = is_array($resultPayload['results'] ?? null) ? $resultPayload['results'] : [];
@@ -293,7 +301,15 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
         }
 
         $resultStatus = (string) ($caseResult['status'] ?? 'blocked');
-        $mappedVersionItemStatus = match ($resultStatus) {
+        $mappedItemStatus = $item instanceof ChecklistItem
+            ? match ($resultStatus) {
+                'passed' => 'passed',
+                'failed' => 'failed',
+                'blocked' => 'blocked',
+                'skipped' => 'pending',
+                default => 'blocked',
+            }
+            : match ($resultStatus) {
             'passed' => 'Passed',
             'failed' => 'Failed',
             'blocked' => 'Blocked',
@@ -309,32 +325,12 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
             'raw_paths' => $artifacts,
         ];
 
-        DB::transaction(function () use ($run, $item, $summary, $caseResult, $mappedVersionItemStatus, $artifactPayload, $resultStatus) {
+        DB::transaction(function () use ($run, $item, $summary, $caseResult, $mappedItemStatus, $artifactPayload, $resultStatus) {
             $oldStatus = $item->status;
-
-            $item->update([
-                'status' => $mappedVersionItemStatus,
-                'tested_by' => $mappedVersionItemStatus === 'Not Tested' ? null : $run->requested_by,
-                'tested_at' => $mappedVersionItemStatus === 'Not Tested' ? null : now(),
-            ]);
-
-            if ($oldStatus !== $mappedVersionItemStatus) {
-                ItemChange::create([
-                    'version_item_id' => $item->id,
-                    'changed_by' => $run->requested_by,
-                    'field_name' => 'status',
-                    'old_value' => $oldStatus,
-                    'new_value' => $mappedVersionItemStatus,
-                    'change_type' => 'status_changed',
-                    'notes' => 'Updated from single test-case run ' . $run->run_id,
-                ]);
-            }
+            $this->updateItemStatusFromRun($item, $run->requested_by, $mappedItemStatus, 'Updated from single test-case run ' . $run->run_id, $oldStatus);
 
             TestResult::updateOrCreate(
-                [
-                    'test_run_id' => $run->id,
-                    'version_item_id' => $item->id,
-                ],
+                $this->resolveTestResultIdentity($run->id, $item),
                 [
                     'status' => $resultStatus,
                     'error_type' => isset($caseResult['error_type']) && is_string($caseResult['error_type']) ? $caseResult['error_type'] : null,
@@ -358,7 +354,7 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
         });
     }
 
-    private function resolveCaseResult(array $results, VersionItem $item, array $runPayload): ?array
+    private function resolveCaseResult(array $results, VersionItem|ChecklistItem $item, array $runPayload): ?array
     {
         $entries = array_values(array_filter($results, static fn ($entry) => is_array($entry)));
         if ($entries === []) {
@@ -398,7 +394,7 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
         return null;
     }
 
-    private function markBlocked(TestRun $run, ?VersionItem $item, string $errorType, string $message): void
+    private function markBlocked(TestRun $run, VersionItem|ChecklistItem|null $item, string $errorType, string $message): void
     {
         $safeMessage = $this->sanitizeUtf8($message);
 
@@ -421,30 +417,10 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
                 return;
             }
 
-            $oldStatus = $item->status;
-            $item->update([
-                'status' => 'Blocked',
-                'tested_by' => $run->requested_by,
-                'tested_at' => now(),
-            ]);
-
-            if ($oldStatus !== 'Blocked') {
-                ItemChange::create([
-                    'version_item_id' => $item->id,
-                    'changed_by' => $run->requested_by,
-                    'field_name' => 'status',
-                    'old_value' => $oldStatus,
-                    'new_value' => 'Blocked',
-                    'change_type' => 'status_changed',
-                    'notes' => 'Infra error during run ' . $run->run_id,
-                ]);
-            }
+            $this->updateItemStatusFromRun($item, $run->requested_by, 'Blocked', 'Infra error during run ' . $run->run_id, $item->status);
 
             TestResult::updateOrCreate(
-                [
-                    'test_run_id' => $run->id,
-                    'version_item_id' => $item->id,
-                ],
+                $this->resolveTestResultIdentity($run->id, $item),
                 [
                     'status' => 'blocked',
                     'error_type' => $errorType,
@@ -465,6 +441,76 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
                 ],
             );
         });
+    }
+
+    private function resolveTestResultIdentity(int $runId, VersionItem|ChecklistItem $item): array
+    {
+        return $item instanceof VersionItem
+            ? ['test_run_id' => $runId, 'version_item_id' => $item->id]
+            : ['test_run_id' => $runId, 'checklist_item_id' => $item->id];
+    }
+
+    private function updateItemStatusFromRun(
+        VersionItem|ChecklistItem $item,
+        ?int $requestedBy,
+        string $newStatus,
+        string $notes,
+        ?string $oldStatus = null,
+    ): void {
+        $oldStatus = $oldStatus ?? (string) $item->status;
+        if ($item instanceof ChecklistItem && !in_array($oldStatus, ['Passed', 'Failed', 'Blocked', 'Not Tested'], true)) {
+            $oldStatus = 'Not Tested';
+        }
+
+        $storedStatus = $item instanceof ChecklistItem
+            ? match ($newStatus) {
+                'Passed', 'passed' => 'passed',
+                'Failed', 'failed' => 'failed',
+                'Blocked', 'blocked' => 'blocked',
+                default => 'pending',
+            }
+            : $newStatus;
+        $displayNewStatus = $item instanceof ChecklistItem
+            ? match ($storedStatus) {
+                'passed' => 'Passed',
+                'failed' => 'Failed',
+                'blocked' => 'Blocked',
+                default => 'Not Tested',
+            }
+            : $newStatus;
+
+        $item->update([
+            'status' => $storedStatus,
+            'tested_by' => $displayNewStatus === 'Not Tested' ? null : $requestedBy,
+            'tested_at' => $displayNewStatus === 'Not Tested' ? null : now(),
+        ]);
+
+        if ($oldStatus === $displayNewStatus) {
+            return;
+        }
+
+        if ($item instanceof VersionItem) {
+            ItemChange::create([
+                'version_item_id' => $item->id,
+                'changed_by' => $requestedBy,
+                'field_name' => 'status',
+                'old_value' => $oldStatus,
+                'new_value' => $displayNewStatus,
+                'change_type' => 'status_changed',
+                'notes' => $notes,
+            ]);
+            return;
+        }
+
+        ChecklistItemHistory::create([
+            'checklist_item_id' => $item->id,
+            'changed_by' => $requestedBy,
+            'field_name' => 'status',
+            'old_value' => $oldStatus,
+            'new_value' => $displayNewStatus,
+            'change_type' => 'status_changed',
+            'notes' => $notes,
+        ]);
     }
 
     private function ensureDirectory(string $path): void

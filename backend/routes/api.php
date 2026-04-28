@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\ExportController;
 use App\Http\Controllers\Api\TestRunController;
 use App\Http\Controllers\Api\TestCaseRunController;
+use App\Http\Controllers\Api\ChecklistItemExecutionController;
 use App\Http\Controllers\TestResultController;
 use App\Http\Controllers\Api\UserStoryController;
 Route::post('/test-results', [TestResultController::class, 'updateResults'])->middleware('throttle:60,1');
@@ -54,19 +55,29 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
         });
 
         // ==========================================
-        // GESTION CHECKLISTS (CHEF & ADMIN_CONTENUS)
+        // CONSULTATION & EXECUTION CHECKLISTS
         // ==========================================
-        Route::middleware(['role:chef|admin_contenus'])->group(function () {
+        Route::middleware(['role:admin|chef|admin_contenus|testeur'])->group(function () {
             Route::get('/checklists', [ChecklistController::class, 'index']);
-            Route::post('/checklists', [ChecklistController::class, 'store']);
+            Route::get('/checklists/items/available', [ChecklistController::class, 'getAvailableItems']);
+            Route::get('/checklists/{checklist}', [ChecklistController::class, 'show']);
+            Route::patch('/checklists/{checklist}/items/{item}/status', [ChecklistController::class, 'updateItemStatus']);
+            Route::get('/checklists/{checklist}/items/{item}/history', [ChecklistController::class, 'getItemHistory']);
+            Route::get('/checklists/{checklist}/items/{item}/execution', [ChecklistItemExecutionController::class, 'show']);
+            Route::post('/checklists/{checklist}/items/{item}/runs', [ChecklistItemExecutionController::class, 'run']);
             Route::get('/checklists/{id}/export/json', [ChecklistController::class, 'exportJson']);
             Route::get('/checklists/{id}/export/csv', [ChecklistController::class, 'exportCsv']);
             Route::get('/checklists/{id}/export/excel', [ChecklistController::class, 'exportExcel']);
             Route::get('/checklists/export/json', [ChecklistController::class, 'exportJson']);
             Route::get('/checklists/export/csv', [ChecklistController::class, 'exportCsv']);
             Route::get('/checklists/export/excel', [ChecklistController::class, 'exportExcel']);
-            Route::get('/checklists/items/available', [ChecklistController::class, 'getAvailableItems']);
-            Route::get('/checklists/{checklist}', [ChecklistController::class, 'show']);
+        });
+
+        // ==========================================
+        // GESTION CHECKLISTS (CHEF & ADMIN_CONTENUS)
+        // ==========================================
+        Route::middleware(['role:chef|admin_contenus'])->group(function () {
+            Route::post('/checklists', [ChecklistController::class, 'store']);
             Route::put('/checklists/{checklist}', [ChecklistController::class, 'update']);
             Route::delete('/checklists/{checklist}', [ChecklistController::class, 'destroy']);
             Route::patch('/checklists/{checklist}/toggle', [ChecklistController::class, 'toggle']);
@@ -79,9 +90,11 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
             Route::get('/projects/{project}/user-stories', [UserStoryController::class, 'index']);
             Route::get('/projects/{project}/user-stories/{userStory}', [UserStoryController::class, 'show']);
             Route::get('/projects/{project}/user-stories/{userStory}/suggest-checklists', [UserStoryController::class, 'suggestChecklists']);
+            Route::get('/projects/{project}/user-stories/{userStory}/suggest-checklists/{checklist}', [UserStoryController::class, 'previewSuggestedChecklist']);
             Route::post('/projects/{project}/user-stories/{userStory}/agent/generate-checklist', [UserStoryController::class, 'generateChecklistWithAgent']);
             Route::post('/projects/{project}/user-stories/{userStory}/generate-from-arxis', [UserStoryController::class, 'generateChecklistFromArxis']);
             Route::post('/projects/{project}/user-stories/{userStory}/attach-checklist', [UserStoryController::class, 'attachChecklist']);
+            Route::post('/projects/{project}/user-stories/{userStory}/adapt-checklist/{checklist}', [UserStoryController::class, 'adaptChecklist']);
             Route::get('/projects/{project}/user-stories/generators/status', [UserStoryController::class, 'getGeneratorsStatus']);
         });
 
@@ -93,6 +106,7 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
             Route::put('/projects/{project}/user-stories/{userStory}', [UserStoryController::class, 'update']);
             Route::delete('/projects/{project}/user-stories/{userStory}', [UserStoryController::class, 'destroy']);
             Route::delete('/projects/{project}/user-stories/{userStory}/checklists/{checklistId}', [UserStoryController::class, 'detachChecklist']);
+            Route::post('/projects/{project}/user-stories/{userStory}/approve-draft/{checklist}', [UserStoryController::class, 'approveGeneratedChecklist']);
         });
 
         // ==========================================

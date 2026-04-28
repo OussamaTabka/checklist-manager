@@ -16,7 +16,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             RolesAndAdminSeeder::class,
-            FakeDataSeeder::class,
+            AdvancedQaExamplesSeeder::class,
         ]);
     }
 }

@@ -11,6 +11,7 @@ class TestRun extends Model
     protected $fillable = [
         'run_id',
         'project_version_id',
+        'checklist_id',
         'schema_version',
         'base_url',
         'mode',
@@ -40,6 +41,11 @@ class TestRun extends Model
     public function projectVersion(): BelongsTo
     {
         return $this->belongsTo(ProjectVersion::class);
+    }
+
+    public function checklist(): BelongsTo
+    {
+        return $this->belongsTo(Checklist::class);
     }
 
     public function requester(): BelongsTo

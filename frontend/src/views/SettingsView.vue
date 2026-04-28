@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
 import { t } from '@/lib/translations'
+import { translatePhrase } from '@/lib/runtimeTranslations'
 import { ArrowLeft, Check, Globe, Moon, Palette } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -13,6 +14,10 @@ const settingsStore = useSettingsStore()
 const showNotification = ref(false)
 const notificationMessage = ref('')
 
+function tr(text) {
+  return translatePhrase(text, settingsStore.language)
+}
+
 const currentLanguageLabel = computed(() => {
   const lang = settingsStore.languages.find((item) => item.code === settingsStore.language)
   return lang ? `${lang.flag} ${lang.name}` : 'Français'
@@ -22,21 +27,21 @@ const settingsCopy = computed(() => {
   switch (auth.primaryRole) {
     case 'admin':
       return {
-        kicker: 'Admin Preferences',
-        title: 'Platform Settings',
-        description: 'Adjust the interface language and appearance for administration work.',
+        kicker: tr('Admin Preferences'),
+        title: tr('Platform Settings'),
+        description: tr('Adjust the interface language and appearance for administration work.'),
       }
     case 'testeur':
       return {
-        kicker: 'Execution Preferences',
-        title: 'Tester Settings',
-        description: 'Tune the workspace for faster reading, execution, and day-to-day testing comfort.',
+        kicker: tr('Execution Preferences'),
+        title: tr('Tester Settings'),
+        description: tr('Tune the workspace for faster reading, execution, and day-to-day testing comfort.'),
       }
     default:
       return {
-        kicker: 'Workspace Preferences',
+        kicker: tr('Workspace Preferences'),
         title: t('settings.title', settingsStore.language),
-        description: 'Configure language and display behavior for your project-management workspace.',
+        description: tr('Configure language and display behavior for your project-management workspace.'),
       }
   }
 })
@@ -73,7 +78,7 @@ function goBack() {
     <div class="settings-hero">
       <button @click="goBack" class="btn btn-secondary btn-sm">
         <ArrowLeft :size="16" />
-        <span>Back</span>
+        <span>{{ tr('Back') }}</span>
       </button>
 
       <div class="settings-hero-copy">
@@ -136,7 +141,7 @@ function goBack() {
         <div class="settings-theme-row">
           <div class="settings-theme-preview">
             <Palette :size="18" />
-            <span>{{ settingsStore.darkMode ? 'Dark canvas enabled' : 'Light canvas enabled' }}</span>
+            <span>{{ settingsStore.darkMode ? tr('Dark canvas enabled') : tr('Light canvas enabled') }}</span>
           </div>
 
           <button

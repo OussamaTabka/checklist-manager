@@ -1,10 +1,11 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { CheckCircle2, ClipboardList, FilePenLine, MessageCircle, Paperclip } from 'lucide-vue-next'
+import { CheckCircle2, ClipboardList, ExternalLink, FilePenLine, Layers3, MessageCircle, Paperclip, PlayCircle } from 'lucide-vue-next'
 import { API_BASE_URL, apiRequest, ensureCsrfCookie } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 import { useUserStoriesStore } from '@/stores/userStories'
+import { translateCurrentPhrase } from '@/lib/runtimeTranslations'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -82,6 +83,31 @@ const selectedVersion = computed(() => {
 
   const targetId = Number(selectedVersionId.value)
   return project.value.versions.find((version) => version.id === targetId) || null
+})
+
+const projectVersions = computed(() => project.value?.versions || [])
+
+const selectedVersionChecklistName = computed(() => selectedVersion.value?.checklist?.name || 'Checklist')
+
+const selectedVersionItemCount = computed(() => selectedVersion.value?.items?.length || 0)
+
+const selectedVersionPendingCount = computed(() => {
+  if (!selectedVersion.value?.items) {
+    return 0
+  }
+
+  return selectedVersion.value.items.filter((item) => displayStatus(item.status) === 'Pending').length
+})
+
+const nextRunnableItem = computed(() => {
+  if (!selectedVersion.value?.items?.length) {
+    return null
+  }
+
+  return (
+    selectedVersion.value.items.find((item) => ['Pending', 'Failed', 'Blocked'].includes(displayStatus(item.status))) ||
+    selectedVersion.value.items[0]
+  )
 })
 
 function mapStatusToExecutionState(status) {
@@ -206,6 +232,28 @@ function stateForItem(item) {
       },
     }
   )
+}
+
+function versionItemCount(version) {
+  return Array.isArray(version?.items) ? version.items.length : 0
+}
+
+function versionPendingCount(version) {
+  if (!Array.isArray(version?.items)) {
+    return 0
+  }
+
+  return version.items.filter((item) => displayStatus(item.status) === 'Pending').length
+}
+
+function selectVersionCard(versionId) {
+  selectedVersionId.value = String(versionId)
+}
+
+function runNextSuggestedItem() {
+  if (nextRunnableItem.value) {
+    openRunModal(nextRunnableItem.value)
+  }
 }
 
 function getArtifactUrl(item) {
@@ -375,11 +423,15 @@ async function loadProject() {
     project.value = data
 
     if (data.versions?.length) {
-      selectedVersionId.value = String(data.versions[0].id)
-      await loadProgress(data.versions[0].id)
-      seedRuntimeStateFromVersion(data.versions[0])
+      const existingSelection = data.versions.find((version) => String(version.id) === String(selectedVersionId.value))
+      const versionToUse = existingSelection || data.versions[0]
+
+      selectedVersionId.value = String(versionToUse.id)
+      await loadProgress(versionToUse.id)
+      seedRuntimeStateFromVersion(versionToUse)
     } else {
       selectedVersionId.value = ''
+      selectedItemId.value = null
       progress.value = null
     }
   } catch (error) {
@@ -746,7 +798,7 @@ function onFileSelected(event) {
 }
 
 async function deleteComment(commentId, itemId) {
-  if (!confirm('Delete this comment?')) {
+  if (!confirm(translateCurrentPhrase('Delete this comment?'))) {
     return
   }
 
@@ -854,38 +906,77 @@ onMounted(async () => {
 
 <template>
   <section class="page stack">
-    <div class="section-header">
-      <h1>Project details</h1>
-    </div>
-
     <p v-if="pageError" class="error">{{ pageError }}</p>
     <p v-if="loading" class="muted">Loading project...</p>
 
     <template v-if="project && !loading">
-      <div class="card stack">
-        <h2>{{ project.name }}</h2>
-        <p class="muted">{{ project.description || 'No description' }}</p>
-        <p class="muted">
-          App URL:
-          <a v-if="project.app_url" :href="project.app_url" target="_blank" rel="noopener noreferrer">{{ project.app_url }}</a>
-          <span v-else>-</span>
-        </p>
-        <p class="muted">Created by: {{ project.creator?.name || '-' }}</p>
+      <div class="project-execution-hero">
+        <div class="project-execution-copy">
+          <p class="project-execution-kicker">Test workspace</p>
+          <h1>{{ project.name }}</h1>
+          <p class="project-execution-subtitle">
+            A clearer execution flow for stories, checklists, environments, and automated runs.
+          </p>
+
+          <div class="project-meta-pills">
+            <span class="project-meta-pill">
+              <Layers3 :size="14" />
+              <span>{{ projectVersions.length }} version<span v-if="projectVersions.length !== 1">s</span></span>
+            </span>
+            <span class="project-meta-pill">
+              <ClipboardList :size="14" />
+              <span>{{ storiesStore.stories.length }} stor{{ storiesStore.stories.length === 1 ? 'y' : 'ies' }}</span>
+            </span>
+            <span class="project-meta-pill">
+              <CheckCircle2 :size="14" />
+              <span>{{ selectedVersionItemCount }} executable item<span v-if="selectedVersionItemCount !== 1">s</span></span>
+            </span>
+          </div>
+        </div>
+
+        <div class="project-execution-side">
+          <div class="project-execution-app-card">
+            <span class="project-execution-side-label">Target application</span>
+            <a
+              v-if="project.app_url"
+              :href="project.app_url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="project-app-link"
+            >
+              <span>{{ project.app_url }}</span>
+              <ExternalLink :size="14" />
+            </a>
+            <p v-else class="muted">No app URL configured yet.</p>
+            <p class="muted">Created by {{ project.creator?.name || '-' }}</p>
+          </div>
+
+          <div class="project-execution-hero-actions">
+            <button
+              class="btn btn-primary"
+              :disabled="!auth.canTest || !nextRunnableItem"
+              @click="runNextSuggestedItem"
+            >
+              <PlayCircle :size="16" />
+              <span>Run next test</span>
+            </button>
+            <RouterLink
+              v-if="auth.canManageStories"
+              class="btn btn-secondary"
+              :to="{ name: 'story-create', query: { projectId: project.id } }"
+            >
+              New story
+            </RouterLink>
+          </div>
+        </div>
       </div>
 
       <div class="card stack">
         <div class="section-header">
           <div>
             <h3>User stories</h3>
-            <p class="muted">Assigned testers can review each story before creating or generating checklist drafts.</p>
+            <p class="muted">Review stories first, then build execution-ready versions from the right checklist.</p>
           </div>
-          <RouterLink
-            v-if="auth.canManageStories"
-            class="btn btn-secondary btn-sm"
-            :to="{ name: 'story-create', query: { projectId: project.id } }"
-          >
-            New story
-          </RouterLink>
         </div>
 
         <p v-if="storiesStore.error" class="error">{{ storiesStore.error }}</p>
@@ -929,8 +1020,13 @@ onMounted(async () => {
         <p v-else class="muted">No user stories yet. Start with stories, then build checklist drafts from them.</p>
       </div>
 
-      <div v-if="auth.canManageProjects" class="card stack">
-        <h3>Create new version</h3>
+      <div v-if="auth.canManageProjects" class="card stack project-create-version-card">
+        <div class="section-header">
+          <div>
+            <h3>Create new version</h3>
+            <p class="muted">Prepare a project-specific execution copy without changing the reusable checklist.</p>
+          </div>
+        </div>
         <form class="grid" @submit.prevent="createVersion">
           <div class="field">
             <label>Checklist</label>
@@ -1074,52 +1170,101 @@ onMounted(async () => {
         </form>
       </div>
 
-      <div class="card stack">
-        <div class="grid">
-          <div class="field">
-            <label>Version</label>
-            <select v-model="selectedVersionId">
-              <option v-for="version in project.versions" :key="version.id" :value="version.id">
-                v{{ version.version_number }} - {{ version.checklist?.name || 'Checklist' }}
-              </option>
-            </select>
+      <div class="card stack execution-workspace-card">
+        <div class="section-header">
+          <div>
+            <h3>Execution workspace</h3>
+            <p class="muted">Choose a version, confirm the environment, then run each test item from one place.</p>
           </div>
-          <div class="actions-row-end">
-            <div v-if="selectedVersionId" class="relative-wrap">
-              <button
-                class="btn btn-secondary btn-sm"
-                @click="openExportDropdown = openExportDropdown === 'version' ? null : 'version'"
-              >
-                Export Version
-              </button>
-              <div
-                v-if="openExportDropdown === 'version'"
-                class="card stack export-dropdown-menu"
-              >
-                <button class="btn btn-secondary btn-sm" @click="exportVersion(Number(selectedVersionId), 'csv')">CSV</button>
-                <button class="btn btn-secondary btn-sm" @click="exportVersion(Number(selectedVersionId), 'pdf')">PDF</button>
-                <button class="btn btn-secondary btn-sm" @click="exportVersion(Number(selectedVersionId), 'xls')">XLS</button>
+        </div>
+
+        <div v-if="projectVersions.length === 0" class="empty-dashed-card execution-empty-state">
+          <h4>No project version yet</h4>
+          <p class="muted">Create a version from a checklist to unlock automated execution and item-by-item tracking.</p>
+        </div>
+
+        <template v-else>
+          <div class="version-card-grid">
+            <button
+              v-for="version in projectVersions"
+              :key="version.id"
+              type="button"
+              :class="['version-selector-card', { active: String(version.id) === String(selectedVersionId) }]"
+              @click="selectVersionCard(version.id)"
+            >
+              <div class="version-selector-top">
+                <span class="version-selector-badge">v{{ version.version_number }}</span>
+                <span class="version-selector-pending">{{ versionPendingCount(version) }} pending</span>
+              </div>
+              <strong>{{ version.checklist?.name || 'Checklist' }}</strong>
+              <p>{{ versionItemCount(version) }} executable item<span v-if="versionItemCount(version) !== 1">s</span></p>
+            </button>
+          </div>
+
+          <div v-if="selectedVersion" class="execution-toolbar">
+            <div class="execution-toolbar-main">
+              <div class="execution-toolbar-copy">
+                <span class="execution-toolbar-label">Selected version</span>
+                <h4>v{{ selectedVersion.version_number }} | {{ selectedVersionChecklistName }}</h4>
+                <p class="muted">
+                  {{ selectedVersionItemCount }} items ready for execution, including
+                  {{ selectedVersionPendingCount }} still pending.
+                </p>
+              </div>
+
+              <div class="execution-environment-box">
+                <span class="execution-toolbar-label">Test environment</span>
+                <strong>{{ project.app_url || 'No base URL configured' }}</strong>
+                <p class="muted">The Run Test action opens the environment settings before launching the automatic check.</p>
               </div>
             </div>
 
-            <div class="relative-wrap">
+            <div class="execution-toolbar-actions">
               <button
-                class="btn btn-secondary btn-sm"
-                @click="openExportDropdown = openExportDropdown === 'project' ? null : 'project'"
+                class="btn btn-primary"
+                :disabled="!auth.canTest || !nextRunnableItem"
+                @click="runNextSuggestedItem"
               >
-                Export Project
+                <PlayCircle :size="16" />
+                <span>Run Test</span>
               </button>
-              <div
-                v-if="openExportDropdown === 'project'"
-                class="card stack export-dropdown-menu"
-              >
-                <button class="btn btn-secondary btn-sm" @click="exportProject('csv')">CSV</button>
-                <button class="btn btn-secondary btn-sm" @click="exportProject('pdf')">PDF</button>
-                <button class="btn btn-secondary btn-sm" @click="exportProject('xls')">XLS</button>
+
+              <div v-if="selectedVersionId" class="relative-wrap">
+                <button
+                  class="btn btn-secondary"
+                  @click="openExportDropdown = openExportDropdown === 'version' ? null : 'version'"
+                >
+                  Export version
+                </button>
+                <div
+                  v-if="openExportDropdown === 'version'"
+                  class="card stack export-dropdown-menu"
+                >
+                  <button class="btn btn-secondary btn-sm" @click="exportVersion(Number(selectedVersionId), 'csv')">CSV</button>
+                  <button class="btn btn-secondary btn-sm" @click="exportVersion(Number(selectedVersionId), 'pdf')">PDF</button>
+                  <button class="btn btn-secondary btn-sm" @click="exportVersion(Number(selectedVersionId), 'xls')">XLS</button>
+                </div>
+              </div>
+
+              <div class="relative-wrap">
+                <button
+                  class="btn btn-secondary"
+                  @click="openExportDropdown = openExportDropdown === 'project' ? null : 'project'"
+                >
+                  Export project
+                </button>
+                <div
+                  v-if="openExportDropdown === 'project'"
+                  class="card stack export-dropdown-menu"
+                >
+                  <button class="btn btn-secondary btn-sm" @click="exportProject('csv')">CSV</button>
+                  <button class="btn btn-secondary btn-sm" @click="exportProject('pdf')">PDF</button>
+                  <button class="btn btn-secondary btn-sm" @click="exportProject('xls')">XLS</button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </template>
 
         <div v-if="progress" class="progress-stats-grid">
           <div class="card progress-stat">
@@ -1176,7 +1321,14 @@ onMounted(async () => {
         <p v-if="actionError" class="error">{{ actionError }}</p>
         <p v-if="actionSuccess" class="success">{{ actionSuccess }}</p>
 
-        <div class="table-wrap" v-if="selectedVersion">
+        <div v-if="selectedVersion" class="execution-table-header">
+          <div>
+            <h4>Executable checklist items</h4>
+            <p class="muted">Each item can be run automatically, then updated with status, comments, and traceability.</p>
+          </div>
+        </div>
+
+        <div class="table-wrap execution-table-wrap" v-if="selectedVersion">
           <table>
             <thead>
               <tr>
@@ -1185,7 +1337,7 @@ onMounted(async () => {
                 <th>Priority</th>
                 <th>Criticality</th>
                 <th>Status</th>
-                <th>Run</th>
+                <th>Automated test</th>
               </tr>
             </thead>
             <tbody>
@@ -1193,9 +1345,12 @@ onMounted(async () => {
                 <tr>
                   <td>{{ item.order + 1 }}</td>
                   <td>
-                    <strong class="item-title-link" @click="selectedItemId === item.id ? (selectedItemId = null) : (selectedItemId = item.id, loadComments(item.id))">
-                      {{ item.title }}
-                    </strong>
+                    <div class="item-title-cell">
+                      <span class="item-case-badge">TC-{{ String(item.order + 1).padStart(2, '0') }}</span>
+                      <strong class="item-title-link" @click="selectedItemId === item.id ? (selectedItemId = null) : (selectedItemId = item.id, loadComments(item.id))">
+                        {{ item.title }}
+                      </strong>
+                    </div>
                     <div class="muted">{{ item.description || '-' }}</div>
                   </td>
                   <td>{{ item.priority }}</td>
@@ -1219,8 +1374,9 @@ onMounted(async () => {
                         {{ executionStateLabel(stateForItem(item).execution_state) }}
                       </span>
 
-                      <button class="btn btn-secondary btn-sm" :disabled="!auth.canTest || isRunInFlight(item)" @click="openRunModal(item)">
-                        {{ runButtonLabel(item) }}
+                      <button class="btn btn-primary btn-sm run-test-inline-btn" :disabled="!auth.canTest || isRunInFlight(item)" @click="openRunModal(item)">
+                        <PlayCircle :size="14" />
+                        <span>{{ runButtonLabel(item) }} Test</span>
                       </button>
 
                       <a
@@ -1505,3 +1661,330 @@ onMounted(async () => {
     </template>
   </section>
 </template>
+
+<style>
+.project-execution-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.95fr);
+  gap: 1.5rem;
+  padding: 1.6rem 1.7rem;
+  border-radius: 1.6rem;
+  background:
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.16), transparent 14rem),
+    radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.12), transparent 14rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 22px 40px -34px rgba(15, 23, 42, 0.38);
+}
+
+.project-execution-kicker {
+  margin: 0 0 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #0f766e;
+}
+
+.project-execution-copy h1 {
+  margin: 0;
+  font-size: clamp(2rem, 3vw, 2.9rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.project-execution-subtitle {
+  max-width: 56rem;
+  margin: 0.85rem 0 1.15rem;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #475569;
+}
+
+.project-meta-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+.project-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.project-execution-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.project-execution-app-card {
+  padding: 1rem 1.1rem;
+  border-radius: 1.2rem;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.project-execution-side-label,
+.execution-toolbar-label {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.project-app-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+  color: #0f172a;
+  text-decoration: none;
+  word-break: break-word;
+}
+
+.project-app-link:hover {
+  color: #0f766e;
+}
+
+.project-execution-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.project-execution-hero-actions .btn,
+.execution-toolbar-actions .btn,
+.run-test-inline-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.project-create-version-card {
+  border-color: rgba(14, 165, 233, 0.18);
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.92), rgba(255, 255, 255, 0.98));
+}
+
+.execution-workspace-card {
+  gap: 1.35rem;
+}
+
+.execution-empty-state {
+  text-align: left;
+}
+
+.execution-empty-state h4 {
+  margin: 0 0 0.35rem;
+}
+
+.version-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.95rem;
+}
+
+.version-selector-card {
+  text-align: left;
+  padding: 1rem 1.05rem;
+  border-radius: 1.15rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  box-shadow: 0 18px 32px -28px rgba(15, 23, 42, 0.3);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.version-selector-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(14, 165, 233, 0.35);
+  box-shadow: 0 22px 36px -28px rgba(14, 165, 233, 0.28);
+}
+
+.version-selector-card.active {
+  border-color: rgba(14, 165, 233, 0.55);
+  background:
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 7rem),
+    linear-gradient(180deg, #f8fdff, #ffffff);
+  box-shadow: 0 24px 40px -28px rgba(14, 165, 233, 0.28);
+}
+
+.version-selector-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.7rem;
+}
+
+.version-selector-badge,
+.item-case-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #075985;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.version-selector-pending {
+  font-size: 0.84rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.version-selector-card strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.version-selector-card p {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.execution-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) auto;
+  gap: 1rem;
+  align-items: stretch;
+  padding: 1rem;
+  border-radius: 1.25rem;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(241, 245, 249, 0.92));
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.execution-toolbar-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.9fr);
+  gap: 1rem;
+}
+
+.execution-toolbar-copy h4 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.execution-environment-box {
+  padding: 0.95rem 1rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.execution-environment-box strong {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.execution-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.execution-table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.execution-table-header h4 {
+  margin: 0;
+}
+
+.execution-table-wrap {
+  overflow: visible;
+}
+
+.item-title-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.35rem;
+}
+
+.run-test-inline-btn {
+  min-width: 8.4rem;
+}
+
+.dark .project-execution-hero {
+  background:
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.16), transparent 14rem),
+    radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.08), transparent 14rem),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.98));
+  border-color: rgba(51, 65, 85, 0.8);
+}
+
+.dark .project-execution-subtitle,
+.dark .version-selector-pending,
+.dark .version-selector-card p,
+.dark .project-execution-side-label,
+.dark .execution-toolbar-label {
+  color: #94a3b8;
+}
+
+.dark .project-meta-pill,
+.dark .project-execution-app-card,
+.dark .execution-environment-box,
+.dark .version-selector-card,
+.dark .execution-toolbar {
+  background: rgba(15, 23, 42, 0.88);
+  border-color: rgba(51, 65, 85, 0.9);
+  color: #e2e8f0;
+}
+
+.dark .project-app-link,
+.dark .version-selector-card strong,
+.dark .execution-environment-box strong,
+.dark .execution-toolbar-copy h4,
+.dark .item-case-badge {
+  color: #f8fafc;
+}
+
+.dark .version-selector-badge,
+.dark .item-case-badge {
+  background: rgba(14, 165, 233, 0.18);
+  color: #bae6fd;
+}
+
+.dark .version-selector-card.active {
+  background:
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.14), transparent 8rem),
+    rgba(15, 23, 42, 0.94);
+}
+
+@media (max-width: 960px) {
+  .project-execution-hero,
+  .execution-toolbar,
+  .execution-toolbar-main {
+    grid-template-columns: 1fr;
+  }
+
+  .execution-toolbar-actions {
+    justify-content: flex-start;
+  }
+}
+</style>

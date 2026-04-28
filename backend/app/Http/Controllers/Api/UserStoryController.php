@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Checklist;
 use App\Models\UserStory;
 use App\Models\Project;
 use App\Services\ChecklistGenerationAgentService;
+use App\Services\ChecklistAdaptationService;
 use App\Services\ChecklistRecommendationService;
+use App\Services\ChecklistSuggestionReviewService;
 use App\Services\TestCaseGenerationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,16 +19,22 @@ class UserStoryController extends Controller
     private TestCaseGenerationService $testCaseGenerator;
     private ChecklistRecommendationService $checklistRecommendations;
     private ChecklistGenerationAgentService $checklistGenerationAgent;
+    private ChecklistSuggestionReviewService $checklistSuggestionReview;
+    private ChecklistAdaptationService $checklistAdaptation;
 
     public function __construct(
         TestCaseGenerationService $testCaseGenerator,
         ChecklistRecommendationService $checklistRecommendations,
-        ChecklistGenerationAgentService $checklistGenerationAgent
+        ChecklistGenerationAgentService $checklistGenerationAgent,
+        ChecklistSuggestionReviewService $checklistSuggestionReview,
+        ChecklistAdaptationService $checklistAdaptation
     )
     {
         $this->testCaseGenerator = $testCaseGenerator;
         $this->checklistRecommendations = $checklistRecommendations;
         $this->checklistGenerationAgent = $checklistGenerationAgent;
+        $this->checklistSuggestionReview = $checklistSuggestionReview;
+        $this->checklistAdaptation = $checklistAdaptation;
     }
 
     /**
@@ -54,7 +63,18 @@ class UserStoryController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'as_a' => 'nullable|string',
+            'i_want_that' => 'nullable|string',
+            'so_that' => 'nullable|string',
             'acceptance_criteria' => 'nullable|string',
+            'business_rules' => 'nullable|array',
+            'business_rules.*' => 'string',
+            'scenarios' => 'nullable|array',
+            'scenarios.*' => 'string',
+            'effort_points' => 'nullable|integer|min:0',
+            'business_value' => 'nullable|integer|min:0',
+            'start_date' => 'nullable|date',
+            'target_completion_date' => 'nullable|date',
             'status' => 'nullable|in:backlog,in_progress,ready_for_test,completed',
             'priority' => 'nullable|in:low,medium,high,critical',
             'story_id' => 'nullable|string',
@@ -79,7 +99,7 @@ class UserStoryController extends Controller
             return response()->json(['error' => 'User story not found in this project'], 404);
         }
 
-        return response()->json($userStory->load(['creator', 'checklists.items']));
+        return response()->json($this->buildUserStoryPayload($userStory));
     }
 
     /**
@@ -96,7 +116,18 @@ class UserStoryController extends Controller
         $validated = $request->validate([
             'title' => 'nullable|string|max:255',
             'description' => 'nullable|string',
+            'as_a' => 'nullable|string',
+            'i_want_that' => 'nullable|string',
+            'so_that' => 'nullable|string',
             'acceptance_criteria' => 'nullable|string',
+            'business_rules' => 'nullable|array',
+            'business_rules.*' => 'string',
+            'scenarios' => 'nullable|array',
+            'scenarios.*' => 'string',
+            'effort_points' => 'nullable|integer|min:0',
+            'business_value' => 'nullable|integer|min:0',
+            'start_date' => 'nullable|date',
+            'target_completion_date' => 'nullable|date',
             'status' => 'nullable|in:backlog,in_progress,ready_for_test,completed',
             'priority' => 'nullable|in:low,medium,high,critical',
             'story_id' => 'nullable|string',
@@ -143,10 +174,12 @@ class UserStoryController extends Controller
         }
 
         try {
-            return response()->json(
-                $this->checklistGenerationAgent->generateDraftForUserStory($userStory),
-                201
-            );
+            $result = $this->checklistGenerationAgent->generateDraftForUserStory($userStory);
+
+            return response()->json([
+                ...$result,
+                'user_story' => $this->buildUserStoryPayload($userStory->fresh()),
+            ], 201);
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Failed to generate checklist with agent',
@@ -161,7 +194,7 @@ class UserStoryController extends Controller
      */
     public function attachChecklist(Request $request, Project $project, UserStory $userStory)
     {
-        $this->authorize('view', $project);
+        $this->authorize('update', $project);
 
         if ($userStory->project_id !== $project->id) {
             return response()->json(['error' => 'User story not found in this project'], 404);
@@ -169,6 +202,7 @@ class UserStoryController extends Controller
 
         $validated = $request->validate([
             'checklist_id' => 'required|exists:checklists,id',
+            'reviewed' => 'required|accepted',
         ]);
 
         // Check if already attached
@@ -183,10 +217,105 @@ class UserStoryController extends Controller
         $userStory->checklists()->attach($validated['checklist_id'], [
             'is_generated_from_arxis' => false,
             'relevance_score' => $selectedSuggestion['score'] ?? null,
-            'link_type' => 'attached',
+            'link_type' => 'attached_after_review',
         ]);
 
-        return response()->json($userStory->load(['creator', 'checklists']), 201);
+        return response()->json($this->buildUserStoryPayload($userStory->fresh()), 201);
+    }
+
+    public function approveGeneratedChecklist(Project $project, UserStory $userStory, Checklist $checklist)
+    {
+        $this->authorize('update', $project);
+
+        if ($userStory->project_id !== $project->id) {
+            return response()->json(['error' => 'User story not found in this project'], 404);
+        }
+
+        if ((int) $checklist->source_user_story_id !== (int) $userStory->id) {
+            return response()->json(['error' => 'Checklist draft does not belong to this user story'], 422);
+        }
+
+        $checklist->update([
+            'lifecycle_status' => 'approved',
+        ]);
+
+        if (!$userStory->checklists()->where('checklist_id', $checklist->id)->exists()) {
+            $userStory->checklists()->attach($checklist->id, [
+                'is_generated_from_arxis' => true,
+                'relevance_score' => null,
+                'link_type' => 'agent_validated_by_chef',
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Checklist draft approved and attached to the user story.',
+            'user_story' => $this->buildUserStoryPayload($userStory->fresh()),
+            'approved_checklist' => $checklist->fresh()->load('items'),
+        ], 201);
+    }
+
+    public function previewSuggestedChecklist(Project $project, UserStory $userStory, \App\Models\Checklist $checklist)
+    {
+        $this->authorize('view', $project);
+
+        if ($userStory->project_id !== $project->id) {
+            return response()->json(['error' => 'User story not found in this project'], 404);
+        }
+
+        $suggestion = $this->checklistRecommendations->findSuggestionForChecklist($userStory, $checklist);
+
+        if (!$suggestion) {
+            return response()->json(['error' => 'Checklist is not relevant enough for preview'], 404);
+        }
+
+        return response()->json(
+            $this->checklistSuggestionReview->buildPreview($userStory, $checklist, $suggestion)
+        );
+    }
+
+    public function adaptChecklist(Request $request, Project $project, UserStory $userStory, \App\Models\Checklist $checklist)
+    {
+        $this->authorize('update', $project);
+
+        if ($userStory->project_id !== $project->id) {
+            return response()->json(['error' => 'User story not found in this project'], 404);
+        }
+
+        $validated = $request->validate([
+            'reviewed' => 'required|accepted',
+            'name' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
+            'category' => 'nullable|string|max:255',
+            'priority' => 'nullable|in:low,medium,high,critical',
+            'status' => 'nullable|in:backlog,in_progress,ready_for_test,completed',
+            'items' => 'required|array|min:1',
+            'items.*.title' => 'required|string|max:255',
+            'items.*.description' => 'nullable|string',
+            'items.*.priority' => 'required|in:Low,Medium,High',
+            'items.*.criticality' => 'required|in:Minor,Major,Critical',
+            'items.*.status' => 'nullable|in:pending,passed,failed',
+        ]);
+
+        $suggestion = $this->checklistRecommendations->findSuggestionForChecklist($userStory, $checklist);
+
+        $draft = $this->checklistAdaptation->createDraftForStory(
+            $project,
+            $userStory,
+            $checklist,
+            [
+                ...$validated,
+                'relevance_score' => $suggestion['score'] ?? null,
+            ]
+        );
+
+        return response()->json([
+            'action' => 'CREATE_DRAFT',
+            'source_checklist_id' => sprintf('CL-%03d', $checklist->id),
+            'project_id' => $project->id,
+            'draft' => $draft,
+            'pending_validation' => true,
+            'user_story' => $this->buildUserStoryPayload($userStory->fresh()),
+        ], 201);
     }
 
     /**
@@ -202,7 +331,7 @@ class UserStoryController extends Controller
 
         $userStory->checklists()->detach($checklistId);
 
-        return response()->json($userStory->load(['creator', 'checklists']));
+        return response()->json($this->buildUserStoryPayload($userStory->fresh()));
     }
 
     /**
@@ -233,5 +362,22 @@ class UserStoryController extends Controller
         return response()->json(
             $this->checklistRecommendations->suggestForUserStory($userStory)
         );
+    }
+
+    private function buildUserStoryPayload(UserStory $userStory): UserStory
+    {
+        $userStory->load(['creator', 'checklists.items']);
+
+        $pendingDrafts = Checklist::query()
+            ->with('items')
+            ->where('source_user_story_id', $userStory->id)
+            ->where('lifecycle_status', 'draft')
+            ->whereIn('generated_from', ['ai', 'reuse'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        $userStory->setAttribute('pending_drafts', $pendingDrafts);
+
+        return $userStory;
     }
 }

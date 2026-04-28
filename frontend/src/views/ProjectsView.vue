@@ -22,6 +22,7 @@ import {
 } from 'lucide-vue-next'
 import { apiRequest, withQuery } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
+import { translateCurrentPhrase } from '@/lib/runtimeTranslations'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -146,6 +147,20 @@ const activeFilterBadges = computed(() => {
 })
 
 const hasActiveFilters = computed(() => activeFilterBadges.value.length > 0)
+
+const projectMetrics = computed(() => {
+  const totalProjects = projects.value.length
+  const totalAssignedTesters = projects.value.reduce((count, project) => count + (project.testers?.length || 0), 0)
+  const totalLinkedChecklists = projects.value.reduce((count, project) => count + (project.checklists?.length || 0), 0)
+  const projectsWithUrl = projects.value.filter((project) => Boolean(project.app_url)).length
+
+  return [
+    { label: 'Projects', value: totalProjects, caption: 'Active workspace entries' },
+    { label: 'Assigned testers', value: totalAssignedTesters, caption: 'Execution capacity linked' },
+    { label: 'Linked checklists', value: totalLinkedChecklists, caption: 'Reusable QA coverage attached' },
+    { label: 'Ready environments', value: projectsWithUrl, caption: 'Projects with target application URL' },
+  ]
+})
 
 const filteredProjects = computed(() => {
   return projects.value.filter((project) => {
@@ -367,7 +382,7 @@ function canManageProject(project) {
 }
 
 async function deleteProject(projectId) {
-  if (!confirm('Are you sure you want to delete this project?')) {
+  if (!confirm(translateCurrentPhrase('Are you sure you want to delete this project?'))) {
     return
   }
 
@@ -419,6 +434,14 @@ watch(
           <span>Create Project</span>
         </button>
       </div>
+    </div>
+
+    <div class="story-detail-metrics">
+      <article v-for="metric in projectMetrics" :key="metric.label" class="story-detail-metric">
+        <span>{{ metric.label }}</span>
+        <strong>{{ metric.value }}</strong>
+        <p class="muted">{{ metric.caption }}</p>
+      </article>
     </div>
 
     <div class="card stack stack-gap-sm">
@@ -682,6 +705,10 @@ watch(
         </h2>
       </div>
 
+      <p class="muted">
+        Open a project to reach the execution workspace, select a version, and use <strong>Run Test</strong> on executable items.
+      </p>
+
       <p v-if="listError" class="error" data-testid="projects-msg-error-list">{{ listError }}</p>
       <p v-if="loadingProjects" class="muted">Loading projects...</p>
 
@@ -763,3 +790,51 @@ watch(
     </div>
   </section>
 </template>
+
+<style>
+.story-detail-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.9rem;
+}
+
+.story-detail-metric {
+  padding: 1rem 1.05rem;
+  border-radius: 1.15rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 16px 30px -28px rgba(15, 23, 42, 0.28);
+}
+
+.story-detail-metric span {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #64748b;
+  font-weight: 800;
+}
+
+.story-detail-metric strong {
+  font-size: 1.25rem;
+  color: #0f172a;
+}
+
+.story-detail-metric p {
+  margin: 0.45rem 0 0;
+}
+
+.dark .story-detail-metric {
+  background: rgba(15, 23, 42, 0.92);
+  border-color: rgba(51, 65, 85, 0.9);
+}
+
+.dark .story-detail-metric span {
+  color: #94a3b8;
+}
+
+.dark .story-detail-metric strong {
+  color: #f8fafc;
+}
+</style>

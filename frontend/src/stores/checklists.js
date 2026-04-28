@@ -172,6 +172,42 @@ export const useChecklistsStore = defineStore('checklists', () => {
     }
   }
 
+  async function getItemExecution(checklistId, itemId) {
+    try {
+      const response = await api.get(
+        `/checklists/${checklistId}/items/${itemId}/execution`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+          },
+        }
+      )
+      return response.data
+    } catch (error) {
+      errors.value.execution = error.message
+      throw error
+    }
+  }
+
+  async function runChecklistItem(checklistId, itemId, payload) {
+    try {
+      const response = await api.post(
+        `/checklists/${checklistId}/items/${itemId}/runs`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+      return response.data
+    } catch (error) {
+      errors.value.run = error.message
+      throw error
+    }
+  }
+
   // Clear errors
   function clearErrors() {
     errors.value = {}
@@ -190,6 +226,8 @@ export const useChecklistsStore = defineStore('checklists', () => {
     deleteChecklist,
     updateItemStatus,
     getItemHistory,
+    getItemExecution,
+    runChecklistItem,
     clearErrors,
   }
 })

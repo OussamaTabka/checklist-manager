@@ -10,6 +10,7 @@ class TestResult extends Model
     protected $fillable = [
         'test_run_id',
         'version_item_id',
+        'checklist_item_id',
         'status',
         'error_type',
         'error_message',
@@ -34,5 +35,10 @@ class TestResult extends Model
     public function versionItem(): BelongsTo
     {
         return $this->belongsTo(VersionItem::class);
+    }
+
+    public function checklistItem(): BelongsTo
+    {
+        return $this->belongsTo(ChecklistItem::class);
     }
 }

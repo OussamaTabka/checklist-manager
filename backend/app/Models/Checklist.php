@@ -16,6 +16,17 @@ class Checklist extends Model
     protected $fillable = [
         'name',
         'description',
+        'project_id',
+        'as_a',
+        'i_want_that',
+        'so_that',
+        'acceptance_criteria',
+        'business_rules',
+        'priority',
+        'status',
+        'assigned_to',
+        'started_at',
+        'completed_at',
         'category',
         'is_active',
         'created_by',
@@ -27,6 +38,9 @@ class Checklist extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'business_rules' => 'array',
+        'started_at' => 'datetime',
+        'completed_at' => 'datetime',
     ];
 
     // Relation : une checklist a plusieurs items

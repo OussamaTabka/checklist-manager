@@ -1,7 +1,13 @@
-<script setup></script>
+<script setup>
+function refreshPage() {
+  if (typeof window !== 'undefined') {
+    window.location.reload()
+  }
+}
+</script>
 
 <template>
-  <div class="logo-header">
+  <button class="logo-header" type="button" @click="refreshPage" title="Refresh page">
     <!-- Icon -->
     <div class="icon">
       <svg viewBox="0 0 58 58" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -34,7 +40,7 @@
         <span class="part1">Intelli</span><span class="part2">Test</span>
       </div>
     </div>
-  </div>
+  </button>
 </template>
 
 <style scoped>
@@ -42,6 +48,10 @@
   display: flex;
   align-items: center;
   gap: 0.65rem;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
 }
 
 .icon {
@@ -101,5 +111,11 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.logo-header:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  outline-offset: 4px;
+  border-radius: 0.75rem;
 }
 </style>

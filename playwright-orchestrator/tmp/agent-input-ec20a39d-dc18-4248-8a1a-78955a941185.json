@@ -1,0 +1,16 @@
+{
+    "run_id": "ec20a39d-dc18-4248-8a1a-78955a941185",
+    "external_id": 51,
+    "test_case_title": "TC-01 | Cas nominal",
+    "test_case_description": "Verifier fonctionnement correct avec des donnees valides.",
+    "test_case_text": "TC-01 | Cas nominal\nVerifier fonctionnement correct avec des donnees valides.",
+    "base_url": "https://www.apple.com/tn",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "High",
+    "criticality": "Critical",
+    "current_status": "Not Tested",
+    "project_version_id": 14,
+    "target_type": "version_item"
+}

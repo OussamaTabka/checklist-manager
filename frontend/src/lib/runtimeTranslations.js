@@ -38,6 +38,7 @@ const PHRASES = {
   common_role: { en: 'Role', fr: 'Role', ar: 'الدور' },
   common_reset: { en: 'Reset', fr: 'Reinitialiser', ar: 'اعادة تعيين' },
   common_search: { en: 'Search', fr: 'Rechercher', ar: 'بحث' },
+  common_critical: { en: 'Critical', fr: 'Critique', ar: 'حرج' },
   common_backlog: { en: 'Backlog', fr: 'Backlog', ar: 'قائمة الانتظار' },
   common_in_progress: { en: 'In Progress', fr: 'En Cours', ar: 'قيد التنفيذ' },
   common_not_started: { en: 'Not Started', fr: 'Non Commence', ar: 'لم يبدا' },
@@ -78,6 +79,109 @@ const PHRASES = {
   settings_language: { en: 'Language', fr: 'Langue', ar: 'اللغة' },
   settings_dark_mode: { en: 'Dark Mode', fr: 'Mode Sombre', ar: 'الوضع الداكن' },
   settings_light_mode: { en: 'Light Mode', fr: 'Mode Clair', ar: 'الوضع الفاتح' },
+  common_back: { en: 'Back', fr: 'Retour', ar: 'رجوع' },
+  common_expand: { en: 'Expand', fr: 'Developper', ar: 'توسيع' },
+  common_collapse: { en: 'Collapse', fr: 'Reduire', ar: 'طي' },
+  common_profile: { en: 'Profile', fr: 'Profil', ar: 'الملف الشخصي' },
+  common_navigation: { en: 'Navigation', fr: 'Navigation', ar: 'التنقل' },
+  common_project: { en: 'Project', fr: 'Projet', ar: 'مشروع' },
+  common_checklist: { en: 'Checklist', fr: 'Checklist', ar: 'قائمة تحقق' },
+  common_user: { en: 'User', fr: 'Utilisateur', ar: 'مستخدم' },
+  common_dark_canvas_enabled: { en: 'Dark canvas enabled', fr: 'Fond sombre active', ar: 'تم تفعيل الخلفية الداكنة' },
+  common_light_canvas_enabled: { en: 'Light canvas enabled', fr: 'Fond clair active', ar: 'تم تفعيل الخلفية الفاتحة' },
+  settings_admin_preferences: { en: 'Admin Preferences', fr: 'Preferences Admin', ar: 'تفضيلات الادارة' },
+  settings_platform_settings: { en: 'Platform Settings', fr: 'Parametres de la plateforme', ar: 'اعدادات المنصة' },
+  settings_admin_description: {
+    en: 'Adjust the interface language and appearance for administration work.',
+    fr: "Ajustez la langue de l'interface et l'apparence pour le travail d'administration.",
+    ar: 'اضبط لغة الواجهة والمظهر من اجل مهام الادارة.',
+  },
+  settings_execution_preferences: { en: 'Execution Preferences', fr: "Preferences d'execution", ar: 'تفضيلات التنفيذ' },
+  settings_tester_settings: { en: 'Tester Settings', fr: 'Parametres testeur', ar: 'اعدادات المختبر' },
+  settings_tester_description: {
+    en: 'Tune the workspace for faster reading, execution, and day-to-day testing comfort.',
+    fr: "Ajustez l'espace de travail pour une lecture, une execution et un confort de test quotidiens.",
+    ar: 'اضبط مساحة العمل لقراءة اسرع وتنفيذ اسهل وراحة يومية في الاختبار.',
+  },
+  settings_workspace_preferences: { en: 'Workspace Preferences', fr: "Preferences de l'espace", ar: 'تفضيلات مساحة العمل' },
+  settings_workspace_description: {
+    en: 'Configure language and display behavior for your project-management workspace.',
+    fr: "Configurez la langue et l'affichage pour votre espace de gestion de projet.",
+    ar: 'قم بضبط اللغة وسلوك العرض لمساحة ادارة المشاريع.',
+  },
+  app_project_command: { en: 'Project Command', fr: 'Pilotage Projet', ar: 'قيادة المشروع' },
+  app_admin_control: { en: 'Admin Control', fr: 'Controle Admin', ar: 'تحكم الادارة' },
+  app_execution_space: { en: 'Execution Space', fr: 'Espace Execution', ar: 'مساحة التنفيذ' },
+  app_workspace: { en: 'Workspace', fr: 'Espace de travail', ar: 'مساحة العمل' },
+  app_tests_failed_recently: { en: 'test(s) failed recently', fr: 'test(s) ont echoue recemment', ar: 'اختبار/اختبارات فشلت مؤخرا' },
+  app_critical_items_failing: { en: 'critical item(s) are failing', fr: 'element(s) critique(s) en echec', ar: 'عنصر/عناصر حرجة في حالة فشل' },
+  app_type_navigation: { en: 'Navigation', fr: 'Navigation', ar: 'التنقل' },
+  placeholder_search_checklists: { en: 'Search checklists...', fr: 'Rechercher des checklists...', ar: 'ابحث في قوائم التحقق...' },
+  placeholder_filter_checklist_name: { en: 'Filter by checklist name', fr: 'Filtrer par nom de checklist', ar: 'تصفية حسب اسم قائمة التحقق' },
+  placeholder_filter_checklist_type: { en: 'Filter by checklist type', fr: 'Filtrer par type de checklist', ar: 'تصفية حسب نوع قائمة التحقق' },
+  placeholder_filter_checklist_category: { en: 'Filter by checklist category', fr: 'Filtrer par categorie de checklist', ar: 'تصفية حسب فئة قائمة التحقق' },
+  placeholder_checklist_category_example: {
+    en: 'e.g., Automation, Security, Performance',
+    fr: 'ex. : Automatisation, Securite, Performance',
+    ar: 'مثال: اتمتة، امان، اداء',
+  },
+  placeholder_search_existing_items: {
+    en: 'Start typing to search existing items...',
+    fr: 'Commencez a taper pour rechercher des items existants...',
+    ar: 'ابدأ الكتابة للبحث عن العناصر الموجودة...',
+  },
+  confirm_delete_checklist: {
+    en: 'Are you sure you want to delete this checklist? This action cannot be undone.',
+    fr: 'Voulez-vous vraiment supprimer cette checklist ? Cette action est irreversible.',
+    ar: 'هل تريد حقا حذف قائمة التحقق هذه؟ لا يمكن التراجع عن هذا الاجراء.',
+  },
+  placeholder_search_projects: { en: 'Search projects...', fr: 'Rechercher des projets...', ar: 'ابحث في المشاريع...' },
+  confirm_delete_project: {
+    en: 'Are you sure you want to delete this project?',
+    fr: 'Voulez-vous vraiment supprimer ce projet ?',
+    ar: 'هل تريد حقا حذف هذا المشروع؟',
+  },
+  placeholder_filter_project_name: { en: 'Filter by project name', fr: 'Filtrer par nom de projet', ar: 'تصفية حسب اسم المشروع' },
+  placeholder_filter_type: { en: 'Filter by type', fr: 'Filtrer par type', ar: 'تصفية حسب النوع' },
+  placeholder_filter_category: { en: 'Filter by category', fr: 'Filtrer par categorie', ar: 'تصفية حسب الفئة' },
+  placeholder_project_phase: { en: 'e.g., API Testing Phase 1', fr: 'ex. : Phase 1 de test API', ar: 'مثال: مرحلة 1 لاختبار API' },
+  placeholder_url_example: { en: 'https://example.com', fr: 'https://example.com', ar: 'https://example.com' },
+  placeholder_project_description: { en: 'Add details about this project...', fr: 'Ajoutez des details sur ce projet...', ar: 'اضف تفاصيل عن هذا المشروع...' },
+  title_previous_page: { en: 'Go to previous page', fr: 'Aller a la page precedente', ar: 'اذهب الى الصفحة السابقة' },
+  title_next_page: { en: 'Go to next page', fr: 'Aller a la page suivante', ar: 'اذهب الى الصفحة التالية' },
+  placeholder_story_reference: { en: 'US-LOGIN-01', fr: 'US-CONNEXION-01', ar: 'US-LOGIN-01' },
+  placeholder_story_title: { en: 'Connexion avec email et mot de passe', fr: 'Connexion avec email et mot de passe', ar: 'تسجيل الدخول بالبريد الالكتروني وكلمة المرور' },
+  placeholder_story_description: {
+    en: "En tant que client, je veux me connecter avec mon email afin d'acceder a mon espace personnel.",
+    fr: "En tant que client, je veux me connecter avec mon email afin d'acceder a mon espace personnel.",
+    ar: 'بصفتي عميلا، اريد تسجيل الدخول بالبريد الالكتروني للوصول الى مساحتي الشخصية.',
+  },
+  placeholder_story_gwt: {
+    en: 'Given valid credentials, When user submits the login form, Then dashboard loads Given invalid credentials, When user submits the form, Then an error message is displayed',
+    fr: "Etant donne des identifiants valides, quand l'utilisateur soumet le formulaire, alors le tableau de bord s'ouvre. Etant donne des identifiants invalides, quand l'utilisateur soumet le formulaire, alors un message d'erreur s'affiche.",
+    ar: 'عند وجود بيانات اعتماد صحيحة، وعندما يرسل المستخدم النموذج، حينها تفتح لوحة التحكم. وعند وجود بيانات اعتماد غير صحيحة، وعندما يرسل المستخدم النموذج، حينها تظهر رسالة خطأ.',
+  },
+  confirm_delete_comment: { en: 'Delete this comment?', fr: 'Supprimer ce commentaire ?', ar: 'حذف هذا التعليق؟' },
+  placeholder_add_comment: { en: 'Add a comment...', fr: 'Ajouter un commentaire...', ar: 'اضف تعليقا...' },
+  placeholder_env_name: { en: 'staging', fr: 'preproduction', ar: 'staging' },
+  confirm_delete_story: {
+    en: 'Are you sure you want to delete this story ?',
+    fr: 'Etes-vous sur de vouloir supprimer cette story ?',
+    ar: 'هل تريد حقا حذف هذه القصة؟',
+  },
+  title_delete: { en: 'Delete', fr: 'Supprimer', ar: 'حذف' },
+  confirm_run_generation_agent: {
+    en: 'Launch the generation agent? It will reuse approved checklists and generate the missing items.',
+    fr: "Lancer l'agent de generation ? Il reutilisera les checklists approuvees puis generera les elements manquants.",
+    ar: 'هل تريد تشغيل وكيل التوليد؟ سيعيد استخدام القوائم المعتمدة ويولد العناصر الناقصة.',
+  },
+  confirm_detach_checklist: {
+    en: 'Detach this checklist?',
+    fr: 'Detacher cette checklist ?',
+    ar: 'فصل قائمة التحقق هذه؟',
+  },
+  title_detach: { en: 'Detach', fr: 'Detacher', ar: 'فصل' },
+  aria_close: { en: 'Close', fr: 'Fermer', ar: 'اغلاق' },
 }
 
 const INDEX = new Map()
@@ -132,7 +236,7 @@ function translateTextNode(node, language) {
 
 function translateAttributes(root, language) {
   const elements = root.querySelectorAll('*')
-  const attrs = ['placeholder', 'title', 'aria-label']
+  const attrs = ['placeholder', 'title', 'aria-label', 'alt']
 
   elements.forEach((el) => {
     attrs.forEach((attr) => {
@@ -227,5 +331,20 @@ export function initRuntimeTranslations(pinia) {
   observer.observe(document.body, {
     childList: true,
     subtree: true,
+    characterData: true,
+    attributes: true,
+    attributeFilter: ['placeholder', 'title', 'aria-label', 'alt', 'value'],
   })
+}
+
+export function translatePhrase(sourceText, language) {
+  return translateKnownPhrase(sourceText, language)
+}
+
+export function translateCurrentPhrase(sourceText) {
+  const lang =
+    (typeof document !== 'undefined' && document.documentElement?.lang) ||
+    'fr'
+
+  return translateKnownPhrase(sourceText, lang)
 }

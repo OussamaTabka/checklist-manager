@@ -25,7 +25,7 @@ export const useAuthStore = defineStore('auth', () => {
   
   // Peut gérer les checklists (Chef et Admin)
   const canManageChecklists = computed(
-    () => roles.value.includes('chef') || roles.value.includes('admin')
+    () => roles.value.includes('chef') || roles.value.includes('admin_contenus')
   )
 
   const canManageStories = computed(() => roles.value.includes('chef') || roles.value.includes('admin'))
@@ -39,7 +39,7 @@ export const useAuthStore = defineStore('auth', () => {
   // Peut exécuter les tests (Chef, Admin et Testeur)
   const canTest = computed(
     () => roles.value.includes('chef') || 
-           roles.value.includes('admin') || 
+           roles.value.includes('admin_contenus') || 
            roles.value.includes('testeur')
   )
   

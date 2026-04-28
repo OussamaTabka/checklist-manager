@@ -13,6 +13,7 @@ export const useUserStoriesStore = defineStore('userStories', () => {
     error: null,
   })
   const suggestionsByStoryId = ref({})
+  const previewByStoryId = ref({})
   const agentResultsByStoryId = ref({})
   const isGenerating = ref(false)
 
@@ -217,7 +218,7 @@ export const useUserStoriesStore = defineStore('userStories', () => {
         `/projects/${projectId}/user-stories/${storyId}/attach-checklist`,
         {
           method: 'POST',
-          body: { checklist_id: checklistId },
+          body: { checklist_id: checklistId, reviewed: true },
         }
       )
       
@@ -289,6 +290,130 @@ export const useUserStoriesStore = defineStore('userStories', () => {
     }
   }
 
+  async function previewSuggestedChecklist(projectId, storyId, checklistId) {
+    try {
+      const response = await apiRequest(
+        `/projects/${projectId}/user-stories/${storyId}/suggest-checklists/${checklistId}`
+      )
+
+      previewByStoryId.value = {
+        ...previewByStoryId.value,
+        [storyId]: response,
+      }
+
+      return response
+    } catch (err) {
+      error.value = err.message || 'Failed to preview suggested checklist'
+      throw err
+    }
+  }
+
+  async function adaptChecklist(projectId, storyId, checklistId, payload) {
+    loading.value = true
+    error.value = null
+
+    try {
+      const response = await apiRequest(
+        `/projects/${projectId}/user-stories/${storyId}/adapt-checklist/${checklistId}`,
+        {
+          method: 'POST',
+          body: {
+            ...payload,
+            reviewed: true,
+          },
+        }
+      )
+
+      if (currentStory.value?.id === storyId && response?.user_story) {
+        currentStory.value = response.user_story
+      }
+
+      return response
+    } catch (err) {
+      error.value = err.message || 'Failed to adapt checklist'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function createManualDraft(projectId, storyId, payload) {
+    loading.value = true
+    error.value = null
+
+    try {
+      const response = await apiRequest('/checklists', {
+        method: 'POST',
+        body: {
+          ...payload,
+          project_id: Number(projectId),
+          source_user_story_id: Number(storyId),
+          lifecycle_status: 'draft',
+          generated_from: 'manual',
+          template_scope: 'project',
+          is_active: true,
+        },
+      })
+
+      return response
+    } catch (err) {
+      error.value = err.message || 'Failed to create manual draft'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function updateDraftChecklist(checklistId, payload) {
+    loading.value = true
+    error.value = null
+
+    try {
+      const response = await apiRequest(`/checklists/${checklistId}`, {
+        method: 'PUT',
+        body: payload,
+      })
+
+      return response
+    } catch (err) {
+      error.value = err.message || 'Failed to update draft checklist'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function approveGeneratedChecklist(projectId, storyId, checklistId) {
+    loading.value = true
+    error.value = null
+
+    try {
+      const response = await apiRequest(
+        `/projects/${projectId}/user-stories/${storyId}/approve-draft/${checklistId}`,
+        {
+          method: 'POST',
+          body: {},
+        }
+      )
+
+      if (currentStory.value?.id === storyId && response?.user_story) {
+        currentStory.value = response.user_story
+      }
+
+      const index = stories.value.findIndex(s => s.id === storyId)
+      if (index !== -1 && response?.user_story) {
+        stories.value[index] = response.user_story
+      }
+
+      return response
+    } catch (err) {
+      error.value = err.message || 'Failed to approve generated checklist'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   function clearError() {
     error.value = null
   }
@@ -302,6 +427,7 @@ export const useUserStoriesStore = defineStore('userStories', () => {
     isGenerating,
     generatorStatus,
     suggestionsByStoryId,
+    previewByStoryId,
     agentResultsByStoryId,
     
     // Computed
@@ -317,7 +443,12 @@ export const useUserStoriesStore = defineStore('userStories', () => {
     generateChecklistFromLLM,
     generateChecklistWithAgent,
     fetchChecklistSuggestions,
+    previewSuggestedChecklist,
     fetchGeneratorStatus,
+    adaptChecklist,
+    createManualDraft,
+    updateDraftChecklist,
+    approveGeneratedChecklist,
     attachChecklist,
     detachChecklist,
     resetCurrentStory,

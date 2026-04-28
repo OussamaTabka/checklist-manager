@@ -4,60 +4,42 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\ExecuteSingleTestCaseRun;
+use App\Models\Checklist;
+use App\Models\ChecklistItem;
 use App\Models\TestResult;
 use App\Models\TestRun;
-use App\Models\VersionItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
-class TestCaseRunController extends Controller
+class ChecklistItemExecutionController extends Controller
 {
-    public function show(int $id)
+    public function show(Checklist $checklist, ChecklistItem $item)
     {
-        $item = VersionItem::findOrFail($id);
+        $this->ensureChecklistOwnership($checklist, $item);
 
         $latestResult = TestResult::with('testRun')
-            ->where('version_item_id', $item->id)
+            ->where('checklist_item_id', $item->id)
             ->orderByDesc('executed_at')
             ->orderByDesc('id')
             ->first();
 
         $latestTargetedRun = TestRun::where('request_payload->test_case_id', $item->id)
-            ->where(function ($query) {
-                $query->whereNull('request_payload->target_type')
-                    ->orWhere('request_payload->target_type', 'version_item');
-            })
+            ->where('request_payload->target_type', 'checklist_item')
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->first();
 
         $latestRun = $this->pickLatestRun($latestTargetedRun, $latestResult?->testRun);
+        $executionState = $this->resolveExecutionState($item, $latestRun, $latestResult);
 
-        $latestRunResult = null;
-        if ($latestRun) {
-            $latestRunResult = TestResult::where('test_run_id', $latestRun->id)
-                ->where('version_item_id', $item->id)
-                ->orderByDesc('executed_at')
-                ->orderByDesc('id')
-                ->first();
-        }
-
-        $effectiveResult = $latestRunResult ?: $latestResult;
-
-        $executionState = $this->resolveExecutionState($item, $latestRun, $effectiveResult);
-
-        $artifactPayload = $effectiveResult?->artifacts;
+        $artifactPayload = $latestResult?->artifacts;
         if (!is_array($artifactPayload)) {
-            $artifactPayload = [
-                'trace' => [],
-                'screenshot' => [],
-                'video' => [],
-            ];
+            $artifactPayload = ['trace' => [], 'screenshot' => [], 'video' => []];
         }
 
-        $resultPayload = $effectiveResult?->result_payload;
+        $resultPayload = $latestResult?->result_payload;
         $executionTrace = [];
         if (is_array($resultPayload) && is_array($resultPayload['execution_trace'] ?? null)) {
             $executionTrace = array_values(array_filter(
@@ -66,16 +48,9 @@ class TestCaseRunController extends Controller
             ));
         }
 
-        if ($latestRun && in_array($latestRun->status, ['created', 'running'], true)) {
-            $executionTrace = $this->readLiveExecutionTrace($latestRun->run_id, $item->id);
-        }
-
-        $lastErrorMessage = null;
-        if ($latestRun && in_array($latestRun->status, ['created', 'running'], true)) {
-            $lastErrorMessage = null;
-        } else {
-            $lastErrorMessage = $effectiveResult?->error_message;
-        }
+        $lastErrorMessage = $latestRun && in_array($latestRun->status, ['created', 'running'], true)
+            ? null
+            : $latestResult?->error_message;
 
         if (!$lastErrorMessage && $latestRun && $latestRun->status === 'failed') {
             $requestPayload = is_array($latestRun->request_payload) ? $latestRun->request_payload : [];
@@ -88,7 +63,7 @@ class TestCaseRunController extends Controller
             'id' => $item->id,
             'title' => $item->title,
             'description' => $item->description,
-            'status' => $item->status,
+            'status' => $this->displayStatus($item->status),
             'execution_state' => $executionState,
             'last_run_id' => $latestRun?->run_id,
             'last_run_status' => $latestRun ? $this->mapRunStatus($latestRun->status) : null,
@@ -104,9 +79,9 @@ class TestCaseRunController extends Controller
         ]);
     }
 
-    public function run(Request $request, int $id)
+    public function run(Request $request, Checklist $checklist, ChecklistItem $item)
     {
-        $item = VersionItem::findOrFail($id);
+        $this->ensureChecklistOwnership($checklist, $item);
 
         $data = $request->validate([
             'base_url' => ['required', 'url', 'max:2048'],
@@ -116,40 +91,36 @@ class TestCaseRunController extends Controller
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $baseUrl = $this->normalizeBaseUrl($data['base_url']);
-        $useAuth = array_key_exists('use_auth', $data) ? (bool) $data['use_auth'] : true;
-        $watchMode = array_key_exists('watch_mode', $data) ? (bool) $data['watch_mode'] : true;
-        $testCaseTitle = (string) $item->title;
-        $testCaseDescription = (string) ($item->description ?? '');
-
         $run = TestRun::create([
             'run_id' => (string) Str::uuid(),
-            'project_version_id' => $item->project_version_id,
+            'project_version_id' => null,
+            'checklist_id' => $checklist->id,
             'schema_version' => '1.0',
-            'base_url' => $baseUrl,
+            'base_url' => rtrim(trim($data['base_url']), '/'),
             'mode' => 'single-test-case',
             'status' => 'created',
             'requested_by' => Auth::id(),
             'summary_total' => 1,
             'request_payload' => [
                 'schema_version' => '1.0',
+                'target_type' => 'checklist_item',
                 'test_case_id' => $item->id,
-                'test_case_title' => $testCaseTitle,
-                'test_case_description' => $testCaseDescription,
-                'test_case_text' => trim($testCaseTitle . "\n" . $testCaseDescription),
-                'base_url' => $baseUrl,
-                'use_auth' => $useAuth,
-                'watch_mode' => $watchMode,
+                'test_case_title' => (string) $item->title,
+                'test_case_description' => (string) ($item->description ?? ''),
+                'test_case_text' => trim((string) $item->title . "\n" . (string) ($item->description ?? '')),
+                'base_url' => rtrim(trim($data['base_url']), '/'),
+                'use_auth' => array_key_exists('use_auth', $data) ? (bool) $data['use_auth'] : true,
+                'watch_mode' => array_key_exists('watch_mode', $data) ? (bool) $data['watch_mode'] : true,
                 'environment_name' => (string) ($data['environment_name'] ?? ''),
                 'notes' => (string) ($data['notes'] ?? ''),
                 'priority' => (string) ($item->priority ?? ''),
                 'criticality' => (string) ($item->criticality ?? ''),
                 'current_status' => (string) ($item->status ?? ''),
-                'project_version_id' => (int) $item->project_version_id,
-                'target_type' => 'version_item',
+                'checklist_id' => (int) $checklist->id,
             ],
         ]);
 
+        $watchMode = array_key_exists('watch_mode', $data) ? (bool) $data['watch_mode'] : true;
         if ($watchMode) {
             ExecuteSingleTestCaseRun::dispatch($run->run_id)->afterResponse();
         } else {
@@ -162,9 +133,28 @@ class TestCaseRunController extends Controller
         ], 202);
     }
 
-    private function normalizeBaseUrl(string $baseUrl): string
+    private function ensureChecklistOwnership(Checklist $checklist, ChecklistItem $item): void
     {
-        return rtrim(trim($baseUrl), '/');
+        abort_unless((int) $item->checklist_id === (int) $checklist->id, 422, 'Checklist item does not belong to this checklist.');
+    }
+
+    private function pickLatestRun(?TestRun $a, ?TestRun $b): ?TestRun
+    {
+        if (!$a) {
+            return $b;
+        }
+        if (!$b) {
+            return $a;
+        }
+
+        $aDate = $a->created_at instanceof Carbon ? $a->created_at : Carbon::parse($a->created_at);
+        $bDate = $b->created_at instanceof Carbon ? $b->created_at : Carbon::parse($b->created_at);
+
+        if ($aDate->equalTo($bDate)) {
+            return ((int) $a->id >= (int) $b->id) ? $a : $b;
+        }
+
+        return $aDate->greaterThanOrEqualTo($bDate) ? $a : $b;
     }
 
     private function mapRunStatus(string $status): string
@@ -178,17 +168,15 @@ class TestCaseRunController extends Controller
         };
     }
 
-    private function resolveExecutionState(VersionItem $item, ?TestRun $latestRun, ?TestResult $latestResult): string
+    private function resolveExecutionState(ChecklistItem $item, ?TestRun $latestRun, ?TestResult $latestResult): string
     {
         if ($latestRun) {
             if ($latestRun->status === 'created') {
                 return 'queued';
             }
-
             if ($latestRun->status === 'running') {
                 return 'running';
             }
-
             if ($latestRun->status === 'failed') {
                 return 'blocked';
             }
@@ -204,7 +192,7 @@ class TestCaseRunController extends Controller
             };
         }
 
-        return match ($item->status) {
+        return match ($this->displayStatus($item->status)) {
             'Passed' => 'passed',
             'Failed' => 'failed',
             'Blocked' => 'blocked',
@@ -212,64 +200,14 @@ class TestCaseRunController extends Controller
         };
     }
 
-    private function pickLatestRun(?TestRun $a, ?TestRun $b): ?TestRun
+    private function displayStatus(?string $status): string
     {
-        if (!$a) {
-            return $b;
-        }
-
-        if (!$b) {
-            return $a;
-        }
-
-        $aDate = $a->created_at instanceof Carbon ? $a->created_at : Carbon::parse($a->created_at);
-        $bDate = $b->created_at instanceof Carbon ? $b->created_at : Carbon::parse($b->created_at);
-
-        if ($aDate->equalTo($bDate)) {
-            return ((int) $a->id >= (int) $b->id) ? $a : $b;
-        }
-
-        return $aDate->greaterThanOrEqualTo($bDate) ? $a : $b;
-    }
-
-    private function readLiveExecutionTrace(string $runId, int $itemId): array
-    {
-        $workspaceRoot = realpath(base_path('..'));
-        if (!$workspaceRoot) {
-            return [];
-        }
-
-        $liveTracePath = $workspaceRoot . DIRECTORY_SEPARATOR . 'runs' . DIRECTORY_SEPARATOR . $runId . DIRECTORY_SEPARATOR . 'live-trace.json';
-        if (!is_file($liveTracePath)) {
-            return [];
-        }
-
-        $payload = json_decode((string) file_get_contents($liveTracePath), true);
-        if (!is_array($payload) || !is_array($payload['cases'] ?? null)) {
-            return [];
-        }
-
-        foreach ($payload['cases'] as $caseEntry) {
-            if (!is_array($caseEntry)) {
-                continue;
-            }
-
-            $externalId = (int) ($caseEntry['external_id'] ?? 0);
-            if ($externalId !== $itemId) {
-                continue;
-            }
-
-            $lines = $caseEntry['execution_trace'] ?? [];
-            if (!is_array($lines)) {
-                return [];
-            }
-
-            return array_values(array_filter(
-                $lines,
-                static fn ($entry) => is_string($entry) && trim($entry) !== '',
-            ));
-        }
-
-        return [];
+        return match ($status) {
+            'passed' => 'Passed',
+            'failed' => 'Failed',
+            'blocked' => 'Blocked',
+            'Passed', 'Failed', 'Blocked' => $status,
+            default => 'Not Tested',
+        };
     }
 }

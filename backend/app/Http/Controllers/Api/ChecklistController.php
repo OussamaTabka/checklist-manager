@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Checklist;
 use App\Models\ChecklistItem;
+use App\Models\ChecklistItemHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -39,12 +40,28 @@ class ChecklistController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string'],
             'description' => ['nullable', 'string'],
+            'project_id' => ['nullable', 'exists:projects,id'],
+            'as_a' => ['nullable', 'string'],
+            'i_want_that' => ['nullable', 'string'],
+            'so_that' => ['nullable', 'string'],
+            'acceptance_criteria' => ['nullable', 'string'],
+            'business_rules' => ['nullable', 'array'],
+            'business_rules.*' => ['string'],
+            'priority' => ['nullable', 'in:low,medium,high,critical'],
+            'status' => ['nullable', 'in:backlog,in_progress,ready_for_test,completed'],
+            'assigned_to' => ['nullable', 'exists:users,id'],
             'category' => ['nullable', 'string'],
+            'is_active' => ['sometimes', 'boolean'],
+            'template_scope' => ['nullable', 'in:global,project'],
+            'lifecycle_status' => ['nullable', 'in:draft,approved,archived'],
+            'generated_from' => ['nullable', 'in:manual,ai,reuse'],
+            'source_user_story_id' => ['nullable', 'exists:user_stories,id'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.title' => ['required', 'string'],
             'items.*.description' => ['nullable', 'string'],
             'items.*.priority' => ['required', 'in:Low,Medium,High'],
             'items.*.criticality' => ['required', 'in:Minor,Major,Critical'],
+            'items.*.status' => ['nullable', 'in:pending,passed,failed'],
         ]);
 
         DB::beginTransaction();
@@ -53,9 +70,22 @@ class ChecklistController extends Controller
             $checklist = Checklist::create([
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
+                'project_id' => $data['project_id'] ?? null,
+                'as_a' => $data['as_a'] ?? null,
+                'i_want_that' => $data['i_want_that'] ?? null,
+                'so_that' => $data['so_that'] ?? null,
+                'acceptance_criteria' => $data['acceptance_criteria'] ?? null,
+                'business_rules' => $data['business_rules'] ?? null,
+                'priority' => $data['priority'] ?? 'medium',
+                'status' => $data['status'] ?? 'backlog',
+                'assigned_to' => $data['assigned_to'] ?? null,
                 'category' => $data['category'] ?? 'General',
                 'created_by' => Auth::id(),
-                'is_active' => true,
+                'is_active' => $data['is_active'] ?? true,
+                'template_scope' => $data['template_scope'] ?? 'global',
+                'lifecycle_status' => $data['lifecycle_status'] ?? 'approved',
+                'generated_from' => $data['generated_from'] ?? 'manual',
+                'source_user_story_id' => $data['source_user_story_id'] ?? null,
             ]);
 
             foreach ($data['items'] as $index => $item) {
@@ -65,6 +95,7 @@ class ChecklistController extends Controller
                     'description' => $item['description'] ?? null,
                     'priority' => $item['priority'],
                     'criticality' => $item['criticality'],
+                    'status' => $item['status'] ?? 'pending',
                     'order' => $index,
                 ]);
             }
@@ -85,7 +116,7 @@ class ChecklistController extends Controller
     // GET /api/checklists/{checklist}
     public function show(Checklist $checklist)
     {
-        return response()->json($checklist->load('items'));
+        return response()->json($checklist->load(['items.tester']));
     }
 
     // PUT /api/checklists/{checklist}
@@ -94,8 +125,22 @@ class ChecklistController extends Controller
     $data = $request->validate([
         'name' => ['sometimes', 'required', 'string'],
         'description' => ['nullable', 'string'],
+        'project_id' => ['nullable', 'exists:projects,id'],
+        'as_a' => ['nullable', 'string'],
+        'i_want_that' => ['nullable', 'string'],
+        'so_that' => ['nullable', 'string'],
+        'acceptance_criteria' => ['nullable', 'string'],
+        'business_rules' => ['nullable', 'array'],
+        'business_rules.*' => ['string'],
+        'priority' => ['nullable', 'in:low,medium,high,critical'],
+        'status' => ['nullable', 'in:backlog,in_progress,ready_for_test,completed'],
+        'assigned_to' => ['nullable', 'exists:users,id'],
         'category' => ['nullable', 'string'],
         'is_active' => ['sometimes', 'boolean'],
+        'template_scope' => ['nullable', 'in:global,project'],
+        'lifecycle_status' => ['nullable', 'in:draft,approved,archived'],
+        'generated_from' => ['nullable', 'in:manual,ai,reuse'],
+        'source_user_story_id' => ['nullable', 'exists:user_stories,id'],
 
         'items' => ['sometimes', 'array', 'min:1'],
         'items.*.id' => ['sometimes', 'integer', 'exists:checklist_items,id'],
@@ -103,6 +148,7 @@ class ChecklistController extends Controller
         'items.*.description' => ['nullable', 'string'],
         'items.*.priority' => ['required_with:items', 'in:Low,Medium,High'],
         'items.*.criticality' => ['required_with:items', 'in:Minor,Major,Critical'],
+        'items.*.status' => ['nullable', 'in:pending,passed,failed'],
     ]);
 
     DB::beginTransaction();
@@ -112,8 +158,21 @@ class ChecklistController extends Controller
         $checklist->update([
             'name' => $data['name'] ?? $checklist->name,
             'description' => array_key_exists('description', $data) ? $data['description'] : $checklist->description,
+            'project_id' => array_key_exists('project_id', $data) ? $data['project_id'] : $checklist->project_id,
+            'as_a' => array_key_exists('as_a', $data) ? $data['as_a'] : $checklist->as_a,
+            'i_want_that' => array_key_exists('i_want_that', $data) ? $data['i_want_that'] : $checklist->i_want_that,
+            'so_that' => array_key_exists('so_that', $data) ? $data['so_that'] : $checklist->so_that,
+            'acceptance_criteria' => array_key_exists('acceptance_criteria', $data) ? $data['acceptance_criteria'] : $checklist->acceptance_criteria,
+            'business_rules' => array_key_exists('business_rules', $data) ? $data['business_rules'] : $checklist->business_rules,
+            'priority' => $data['priority'] ?? $checklist->priority,
+            'status' => $data['status'] ?? $checklist->status,
+            'assigned_to' => array_key_exists('assigned_to', $data) ? $data['assigned_to'] : $checklist->assigned_to,
             'category' => $data['category'] ?? $checklist->category,
             'is_active' => $data['is_active'] ?? $checklist->is_active,
+            'template_scope' => $data['template_scope'] ?? $checklist->template_scope,
+            'lifecycle_status' => $data['lifecycle_status'] ?? $checklist->lifecycle_status,
+            'generated_from' => $data['generated_from'] ?? $checklist->generated_from,
+            'source_user_story_id' => array_key_exists('source_user_story_id', $data) ? $data['source_user_story_id'] : $checklist->source_user_story_id,
         ]);
 
         // items update (if provided)
@@ -135,6 +194,7 @@ class ChecklistController extends Controller
                         'description' => $itemData['description'] ?? null,
                         'priority' => $itemData['priority'],
                         'criticality' => $itemData['criticality'],
+                        'status' => $itemData['status'] ?? $item->status ?? 'pending',
                         'order' => $index,
                     ]);
 
@@ -145,6 +205,7 @@ class ChecklistController extends Controller
                         'description' => $itemData['description'] ?? null,
                         'priority' => $itemData['priority'],
                         'criticality' => $itemData['criticality'],
+                        'status' => $itemData['status'] ?? 'pending',
                         'order' => $index,
                     ]);
 
@@ -198,6 +259,12 @@ class ChecklistController extends Controller
                 'description' => $checklist->description,
                 'category' => $checklist->category,
                 'is_active' => $checklist->is_active,
+                'priority' => $checklist->priority,
+                'status' => $checklist->status,
+                'template_scope' => $checklist->template_scope,
+                'lifecycle_status' => $checklist->lifecycle_status,
+                'generated_from' => $checklist->generated_from,
+                'acceptance_criteria' => $checklist->acceptance_criteria,
                 'items' => $checklist->items->map(function ($item) {
                     return [
                         'id' => $item->id,
@@ -205,6 +272,7 @@ class ChecklistController extends Controller
                         'description' => $item->description,
                         'priority' => $item->priority,
                         'criticality' => $item->criticality,
+                        'status' => $item->status,
                     ];
                 }),
             ];
@@ -253,7 +321,7 @@ class ChecklistController extends Controller
             fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
             
             // CSV header
-            fputcsv($file, ['Checklist Name', 'Category', 'Status', 'Item Title', 'Item Description', 'Priority', 'Criticality']);
+            fputcsv($file, ['Checklist Name', 'Category', 'Checklist Status', 'Item Title', 'Item Description', 'Priority', 'Criticality', 'Item Status']);
 
             foreach ($checklists as $checklist) {
                 if ($checklist->items->isEmpty()) {
@@ -261,6 +329,7 @@ class ChecklistController extends Controller
                         $checklist->name,
                         $checklist->category ?: '',
                         $checklist->is_active ? 'Active' : 'Inactive',
+                        '',
                         '',
                         '',
                         '',
@@ -276,6 +345,7 @@ class ChecklistController extends Controller
                             $item->description ?: '',
                             $item->priority,
                             $item->criticality,
+                            ucfirst($item->status ?? 'pending'),
                         ]);
                     }
                 }
@@ -332,7 +402,7 @@ class ChecklistController extends Controller
         
         // Header row
         $xml .= '<Row ss:StyleID="Header">' . "\n";
-        $headers = ['Checklist Name', 'Category', 'Status', 'Item Title', 'Item Description', 'Priority', 'Criticality'];
+        $headers = ['Checklist Name', 'Category', 'Checklist Status', 'Item Title', 'Item Description', 'Priority', 'Criticality', 'Item Status'];
         foreach ($headers as $header) {
             $xml .= '<Cell><Data ss:Type="String">' . htmlspecialchars($header) . '</Data></Cell>' . "\n";
         }
@@ -349,6 +419,7 @@ class ChecklistController extends Controller
                 $xml .= '<Cell><Data ss:Type="String"></Data></Cell>' . "\n";
                 $xml .= '<Cell><Data ss:Type="String"></Data></Cell>' . "\n";
                 $xml .= '<Cell><Data ss:Type="String"></Data></Cell>' . "\n";
+                $xml .= '<Cell><Data ss:Type="String"></Data></Cell>' . "\n";
                 $xml .= '</Row>' . "\n";
             } else {
                 foreach ($checklist->items as $item) {
@@ -360,6 +431,7 @@ class ChecklistController extends Controller
                     $xml .= '<Cell><Data ss:Type="String">' . htmlspecialchars($item->description ?: '') . '</Data></Cell>' . "\n";
                     $xml .= '<Cell><Data ss:Type="String">' . htmlspecialchars($item->priority) . '</Data></Cell>' . "\n";
                     $xml .= '<Cell><Data ss:Type="String">' . htmlspecialchars($item->criticality) . '</Data></Cell>' . "\n";
+                    $xml .= '<Cell><Data ss:Type="String">' . htmlspecialchars(ucfirst($item->status ?? 'pending')) . '</Data></Cell>' . "\n";
                     $xml .= '</Row>' . "\n";
                 }
             }
@@ -384,5 +456,90 @@ class ChecklistController extends Controller
             ->get();
         
         return response()->json($items);
+    }
+
+    public function updateItemStatus(Request $request, Checklist $checklist, ChecklistItem $item)
+    {
+        if ((int) $item->checklist_id !== (int) $checklist->id) {
+            return response()->json(['message' => 'Checklist item does not belong to this checklist.'], 422);
+        }
+
+        $data = $request->validate([
+            'status' => ['required', 'in:Not Tested,Passed,Failed,Blocked'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $oldStatus = $this->displayItemStatus($item->status);
+        $newStatus = $data['status'];
+
+        $item->update([
+            'status' => $this->normalizeItemStatus($newStatus),
+            'tested_by' => $newStatus === 'Not Tested' ? null : Auth::id(),
+            'tested_at' => $newStatus === 'Not Tested' ? null : now(),
+        ]);
+
+        if ($oldStatus !== $newStatus) {
+            ChecklistItemHistory::create([
+                'checklist_item_id' => $item->id,
+                'changed_by' => Auth::id(),
+                'field_name' => 'status',
+                'old_value' => $oldStatus,
+                'new_value' => $newStatus,
+                'change_type' => 'status_changed',
+                'notes' => $data['notes'] ?? null,
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Checklist item status updated.',
+            'status' => $newStatus,
+            'tested_by' => $item->tester()->first(['id', 'name', 'email']),
+            'tested_at' => optional($item->tested_at)->toISOString(),
+            'history' => $item->history()->with('changedBy:id,name,email')->get(),
+        ]);
+    }
+
+    public function getItemHistory(Checklist $checklist, ChecklistItem $item)
+    {
+        if ((int) $item->checklist_id !== (int) $checklist->id) {
+            return response()->json(['message' => 'Checklist item does not belong to this checklist.'], 422);
+        }
+
+        return response()->json(
+            $item->history()->with('changedBy:id,name,email')->get()->map(function (ChecklistItemHistory $history) {
+                return [
+                    'id' => $history->id,
+                    'field_name' => $history->field_name,
+                    'old_value' => $history->old_value,
+                    'new_value' => $history->new_value,
+                    'change_type' => $history->change_type,
+                    'notes' => $history->notes,
+                    'created_at' => optional($history->created_at)->toISOString(),
+                    'changed_by' => $history->changedBy,
+                ];
+            })->values()
+        );
+    }
+
+    private function normalizeItemStatus(string $status): string
+    {
+        return match ($status) {
+            'Not Tested' => 'pending',
+            'Passed' => 'passed',
+            'Failed' => 'failed',
+            'Blocked' => 'blocked',
+            default => 'pending',
+        };
+    }
+
+    private function displayItemStatus(?string $status): string
+    {
+        return match ($status) {
+            'passed' => 'Passed',
+            'failed' => 'Failed',
+            'blocked' => 'Blocked',
+            'Passed', 'Failed', 'Blocked' => $status,
+            default => 'Not Tested',
+        };
     }
 }

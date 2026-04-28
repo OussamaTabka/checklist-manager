@@ -112,6 +112,20 @@ const activeFilterBadges = computed(() => {
 
 const hasActiveFilters = computed(() => activeFilterBadges.value.length > 0)
 
+const checklistMetrics = computed(() => {
+  const totalChecklists = checklists.value.length
+  const activeChecklists = checklists.value.filter((checklist) => checklist.is_active).length
+  const totalItems = checklists.value.reduce((count, checklist) => count + (checklist.items?.length || 0), 0)
+  const categorizedChecklists = checklists.value.filter((checklist) => Boolean(checklist.category)).length
+
+  return [
+    { label: 'Templates', value: totalChecklists, caption: 'Reusable checklist library' },
+    { label: 'Active', value: activeChecklists, caption: 'Available for suggestions and projects' },
+    { label: 'Items', value: totalItems, caption: 'Reusable QA test cases in the library' },
+    { label: 'Categorized', value: categorizedChecklists, caption: 'Templates with explicit QA domain' },
+  ]
+})
+
 // Compute filtered items for autocomplete based on search query
 const getFilteredItems = (itemIndex) => {
   const query = itemSearchQueries.value[itemIndex] || ''
@@ -374,6 +388,14 @@ watch(
       </div>
     </div>
 
+    <div class="story-detail-metrics">
+      <article v-for="metric in checklistMetrics" :key="metric.label" class="story-detail-metric">
+        <span>{{ metric.label }}</span>
+        <strong>{{ metric.value }}</strong>
+        <p class="muted">{{ metric.caption }}</p>
+      </article>
+    </div>
+
     <div v-if="!auth.canManageChecklists" class="card error">
       <p>Only project managers and admins can create or edit checklists.</p>
     </div>
@@ -564,6 +586,9 @@ watch(
 
     <div class="card stack">
       <h2>Checklist list</h2>
+      <p class="muted">
+        Templates stay reusable. Automated execution happens after a checklist is turned into a project version inside the execution workspace.
+      </p>
 
       <p v-if="loading" class="muted">Loading checklists...</p>
 
@@ -583,7 +608,9 @@ watch(
             <tr v-for="checklist in filteredChecklists" :key="checklist.id">
               <td>{{ checklist.id }}</td>
               <td>
-                <strong>{{ checklist.name }}</strong>
+                <RouterLink :to="{ name: 'checklist-detail', params: { id: checklist.id } }" class="project-title-link">
+                  {{ checklist.name }}
+                </RouterLink>
                 <div class="muted">{{ checklist.description || '-' }}</div>
               </td>
               <td>{{ checklist.category || '-' }}</td>
@@ -595,10 +622,10 @@ watch(
               <td>{{ checklist.items?.length || 0 }}</td>
               <td>
                 <div class="actions">
-                  <button class="btn btn-secondary btn-sm" @click="editChecklist(checklist)">Edit</button>
-                  <button class="btn btn-secondary btn-sm" @click="toggleChecklist(checklist)">Toggle</button>
-
-                  <button class="btn btn-danger btn-sm" @click="deleteChecklist(checklist.id)">Delete</button>
+                  <RouterLink class="btn btn-secondary btn-sm" :to="{ name: 'checklist-detail', params: { id: checklist.id } }">Open</RouterLink>
+                  <button v-if="auth.canManageChecklists" class="btn btn-secondary btn-sm" @click="editChecklist(checklist)">Edit</button>
+                  <button v-if="auth.canManageChecklists" class="btn btn-secondary btn-sm" @click="toggleChecklist(checklist)">Toggle</button>
+                  <button v-if="auth.canManageChecklists" class="btn btn-danger btn-sm" @click="deleteChecklist(checklist.id)">Delete</button>
                 </div>
               </td>
             </tr>
@@ -628,3 +655,51 @@ watch(
     </div>
   </section>
 </template>
+
+<style>
+.story-detail-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.9rem;
+}
+
+.story-detail-metric {
+  padding: 1rem 1.05rem;
+  border-radius: 1.15rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 16px 30px -28px rgba(15, 23, 42, 0.28);
+}
+
+.story-detail-metric span {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #64748b;
+  font-weight: 800;
+}
+
+.story-detail-metric strong {
+  font-size: 1.25rem;
+  color: #0f172a;
+}
+
+.story-detail-metric p {
+  margin: 0.45rem 0 0;
+}
+
+.dark .story-detail-metric {
+  background: rgba(15, 23, 42, 0.92);
+  border-color: rgba(51, 65, 85, 0.9);
+}
+
+.dark .story-detail-metric span {
+  color: #94a3b8;
+}
+
+.dark .story-detail-metric strong {
+  color: #f8fafc;
+}
+</style>

@@ -15,6 +15,7 @@ const form = ref({
   // Section 1: General Info
   name: '',
   description: '',
+  category: 'Fonctionnel',
   priority: 'medium',
   
   // Section 2: User Story
@@ -32,7 +33,7 @@ const form = ref({
   status: 'ready_for_test',
   
   // Section 4: Scenarios (items)
-  items: [{ title: '', description: '', priority: 'Medium', criticality: 'Medium' }],
+  items: [{ title: '', description: '', priority: 'High', criticality: 'Major', status: 'pending' }],
 })
 
 const expandedSections = ref({
@@ -60,10 +61,15 @@ const itemPriorityOptions = [
 ]
 
 const criticalityOptions = [
-  { value: 'Low', label: 'Low' },
-  { value: 'Medium', label: 'Medium' },
-  { value: 'High', label: 'High' },
+  { value: 'Minor', label: 'Minor' },
+  { value: 'Major', label: 'Major' },
   { value: 'Critical', label: 'Critical' },
+]
+
+const itemStatusOptions = [
+  { value: 'pending', label: 'Pending' },
+  { value: 'passed', label: 'Passed' },
+  { value: 'failed', label: 'Failed' },
 ]
 
 const statusOptions = [
@@ -86,6 +92,7 @@ async function loadChecklist() {
       form.value = {
         name: checklist.name || '',
         description: checklist.description || '',
+        category: checklist.category || 'Fonctionnel',
         priority: checklist.priority || 'medium',
         as_a: checklist.as_a || '',
         i_want_that: checklist.i_want_that || '',
@@ -120,7 +127,8 @@ function addScenario() {
     title: '',
     description: '',
     priority: 'Medium',
-    criticality: 'Medium',
+    criticality: 'Major',
+    status: 'pending',
   })
 }
 
@@ -175,6 +183,7 @@ async function submit() {
     const payload = {
       name: form.value.name,
       description: form.value.description,
+      category: form.value.category,
       priority: form.value.priority,
       as_a: form.value.as_a || null,
       i_want_that: form.value.i_want_that || null,
@@ -261,6 +270,11 @@ onMounted(() => {
           <div class="field col-span-2">
             <label>Description *</label>
             <textarea v-model="form.description" rows="3" placeholder="Describe the purpose of this checklist"></textarea>
+          </div>
+
+          <div class="field">
+            <label>Category</label>
+            <input v-model="form.category" type="text" placeholder="Fonctionnel" />
           </div>
 
           <div class="field">
@@ -403,6 +417,13 @@ onMounted(() => {
               <label>Criticality</label>
               <select v-model="form.items[index].criticality">
                 <option v-for="opt in criticalityOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Status</label>
+              <select v-model="form.items[index].status">
+                <option v-for="opt in itemStatusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
               </select>
             </div>
           </div>
