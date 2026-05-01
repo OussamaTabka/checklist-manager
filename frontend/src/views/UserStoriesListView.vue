@@ -1,10 +1,9 @@
 <script setup>
-import { onMounted, computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useUserStoriesStore } from '@/stores/userStories'
 import { useAuthStore } from '@/stores/auth'
 import { apiRequest } from '@/lib/api'
-import { translateCurrentPhrase } from '@/lib/runtimeTranslations'
 import { ArrowRight, FolderKanban, Plus, Sparkles, Trash2, Zap } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -27,24 +26,24 @@ const roleStoryCopy = computed(() => {
   switch (auth.primaryRole) {
     case 'admin':
       return {
-        kicker: 'Admin Workspace',
-        title: 'User Story Governance',
+        kicker: 'Espace administrateur',
+        title: 'Pilotage des User Stories',
         description:
-          'Review project requirements, monitor story quality, and ensure checklist generation stays reusable and controlled.',
+          'Supervisez la qualité du backlog, la structuration des besoins et la réutilisation des checklists à l’échelle de la plateforme.',
       }
     case 'testeur':
       return {
-        kicker: 'Execution Workspace',
-        title: 'Assigned User Stories',
+        kicker: 'Espace d’exécution',
+        title: 'User Stories assignées',
         description:
-          'Browse the stories linked to your projects, understand readiness, and move into checklist execution with full context.',
+          'Consultez les User Stories liées à vos projets, évaluez leur niveau de préparation et accédez au contexte nécessaire avant l’exécution des tests.',
       }
     default:
       return {
-        kicker: 'Chef Workspace',
-        title: 'User Stories Workspace',
+        kicker: 'Espace chef de projet',
+        title: 'Backlog des User Stories',
         description:
-          'Centralisez les besoins du projet, suivez leur maturité, puis transformez-les en checklists réutilisables sans perdre le contexte métier.',
+          'Centralisez les besoins du projet, suivez leur maturité et transformez-les en checklists réutilisables sans perdre le contexte métier.',
       }
   }
 })
@@ -115,9 +114,9 @@ const statusCounts = computed(() => ({
 
 const statusLabels = {
   backlog: 'Backlog',
-  in_progress: 'En Cours',
-  ready_for_test: 'Prêt pour Test',
-  completed: 'Complété',
+  in_progress: 'En cours',
+  ready_for_test: 'Prêt pour test',
+  completed: 'Terminée',
 }
 
 const priorityLabels = {
@@ -141,7 +140,7 @@ async function loadStories() {
 
 async function deleteStory(storyId, event) {
   event.stopPropagation()
-  if (!confirm(translateCurrentPhrase('Êtes-vous sûr de vouloir supprimer cette story ?'))) return
+  if (!confirm('Voulez-vous vraiment supprimer cette User Story ?')) return
 
   try {
     if (!projectId.value) {
@@ -150,7 +149,7 @@ async function deleteStory(storyId, event) {
 
     await storiesStore.deleteStory(projectId.value, storyId)
   } catch (err) {
-    alert(`${translateCurrentPhrase('Error')}: ${err.message}`)
+    alert(`Erreur : ${err.message}`)
   }
 }
 
@@ -208,7 +207,7 @@ watch(
             class="btn btn-secondary btn-sm"
           >
             <FolderKanban :size="16" />
-            <span>Open Project</span>
+            <span>Consulter le projet</span>
           </RouterLink>
 
           <RouterLink
@@ -217,7 +216,7 @@ watch(
             class="btn btn-primary btn-sm"
           >
             <Plus :size="16" />
-            <span>Nouvelle Story</span>
+            <span>Ajouter une User Story</span>
           </RouterLink>
         </div>
       </div>
@@ -230,10 +229,10 @@ watch(
             <p class="story-insight-label">Projet sélectionné</p>
             <h2>{{ currentProject?.name || 'Aucun projet sélectionné' }}</h2>
           </div>
-          <span class="story-insight-chip">{{ filteredStories.length }} stories visibles</span>
+          <span class="story-insight-chip">{{ filteredStories.length }} User Stories visibles</span>
         </div>
         <p class="story-insight-text">
-          {{ currentProject?.description || 'Choisissez un projet pour concentrer la navigation, la création de stories et la génération de checklists.' }}
+          {{ currentProject?.description || 'Choisissez un projet pour centraliser la navigation, la création des User Stories et la génération de checklists.' }}
         </p>
       </article>
 
@@ -242,7 +241,7 @@ watch(
           <Zap :size="18" class="text-blue-600" />
           <div>
             <p class="story-insight-label">Moteur de génération</p>
-            <strong>{{ storiesStore.generatorStatus.current || 'Détermination...' }}</strong>
+            <strong>{{ storiesStore.generatorStatus.current || 'Détection en cours...' }}</strong>
           </div>
         </div>
         <p class="story-insight-text">
@@ -268,9 +267,9 @@ watch(
           <select v-model="statusFilter">
             <option value="all">Tous</option>
             <option value="backlog">Backlog</option>
-            <option value="in_progress">En Cours</option>
-            <option value="ready_for_test">Prêt pour Test</option>
-            <option value="completed">Complété</option>
+            <option value="in_progress">En cours</option>
+            <option value="ready_for_test">Prêt pour test</option>
+            <option value="completed">Terminée</option>
           </select>
         </div>
 
@@ -297,7 +296,7 @@ watch(
       >
         <span class="story-metric-label">{{ label }}</span>
         <strong>{{ statusCounts[statusKey] }}</strong>
-        <span class="story-metric-link">{{ statusFilter === statusKey ? 'Clear focus' : 'Focus' }}</span>
+        <span class="story-metric-link">{{ statusFilter === statusKey ? 'Réinitialiser' : 'Filtrer' }}</span>
       </button>
     </div>
 
@@ -315,7 +314,7 @@ watch(
       >
         <div class="story-card-head">
           <div>
-            <p class="story-card-id">Story #{{ story.id }}</p>
+            <p class="story-card-id">User Story #{{ story.id }}</p>
             <h3>{{ story.title }}</h3>
           </div>
           <button
@@ -338,7 +337,7 @@ watch(
 
         <div class="story-card-footer">
           <span class="story-open-link">
-            Open details
+            Voir les détails
             <ArrowRight :size="15" />
           </span>
         </div>
@@ -347,10 +346,9 @@ watch(
 
     <div v-else class="story-empty-state">
       <Sparkles :size="28" />
-      <h3>Aucune user story trouvée</h3>
+      <h3>Aucune User Story trouvée</h3>
       <p>
-        Commencez par sélectionner un projet, puis créez des stories qui serviront de base à la génération
-        intelligente de checklists.
+        Commencez par sélectionner un projet, puis ajoutez des User Stories qui serviront de base à la génération intelligente de checklists.
       </p>
       <RouterLink
         v-if="auth.isProjectManager && projectId"
@@ -358,7 +356,7 @@ watch(
         class="btn btn-primary btn-sm"
       >
         <Plus :size="16" />
-        <span>Créer la première story</span>
+        <span>Créer la première User Story</span>
       </RouterLink>
     </div>
   </section>

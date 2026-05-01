@@ -463,12 +463,13 @@ async function loadProgress(versionId) {
 }
 
 async function loadChecklists() {
-  if (!auth.canManageProjects) {
+  if (!auth.isTester) {
+    checklists.value = []
     return
   }
 
   try {
-    const data = await apiRequest('/checklists', {}, auth.token)
+    const data = await apiRequest(`/checklists?project_id=${route.params.id}`, {}, auth.token)
     checklists.value = (data.data || []).filter((checklist) => checklist.is_active)
   } catch {
     checklists.value = []
@@ -662,6 +663,7 @@ async function createVersionWithEditedChecklist() {
       name: checklistEditorForm.name,
       description: checklistEditorForm.description || null,
       category: checklistEditorForm.category || null,
+      project_id: Number(route.params.id),
       is_active: true,
       items: checklistEditorForm.items.map((item) => ({
         title: item.title,
@@ -895,12 +897,12 @@ onBeforeUnmount(() => {
 })
 
 onMounted(async () => {
-  if (auth.canManageChecklists) {
+  if (auth.isTester) {
     await Promise.all([loadProject(), loadChecklists(), loadAvailableItems(), loadUserStories()])
     return
   }
 
-  await Promise.all([loadProject(), loadChecklists(), loadUserStories()])
+  await Promise.all([loadProject(), loadUserStories()])
 })
 </script>
 
@@ -915,7 +917,7 @@ onMounted(async () => {
           <p class="project-execution-kicker">Test workspace</p>
           <h1>{{ project.name }}</h1>
           <p class="project-execution-subtitle">
-            A clearer execution flow for stories, checklists, environments, and automated runs.
+            Project context, linked user stories, execution checklists, environments, and automated runs in one place.
           </p>
 
           <div class="project-meta-pills">
@@ -949,6 +951,7 @@ onMounted(async () => {
             </a>
             <p v-else class="muted">No app URL configured yet.</p>
             <p class="muted">Created by {{ project.creator?.name || '-' }}</p>
+            <p class="muted">Objectives: {{ project.test_objectives || 'No test objectives defined yet.' }}</p>
           </div>
 
           <div class="project-execution-hero-actions">
@@ -1020,16 +1023,16 @@ onMounted(async () => {
         <p v-else class="muted">No user stories yet. Start with stories, then build checklist drafts from them.</p>
       </div>
 
-      <div v-if="auth.canManageProjects" class="card stack project-create-version-card">
+      <div v-if="auth.isTester" class="card stack project-create-version-card">
         <div class="section-header">
           <div>
-            <h3>Create new version</h3>
-            <p class="muted">Prepare a project-specific execution copy without changing the reusable checklist.</p>
+            <h3>Create execution checklist</h3>
+            <p class="muted">Choose a project checklist draft, adjust it if needed, then create the execution version.</p>
           </div>
         </div>
         <form class="grid" @submit.prevent="createVersion">
           <div class="field">
-            <label>Checklist</label>
+            <label>Execution checklist</label>
             <select v-model="versionForm.checklist_id" required>
               <option disabled value="">Select checklist</option>
               <option v-for="checklist in checklists" :key="checklist.id" :value="checklist.id">
@@ -1045,7 +1048,7 @@ onMounted(async () => {
               :disabled="!versionForm.checklist_id"
               @click="openChecklistEditor(Number(versionForm.checklist_id))"
             >
-              Edit Checklist
+              Edit Before Execution
             </button>
           </div>
         </form>
@@ -1053,7 +1056,7 @@ onMounted(async () => {
 
       <!-- Inline Checklist Editor Modal -->
       <div v-if="showChecklistEditor" class="card stack checklist-editor-panel">
-        <h3>Edit Checklist for New Version</h3>
+        <h3>Edit Checklist Before Execution</h3>
         <p class="muted">Customize this checklist before creating the version. Changes won't affect the original checklist.</p>
         
         <p v-if="actionError" class="error">{{ actionError }}</p>
@@ -1164,7 +1167,7 @@ onMounted(async () => {
           </div>
 
           <div class="actions">
-            <button class="btn btn-primary" type="submit">Create version with custom checklist</button>
+            <button class="btn btn-primary" type="submit">Create execution version with custom checklist</button>
             <button type="button" class="btn btn-secondary" @click="closeChecklistEditor">Cancel</button>
           </div>
         </form>
@@ -1180,7 +1183,7 @@ onMounted(async () => {
 
         <div v-if="projectVersions.length === 0" class="empty-dashed-card execution-empty-state">
           <h4>No project version yet</h4>
-          <p class="muted">Create a version from a checklist to unlock automated execution and item-by-item tracking.</p>
+          <p class="muted">The assigned tester must create an execution checklist before automated runs and item-by-item tracking become available.</p>
         </div>
 
         <template v-else>

@@ -6,79 +6,92 @@ use App\Http\Controllers\Controller;
 use App\Models\Checklist;
 use App\Models\Project;
 use App\Models\ProjectVersion;
+use App\Models\UserStory;
 use App\Models\User;
 use App\Models\VersionItem;
+use App\Services\ProjectUserStoryImportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 
 class ProjectController extends Controller
 {
-    public function createVersion(Request $request, Project $project)
-{
-    $this->authorize('update', $project);
-
-    $data = $request->validate([
-        'checklist_id' => ['required', 'integer', 'exists:checklists,id'],
-    ]);
-
-    $checklist = Checklist::where('id', $data['checklist_id'])
-        ->where('is_active', true)
-        ->with(['items' => fn ($q) => $q->orderBy('order')])
-        ->first();
-
-    if (!$checklist) {
-        return response()->json(['message' => 'Checklist not found or not active'], 422);
+    public function __construct(
+        private readonly ProjectUserStoryImportService $projectUserStoryImportService
+    ) {
     }
 
-    $lastVersion = $project->versions()->max('version_number') ?? 0;
-    $nextVersionNumber = $lastVersion + 1;
+    public function createVersion(Request $request, Project $project)
+    {
+        $this->authorize('view', $project);
+        $this->ensureExecutionAccess($project);
 
-    DB::beginTransaction();
-    try {
-        $version = ProjectVersion::create([
-            'project_id' => $project->id,
-            'checklist_id' => $checklist->id,
-            'version_number' => $nextVersionNumber,
+        $data = $request->validate([
+            'checklist_id' => ['required', 'integer', 'exists:checklists,id'],
         ]);
 
-        foreach ($checklist->items as $item) {
-            VersionItem::create([
-                'project_version_id' => $version->id,
-                'title' => $item->title,
-                'description' => $item->description,
-                'priority' => $item->priority,
-                'criticality' => $item->criticality,
-                'order' => $item->order,
-                'status' => 'Not Tested',
-            ]);
+        $checklist = Checklist::where('id', $data['checklist_id'])
+            ->where('is_active', true)
+            ->with(['items' => fn ($q) => $q->orderBy('order')])
+            ->first();
+
+        if (!$checklist) {
+            return response()->json(['message' => 'Checklist not found or not active'], 422);
         }
 
-        DB::commit();
+        $lastVersion = $project->versions()->max('version_number') ?? 0;
+        $nextVersionNumber = $lastVersion + 1;
 
-        return response()->json(
-            $version->load(['items', 'checklist:id,name']),
-            201
-        );
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Error creating project version', [
-            'project_id' => $project->id,
-            'checklist_id' => $data['checklist_id'] ?? null,
-            'user_id' => Auth::id(),
-            'error' => $e->getMessage(),
-        ]);
-        return response()->json(['message' => 'Error creating version'], 500);
+        DB::beginTransaction();
+
+        try {
+            $version = ProjectVersion::create([
+                'project_id' => $project->id,
+                'checklist_id' => $checklist->id,
+                'version_number' => $nextVersionNumber,
+            ]);
+
+            foreach ($checklist->items as $item) {
+                VersionItem::create([
+                    'project_version_id' => $version->id,
+                    'title' => $item->title,
+                    'description' => $item->description,
+                    'priority' => $item->priority,
+                    'criticality' => $item->criticality,
+                    'order' => $item->order,
+                    'status' => 'Not Tested',
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json($version->load(['items', 'checklist:id,name']), 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('Error creating project version', [
+                'project_id' => $project->id,
+                'checklist_id' => $data['checklist_id'] ?? null,
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json(['message' => 'Error creating version'], 500);
+        }
     }
-}
+
     public function index()
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        $query = Project::with(['creator:id,name,email', 'checklists:id,name,description', 'testers:id,name,email']);
 
-        // Chef voit seulement ses projets, Admin voit tous, Testeur voit seulement les projets assignés
+        $query = Project::with([
+            'creator:id,name,email',
+            'testers:id,name,email',
+        ])->withCount(['userStories', 'versions']);
+
         if ($user->hasRole('chef') && !$user->hasRole('admin')) {
             $query->where('created_by', $user->id);
         }
@@ -87,30 +100,20 @@ class ProjectController extends Controller
             $query->whereHas('testers', fn ($testerQuery) => $testerQuery->where('users.id', $user->id));
         }
 
-        return response()->json(
-            $query->orderByDesc('id')->paginate(10)
-        );
+        return response()->json($query->orderByDesc('id')->paginate(10));
     }
 
-    // GET /api/projects/metadata
     public function metadata()
     {
-        $checklists = Checklist::query()
-            ->where('is_active', true)
-            ->select(['id', 'name', 'description'])
-            ->orderBy('name')
-            ->get();
-
         $testers = User::with(['roles:id,name'])
             ->select(['id', 'name', 'email'])
             ->whereHas('roles', function ($query) {
-                $query->whereIn('name', ['testeur', 'chef', 'admin_contenus', 'admin']);
+                $query->where('name', 'testeur');
             })
             ->orderBy('name')
             ->get();
 
         return response()->json([
-            'checklists' => $checklists,
             'testers' => $testers,
         ]);
     }
@@ -123,130 +126,110 @@ class ProjectController extends Controller
             $project->load([
                 'creator:id,name,email',
                 'versions' => fn ($q) => $q->orderByDesc('version_number'),
-                'versions.checklist:id,name',
+                'versions.checklist:id,name,project_id,template_scope,lifecycle_status,generated_from',
                 'versions.items' => fn ($q) => $q->orderBy('order'),
-                'checklists:id,name,description,template_scope,lifecycle_status,generated_from',
                 'testers:id,name,email',
-                'userStories' => fn ($q) => $q->with(['creator:id,name,email', 'checklists:id,name,lifecycle_status,generated_from'])->orderByDesc('priority')->orderByDesc('created_at'),
+                'userStories' => fn ($q) => $q
+                    ->with(['creator:id,name,email', 'checklists:id,name,project_id,lifecycle_status,generated_from'])
+                    ->orderByDesc('priority')
+                    ->orderByDesc('created_at'),
             ])
         );
     }
 
-    // POST /api/projects  => crée projet + version 1 + snapshot items
     public function store(Request $request)
     {
         $this->authorize('create', Project::class);
 
         $data = $request->validate([
-            'name' => ['required', 'string'],
+            'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'test_objectives' => ['nullable', 'string'],
             'app_url' => ['required', 'url', 'max:2048'],
-            'checklist_id' => ['nullable', 'integer', 'exists:checklists,id'], // Optional initial checklist
-            'checklist_ids' => ['nullable', 'array'], // Additional checklists to assign
-            'checklist_ids.*' => ['integer', 'exists:checklists,id'],
-            'tester_ids' => ['nullable', 'array'], // Testers to assign
+            'tester_ids' => ['required', 'array', 'min:1'],
             'tester_ids.*' => ['integer', 'exists:users,id'],
+            'user_stories_file' => ['nullable', 'file', 'mimes:csv,txt,xlsx,json'],
         ]);
 
-        $primaryChecklist = null;
-        if (!empty($data['checklist_id'])) {
-            $primaryChecklist = Checklist::where('id', $data['checklist_id'])
-                ->where('is_active', true)
-                ->with(['items' => fn ($q) => $q->orderBy('order')])
-                ->first();
-
-            if (!$primaryChecklist) {
-                return response()->json(['message' => 'Checklist not found or not active'], 422);
-            }
-        }
-
-        // Validate additional checklists if provided
-        $additionalChecklistIds = $data['checklist_ids'] ?? [];
-        if (!empty($data['checklist_id']) && !in_array($data['checklist_id'], $additionalChecklistIds)) {
-            $additionalChecklistIds[] = $data['checklist_id'];
-        }
-
-        if (!empty($additionalChecklistIds)) {
-            $checklists = Checklist::whereIn('id', $additionalChecklistIds)
-                ->where('is_active', true)
-                ->get();
-
-            if ($checklists->count() !== count($additionalChecklistIds)) {
-                return response()->json(['message' => 'One or more checklists not found or not active'], 422);
-            }
-        }
-
-        // Validate testers if provided
         $testerIds = $data['tester_ids'] ?? [];
-        if (!empty($testerIds)) {
-            $testers = User::whereIn('id', $testerIds)
-                ->whereHas('roles', fn ($q) => $q->whereIn('name', ['testeur', 'chef', 'admin_contenus']))
-                ->get();
+        $testers = User::whereIn('id', $testerIds)
+            ->whereHas('roles', fn ($q) => $q->where('name', 'testeur'))
+            ->get();
 
-            if ($testers->count() !== count($testerIds)) {
-                return response()->json(['message' => 'One or more testers not found or invalid role'], 422);
-            }
+        if ($testers->count() !== count($testerIds)) {
+            return response()->json(['message' => 'One or more testers not found or invalid role'], 422);
+        }
+
+        try {
+            $importedStories = $this->projectUserStoryImportService->prepareImportedStories(
+                $request->file('user_stories_file')
+            );
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+
+        $validStories = $importedStories['stories'];
+        $summary = [
+            'manual_created' => 0,
+            'imported_created' => count($importedStories['stories']),
+            'total_created' => count($validStories),
+            'failed_manuals' => 0,
+            'failed_imports' => $importedStories['failed_count'],
+            'errors' => $importedStories['errors'],
+        ];
+
+        if ($summary['total_created'] < 1) {
+            return response()->json([
+                'message' => 'Veuillez importer un fichier contenant au moins une User Story valide.',
+                'user_stories_summary' => $summary,
+            ], 422);
         }
 
         DB::beginTransaction();
+
         try {
-            // Create project
             $project = Project::create([
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
+                'test_objectives' => $data['test_objectives'] ?? null,
                 'app_url' => $data['app_url'],
                 'created_by' => Auth::id(),
             ]);
 
-            // Attach all checklists to project
-            if (!empty($additionalChecklistIds)) {
-                $project->checklists()->attach($additionalChecklistIds);
-            }
+            $project->testers()->attach($testerIds);
+            $userId = Auth::id();
 
-            // Attach testers to project
-            if (!empty($testerIds)) {
-                $project->testers()->attach($testerIds);
-            }
-
-            if ($primaryChecklist) {
-                $version = ProjectVersion::create([
+            foreach ($validStories as $storyData) {
+                UserStory::create([
+                    ...$storyData,
                     'project_id' => $project->id,
-                    'checklist_id' => $primaryChecklist->id,
-                    'version_number' => 1,
+                    'created_by' => $userId,
                 ]);
-
-                foreach ($primaryChecklist->items as $item) {
-                    VersionItem::create([
-                        'project_version_id' => $version->id,
-                        'title' => $item->title,
-                        'description' => $item->description,
-                        'priority' => $item->priority,
-                        'criticality' => $item->criticality,
-                        'order' => $item->order,
-                        'status' => 'Not Tested',
-                    ]);
-                }
             }
 
             DB::commit();
 
             return response()->json(
-                $project->load([
-                    'versions.items',
-                    'versions.checklist',
-                    'checklists:id,name',
-                    'testers:id,name,email',
-                ]),
+                [
+                    'project' => $project->load([
+                        'creator:id,name,email',
+                        'testers:id,name,email',
+                    ]),
+                    'user_stories_summary' => $summary,
+                ],
                 201
             );
         } catch (\Exception $e) {
             DB::rollBack();
+
             Log::error('Error creating project', [
                 'name' => $data['name'] ?? null,
-                'checklist_id' => $data['checklist_id'] ?? null,
                 'user_id' => Auth::id(),
                 'error' => $e->getMessage(),
             ]);
+
             return response()->json(['message' => 'Error creating project'], 500);
         }
     }
@@ -256,14 +239,41 @@ class ProjectController extends Controller
         $this->authorize('update', $project);
 
         $data = $request->validate([
-            'name' => ['sometimes', 'required', 'string'],
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'test_objectives' => ['nullable', 'string'],
             'app_url' => ['sometimes', 'required', 'url', 'max:2048'],
+            'tester_ids' => ['sometimes', 'array', 'min:1'],
+            'tester_ids.*' => ['integer', 'exists:users,id'],
         ]);
 
-        $project->update($data);
-        $project->load(['creator:id,name,email', 'versions']);
-        return response()->json($project);
+        if (array_key_exists('tester_ids', $data)) {
+            $testers = User::whereIn('id', $data['tester_ids'])
+                ->whereHas('roles', fn ($q) => $q->where('name', 'testeur'))
+                ->get();
+
+            if ($testers->count() !== count($data['tester_ids'])) {
+                return response()->json(['message' => 'One or more testers not found or invalid role'], 422);
+            }
+        }
+
+        $project->update([
+            'name' => $data['name'] ?? $project->name,
+            'description' => array_key_exists('description', $data) ? $data['description'] : $project->description,
+            'test_objectives' => array_key_exists('test_objectives', $data) ? $data['test_objectives'] : $project->test_objectives,
+            'app_url' => $data['app_url'] ?? $project->app_url,
+        ]);
+
+        if (array_key_exists('tester_ids', $data)) {
+            $project->testers()->sync($data['tester_ids']);
+        }
+
+        return response()->json(
+            $project->load([
+                'creator:id,name,email',
+                'testers:id,name,email',
+            ])
+        );
     }
 
     public function destroy(Project $project)
@@ -271,66 +281,40 @@ class ProjectController extends Controller
         $this->authorize('delete', $project);
 
         $project->delete();
+
         return response()->json(null, 204);
     }
 
-    /**
-     * Assign testers to a project
-     */
     public function assignTesters(Request $request, Project $project)
     {
         $this->authorize('update', $project);
 
         $data = $request->validate([
-            'tester_ids' => ['required', 'array'],
+            'tester_ids' => ['required', 'array', 'min:1'],
             'tester_ids.*' => ['integer', 'exists:users,id'],
         ]);
 
-        // Validate testers have correct roles
         $testers = User::whereIn('id', $data['tester_ids'])
-            ->whereHas('roles', fn ($q) => $q->whereIn('name', ['testeur', 'chef', 'admin_contenus']))
+            ->whereHas('roles', fn ($q) => $q->where('name', 'testeur'))
             ->get();
 
         if ($testers->count() !== count($data['tester_ids'])) {
             return response()->json(['message' => 'One or more testers not found or invalid role'], 422);
         }
 
-        // Sync testers (replace all with new ones)
         $project->testers()->sync($data['tester_ids']);
 
-        return response()->json(
-            $project->load('testers:id,name,email'),
-            200
-        );
+        return response()->json($project->load('testers:id,name,email'), 200);
     }
 
-    /**
-     * Assign checklists to a project
-     */
-    public function assignChecklists(Request $request, Project $project)
+    private function ensureExecutionAccess(Project $project): void
     {
-        $this->authorize('update', $project);
+        $user = Auth::user();
 
-        $data = $request->validate([
-            'checklist_ids' => ['required', 'array'],
-            'checklist_ids.*' => ['integer', 'exists:checklists,id'],
-        ]);
-
-        // Validate checklists are active
-        $checklists = Checklist::whereIn('id', $data['checklist_ids'])
-            ->where('is_active', true)
-            ->get();
-
-        if ($checklists->count() !== count($data['checklist_ids'])) {
-            return response()->json(['message' => 'One or more checklists not found or not active'], 422);
-        }
-
-        // Sync checklists (replace all with new ones)
-        $project->checklists()->sync($data['checklist_ids']);
-
-        return response()->json(
-            $project->load('checklists:id,name,description'),
-            200
+        abort_unless(
+            $user && $user->hasRole('testeur') && $project->testers()->where('users.id', $user->id)->exists(),
+            403,
+            'Only assigned testers can design execution checklists for this project.'
         );
     }
 }

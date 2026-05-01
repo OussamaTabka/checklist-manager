@@ -4,11 +4,8 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeft,
   ArrowRight,
-  BookOpen,
   ChartColumn,
   CirclePlus,
-  ClipboardList,
-  Info,
   LoaderCircle,
   Pencil,
   Rocket,
@@ -21,6 +18,9 @@ import {
   X,
 } from 'lucide-vue-next'
 import { apiRequest, withQuery } from '@/lib/api'
+import {
+  analyzeImportedUserStories,
+} from '@/lib/projectUserStories'
 import { useAuthStore } from '@/stores/auth'
 import { translateCurrentPhrase } from '@/lib/runtimeTranslations'
 
@@ -34,8 +34,7 @@ const pagination = reactive({
   last_page: 1,
 })
 
-const checklists = ref([])
-const users = ref([]) // for testers
+const users = ref([])
 const listError = ref('')
 const createError = ref('')
 const successMessage = ref('')
@@ -43,6 +42,10 @@ const loadingProjects = ref(false)
 const creating = ref(false)
 const showProjectForm = ref(false)
 const showAdvancedFilters = ref(false)
+const importValidationLoading = ref(false)
+const importedStoriesFile = ref(null)
+const importedStoriesAnalysis = ref(null)
+const userStoriesFileInput = ref(null)
 
 const filters = reactive({
   name: '',
@@ -50,38 +53,39 @@ const filters = reactive({
   category: '',
   query: '',
   creator: 'all',
-  checklist: 'all',
 })
 
 const form = reactive({
   id: null,
   name: '',
   description: '',
+  test_objectives: '',
   app_url: '',
-  checklist_id: '',
-  checklist_ids: [], // additional checklists
-  tester_ids: [], // assigned testers
+  tester_ids: [],
 })
 
 const projectPageCopy = computed(() => {
   switch (auth.primaryRole) {
     case 'admin':
       return {
-        kicker: 'Admin Workspace',
-        title: 'Projects',
-        description: 'Audit delivery structure, review ownership, and oversee how projects are configured across the platform.',
+        kicker: 'Espace administrateur',
+        title: 'Projets',
+        description:
+          'Supervisez la configuration des projets, leur périmètre fonctionnel et l’organisation globale de la plateforme.',
       }
     case 'testeur':
       return {
-        kicker: 'Execution Workspace',
-        title: 'Assigned Projects',
-        description: 'See the projects linked to you, understand their scope, and move directly toward execution details.',
+        kicker: 'Espace d’exécution',
+        title: 'Projets assignés',
+        description:
+          'Consultez les projets qui vous sont assignés, comprenez leur périmètre et accédez rapidement à l’exécution des tests.',
       }
     default:
       return {
-        kicker: 'Chef Workspace',
-        title: 'Projects',
-        description: 'Manage testing projects, assign checklists and testers, and track execution progress.',
+        kicker: 'Espace chef de projet',
+        title: 'Projets',
+        description:
+          'Créez les projets, définissez leur contexte, préparez le backlog initial et assignez les testeurs.',
       }
   }
 })
@@ -96,20 +100,8 @@ const creatorFilterOptions = computed(() => {
     if (seen.has(creator.id)) {
       return false
     }
+
     seen.add(creator.id)
-    return true
-  })
-})
-
-const checklistFilterOptions = computed(() => {
-  const allChecklists = projects.value.flatMap((project) => project.checklists || [])
-  const seen = new Set()
-
-  return allChecklists.filter((checklist) => {
-    if (!checklist?.id || seen.has(checklist.id)) {
-      return false
-    }
-    seen.add(checklist.id)
     return true
   })
 })
@@ -118,57 +110,54 @@ const activeFilterBadges = computed(() => {
   const badges = []
 
   if (filters.name.trim() !== '') {
-    badges.push({ key: 'name', label: `Name: ${filters.name.trim()}` })
+    badges.push({ key: 'name', label: `Nom : ${filters.name.trim()}` })
   }
 
   if (filters.type.trim() !== '') {
-    badges.push({ key: 'type', label: `Type: ${filters.type.trim()}` })
+    badges.push({ key: 'type', label: `Type : ${filters.type.trim()}` })
   }
 
   if (filters.category.trim() !== '') {
-    badges.push({ key: 'category', label: `Category: ${filters.category.trim()}` })
+    badges.push({ key: 'category', label: `Catégorie : ${filters.category.trim()}` })
   }
 
   if (filters.query.trim() !== '') {
-    badges.push({ key: 'query', label: `Search: ${filters.query.trim()}` })
+    badges.push({ key: 'query', label: `Recherche : ${filters.query.trim()}` })
   }
 
   if (filters.creator !== 'all') {
     const creator = creatorFilterOptions.value.find((item) => String(item.id) === String(filters.creator))
-    badges.push({ key: 'creator', label: `Creator: ${creator?.name || filters.creator}` })
-  }
-
-  if (filters.checklist !== 'all') {
-    const checklist = checklistFilterOptions.value.find((item) => String(item.id) === String(filters.checklist))
-    badges.push({ key: 'checklist', label: `Checklist: ${checklist?.name || filters.checklist}` })
+    badges.push({ key: 'creator', label: `Créateur : ${creator?.name || filters.creator}` })
   }
 
   return badges
 })
 
 const hasActiveFilters = computed(() => activeFilterBadges.value.length > 0)
+const importedValidUserStoriesCount = computed(() => importedStoriesAnalysis.value?.validCount || 0)
+const importedInvalidUserStoriesCount = computed(() => importedStoriesAnalysis.value?.invalidCount || 0)
+const hasImportedUserStories = computed(() => importedValidUserStoriesCount.value >= 1)
 
 const projectMetrics = computed(() => {
   const totalProjects = projects.value.length
   const totalAssignedTesters = projects.value.reduce((count, project) => count + (project.testers?.length || 0), 0)
-  const totalLinkedChecklists = projects.value.reduce((count, project) => count + (project.checklists?.length || 0), 0)
+  const totalLinkedStories = projects.value.reduce((count, project) => count + Number(project.user_stories_count || 0), 0)
   const projectsWithUrl = projects.value.filter((project) => Boolean(project.app_url)).length
 
   return [
-    { label: 'Projects', value: totalProjects, caption: 'Active workspace entries' },
-    { label: 'Assigned testers', value: totalAssignedTesters, caption: 'Execution capacity linked' },
-    { label: 'Linked checklists', value: totalLinkedChecklists, caption: 'Reusable QA coverage attached' },
-    { label: 'Ready environments', value: projectsWithUrl, caption: 'Projects with target application URL' },
+    { label: 'Projets', value: totalProjects, caption: 'Projets disponibles dans l’espace de travail' },
+    { label: 'Testeurs assignés', value: totalAssignedTesters, caption: 'Capacité d’exécution mobilisée' },
+    { label: 'User Stories liées', value: totalLinkedStories, caption: 'Périmètre fonctionnel déjà préparé' },
+    { label: 'Environnements prêts', value: projectsWithUrl, caption: 'Projets disposant d’une URL cible' },
   ]
 })
 
 const filteredProjects = computed(() => {
   return projects.value.filter((project) => {
     const projectType = String(project.type || project.project_type || '').trim()
-    const checklistCategories = (project.checklists || []).map((checklist) => String(checklist.category || '').trim())
-    const projectCategory = String(project.category || checklistCategories[0] || '').trim()
+    const projectCategory = String(project.category || '').trim()
+    const searchText = `${project.name || ''} ${project.description || ''} ${project.test_objectives || ''} ${project.app_url || ''} ${projectType} ${projectCategory}`.toLowerCase()
 
-    const searchText = `${project.name || ''} ${project.description || ''} ${project.app_url || ''} ${projectType} ${projectCategory}`.toLowerCase()
     const matchesName =
       filters.name.trim() === '' ||
       String(project.name || '').toLowerCase().includes(filters.name.trim().toLowerCase())
@@ -177,17 +166,14 @@ const filteredProjects = computed(() => {
       projectType.toLowerCase().includes(filters.type.trim().toLowerCase())
     const matchesCategory =
       filters.category.trim() === '' ||
-      projectCategory.toLowerCase().includes(filters.category.trim().toLowerCase()) ||
-      checklistCategories.some((value) => value.toLowerCase().includes(filters.category.trim().toLowerCase()))
-    const matchesQuery = filters.query.trim() === '' || searchText.includes(filters.query.trim().toLowerCase())
+      projectCategory.toLowerCase().includes(filters.category.trim().toLowerCase())
+    const matchesQuery =
+      filters.query.trim() === '' || searchText.includes(filters.query.trim().toLowerCase())
     const matchesCreator =
       filters.creator === 'all' ||
       String(project.creator?.id || '') === String(filters.creator)
-    const matchesChecklist =
-      filters.checklist === 'all' ||
-      (project.checklists || []).some((checklist) => String(checklist.id) === String(filters.checklist))
 
-    return matchesName && matchesType && matchesCategory && matchesQuery && matchesCreator && matchesChecklist
+    return matchesName && matchesType && matchesCategory && matchesQuery && matchesCreator
   })
 })
 
@@ -214,12 +200,11 @@ async function loadProjectMetadata() {
 
   try {
     const data = await apiRequest('/projects/metadata', {}, auth.token)
-    checklists.value = data.checklists || []
     users.value = data.testers || []
   } catch (error) {
-    checklists.value = []
     users.value = []
-    createError.value = error.data?.message || error.message || 'Unable to load project setup data'
+    createError.value =
+      error.data?.message || error.message || 'Impossible de charger les données nécessaires à la création du projet.'
   }
 }
 
@@ -229,57 +214,119 @@ async function submitProject() {
   creating.value = true
 
   try {
-    const payload = {
-      name: form.name,
-      description: form.description || null,
-      app_url: form.app_url,
-      ...(form.checklist_id ? { checklist_id: Number(form.checklist_id) } : {}),
-    }
-
     if (form.id) {
-      // Update project (name, description, app_url only)
-      await apiRequest(`/projects/${form.id}`, { method: 'PUT', body: payload }, auth.token)
-      successMessage.value = 'Project updated successfully.'
-    } else {
-      // Create new project with testers and checklists
-      const createPayload = {
-        ...payload,
+      const payload = {
+        name: form.name,
+        description: form.description || null,
+        test_objectives: form.test_objectives || null,
+        app_url: form.app_url,
         tester_ids: form.tester_ids.map((id) => Number(id)),
-        checklist_ids: form.checklist_ids.map((id) => Number(id)),
       }
 
-      if (form.checklist_id) {
-        createPayload.checklist_id = Number(form.checklist_id)
+      await apiRequest(`/projects/${form.id}`, { method: 'PUT', body: payload }, auth.token)
+      successMessage.value = 'Le projet a été mis à jour avec succès.'
+    } else {
+      if (importedStoriesFile.value && !importedStoriesAnalysis.value) {
+        await analyzeSelectedUserStoriesFile()
       }
 
-      await apiRequest(
-        '/projects',
-        {
-          method: 'POST',
-          body: createPayload,
-        },
-        auth.token,
-      )
-      successMessage.value = 'Project created successfully.'
+      if (!hasImportedUserStories.value) {
+        createError.value = 'Veuillez importer un fichier contenant au moins une User Story valide.'
+        return
+      }
+
+      const payload = new FormData()
+      payload.append('name', form.name)
+      payload.append('description', form.description || '')
+      payload.append('test_objectives', form.test_objectives || '')
+      payload.append('app_url', form.app_url)
+
+      form.tester_ids.forEach((id) => {
+        payload.append('tester_ids[]', String(Number(id)))
+      })
+
+      if (importedStoriesFile.value) {
+        payload.append('user_stories_file', importedStoriesFile.value)
+      }
+
+      const response = await apiRequest('/projects', { method: 'POST', body: payload }, auth.token)
+      const summary = response?.user_stories_summary
+
+      if (summary) {
+        const ignoredCount = Number(summary.failed_imports || 0)
+        if (ignoredCount > 0) {
+          successMessage.value = `Projet créé avec succès. ${summary.total_created} User Stories ont été ajoutées et ${ignoredCount} ligne(s) ont été ignorée(s).`
+        } else {
+          successMessage.value = `Projet créé avec succès. ${summary.total_created} User Stories ont été ajoutées.`
+        }
+      } else {
+        successMessage.value = 'Projet créé avec succès.'
+      }
+
+      resetForm(true)
+      await loadProjects(1)
+      return
     }
 
     resetForm(true)
     await loadProjects(1)
   } catch (error) {
-    createError.value = error.data?.message || error.message
+    createError.value =
+      error.data?.message || error.message || 'Impossible de créer le projet. Veuillez vérifier les informations saisies.'
   } finally {
     creating.value = false
   }
+}
+
+async function analyzeSelectedUserStoriesFile() {
+  createError.value = ''
+  importedStoriesAnalysis.value = null
+
+  if (!importedStoriesFile.value) {
+    return
+  }
+
+  importValidationLoading.value = true
+
+  try {
+    importedStoriesAnalysis.value = await analyzeImportedUserStories(importedStoriesFile.value)
+  } catch (error) {
+    createError.value = error.message || 'Impossible de lire le fichier de User Stories.'
+  } finally {
+    importValidationLoading.value = false
+  }
+}
+
+async function onUserStoriesFileChange(event) {
+  importedStoriesFile.value = event.target.files?.[0] || null
+  importedStoriesAnalysis.value = null
+
+  if (importedStoriesFile.value) {
+    await analyzeSelectedUserStoriesFile()
+  }
+}
+
+function clearUserStoriesFile() {
+  importedStoriesFile.value = null
+  importedStoriesAnalysis.value = null
+
+  if (userStoriesFileInput.value) {
+    userStoriesFileInput.value.value = ''
+  }
+}
+
+function resetUserStoriesSection() {
+  clearUserStoriesFile()
 }
 
 function resetForm(closeForm = false) {
   form.id = null
   form.name = ''
   form.description = ''
+  form.test_objectives = ''
   form.app_url = ''
-  form.checklist_id = ''
-  form.checklist_ids = []
   form.tester_ids = []
+  resetUserStoriesSection()
 
   if (closeForm) {
     showProjectForm.value = false
@@ -292,7 +339,6 @@ function clearAllFilters() {
   filters.category = ''
   filters.query = ''
   filters.creator = 'all'
-  filters.checklist = 'all'
 }
 
 function removeFilter(key) {
@@ -318,22 +364,12 @@ function removeFilter(key) {
 
   if (key === 'creator') {
     filters.creator = 'all'
-    return
-  }
-
-  if (key === 'checklist') {
-    filters.checklist = 'all'
   }
 }
 
 function toggleCreatorFilter(id) {
   const value = String(id)
   filters.creator = filters.creator === value ? 'all' : value
-}
-
-function toggleChecklistFilter(id) {
-  const value = String(id)
-  filters.checklist = filters.checklist === value ? 'all' : value
 }
 
 function getHostname(url) {
@@ -345,6 +381,8 @@ function getHostname(url) {
 }
 
 function openCreateForm() {
+  createError.value = ''
+  successMessage.value = ''
   resetForm(false)
   showProjectForm.value = true
 }
@@ -369,12 +407,16 @@ function openCreateFormFromQuery() {
 }
 
 function editProject(project) {
+  createError.value = ''
+  successMessage.value = ''
+  resetUserStoriesSection()
   showProjectForm.value = true
   form.id = project.id
   form.name = project.name
   form.description = project.description || ''
+  form.test_objectives = project.test_objectives || ''
   form.app_url = project.app_url || ''
-  form.checklist_id = ''
+  form.tester_ids = (project.testers || []).map((tester) => tester.id)
 }
 
 function canManageProject(project) {
@@ -390,7 +432,7 @@ async function deleteProject(projectId) {
 
   try {
     await apiRequest(`/projects/${projectId}`, { method: 'DELETE' }, auth.token)
-    successMessage.value = 'Project deleted successfully.'
+    successMessage.value = 'Le projet a été archivé avec succès.'
     await loadProjects(1)
   } catch (error) {
     listError.value = error.data?.message || error.message
@@ -419,19 +461,12 @@ watch(
           <Rocket :size="30" :stroke-width="2.3" />
           <span>{{ projectPageCopy.title }}</span>
         </h1>
-        <p class="muted page-subtitle">
-          {{ projectPageCopy.description }}
-        </p>
+        <p class="muted page-subtitle">{{ projectPageCopy.description }}</p>
       </div>
       <div class="dashboard-command-actions">
-        <button
-          v-if="auth.canManageProjects"
-          class="btn btn-primary create-project-btn"
-          type="button"
-          @click="openCreateForm"
-        >
+        <button v-if="auth.canManageProjects" class="btn btn-primary create-project-btn" type="button" @click="openCreateForm">
           <CirclePlus :size="16" />
-          <span>Create Project</span>
+          <span>Créer un projet</span>
         </button>
       </div>
     </div>
@@ -448,49 +483,43 @@ watch(
       <div class="search-top-row">
         <div class="search-input-wrap">
           <Search :size="18" :stroke-width="2.1" />
-          <input v-model="filters.query" placeholder="Search projects..." class="search-input" />
+          <input v-model="filters.query" placeholder="Rechercher un projet..." class="search-input" />
         </div>
-
       </div>
 
       <div class="actions actions-between">
         <button class="btn btn-secondary btn-sm" type="button" @click="showAdvancedFilters = !showAdvancedFilters">
-          <span>{{ showAdvancedFilters ? 'Hide Filters' : 'Show Filters' }}</span>
+          <span>{{ showAdvancedFilters ? 'Masquer les filtres' : 'Afficher les filtres' }}</span>
         </button>
 
         <button v-if="hasActiveFilters" class="btn btn-secondary btn-sm" type="button" @click="clearAllFilters">
-          Clear all
+          Réinitialiser
         </button>
       </div>
 
       <div v-if="showAdvancedFilters" class="stack advanced-filters-stack">
         <div class="grid filters-grid">
           <div class="field">
-            <label class="field-label-strong">Name</label>
-            <input v-model="filters.name" placeholder="Filter by project name" />
+            <label class="field-label-strong">Nom</label>
+            <input v-model="filters.name" placeholder="Filtrer par nom de projet" />
           </div>
 
           <div class="field">
             <label class="field-label-strong">Type</label>
-            <input v-model="filters.type" placeholder="Filter by type" />
+            <input v-model="filters.type" placeholder="Filtrer par type" />
           </div>
 
           <div class="field">
-            <label class="field-label-strong">Category</label>
-            <input v-model="filters.category" placeholder="Filter by category" />
+            <label class="field-label-strong">Catégorie</label>
+            <input v-model="filters.category" placeholder="Filtrer par catégorie" />
           </div>
         </div>
 
         <div class="field field-tight">
-          <label class="field-label-strong">Creator</label>
+          <label class="field-label-strong">Créateur</label>
           <div class="chip-row">
-            <button
-              type="button"
-              class="filter-chip"
-              :class="{ active: filters.creator === 'all' }"
-              @click="filters.creator = 'all'"
-            >
-              All creators
+            <button type="button" class="filter-chip" :class="{ active: filters.creator === 'all' }" @click="filters.creator = 'all'">
+              Tous
             </button>
             <button
               v-for="creator in creatorFilterOptions"
@@ -504,34 +533,10 @@ watch(
             </button>
           </div>
         </div>
-
-        <div class="field field-tight">
-          <label class="field-label-strong">Checklist</label>
-          <div class="chip-row">
-            <button
-              type="button"
-              class="filter-chip"
-              :class="{ active: filters.checklist === 'all' }"
-              @click="filters.checklist = 'all'"
-            >
-              All checklists
-            </button>
-            <button
-              v-for="checklist in checklistFilterOptions"
-              :key="checklist.id"
-              type="button"
-              class="filter-chip"
-              :class="{ active: filters.checklist === String(checklist.id) }"
-              @click="toggleChecklistFilter(checklist.id)"
-            >
-              {{ checklist.name }}
-            </button>
-          </div>
-        </div>
       </div>
 
       <div v-if="hasActiveFilters" class="active-filters-row">
-        <span class="muted active-filters-label">Filters applied:</span>
+        <span class="muted active-filters-label">Filtres appliqués :</span>
         <div class="chip-row">
           <span v-for="badge in activeFilterBadges" :key="badge.key" class="applied-chip">
             {{ badge.label }}
@@ -548,7 +553,7 @@ watch(
         <h2 class="section-heading-with-icon">
           <Pencil v-if="form.id" :size="20" :stroke-width="2.2" />
           <CirclePlus v-else :size="20" :stroke-width="2.2" />
-          <span>{{ form.id ? 'Edit Project' : 'Create New Project' }}</span>
+          <span>{{ form.id ? 'Modifier le projet' : 'Créer un projet' }}</span>
         </h2>
       </div>
 
@@ -558,116 +563,47 @@ watch(
       <form class="stack" @submit.prevent="submitProject" data-testid="projects-form">
         <div class="form-grid-two">
           <div class="field">
-            <label class="field-label-strong">Project Name</label>
-            <input
-              v-model="form.name"
-              required
-              placeholder="e.g., API Testing Phase 1"
-              data-testid="projects-input-name"
-            />
+            <label class="field-label-strong">Nom du projet</label>
+            <input v-model="form.name" required placeholder="ex. : Phase 1 de test API" data-testid="projects-input-name" />
           </div>
           <div class="field">
-            <label class="field-label-strong">App URL</label>
-            <input
-              v-model="form.app_url"
-              type="url"
-              placeholder="https://example.com"
-              required
-              data-testid="projects-input-app-url"
-            />
+            <label class="field-label-strong">URL de l’application</label>
+            <input v-model="form.app_url" type="url" placeholder="https://example.com" required data-testid="projects-input-app-url" />
           </div>
         </div>
 
         <div class="field">
           <label class="field-label-strong">Description</label>
-          <textarea v-model="form.description" rows="3" placeholder="Add details about this project..." />
+          <textarea v-model="form.description" rows="3" placeholder="Décrivez le contexte, le périmètre et les enjeux métier du projet..." />
         </div>
 
-        <!-- Create New Project Only -->
-        <div v-if="!form.id" class="card project-setup-section">
+        <div class="field">
+          <label class="field-label-strong">Objectifs de test</label>
+          <textarea v-model="form.test_objectives" rows="3" placeholder="Précisez les objectifs QA, les risques à couvrir et les résultats attendus..." />
+        </div>
+
+        <div class="card project-setup-section">
           <div class="section-divider">
             <h3 class="section-heading-with-icon-sm">
               <Settings :size="18" :stroke-width="2.2" />
-              <span>Project Setup</span>
+              <span>Équipe assignée</span>
             </h3>
           </div>
 
-          <!-- Primary Checklist -->
           <div class="field">
-            <label class="label-with-icon">
-              <ClipboardList :size="18" :stroke-width="2.1" />
-              Initial Checklist
-            </label>
-            <select v-model="form.checklist_id" class="select-top-gap">
-              <option value="">Start without a checklist</option>
-              <option v-for="checklist in checklists" :key="checklist.id" :value="checklist.id">
-                {{ checklist.name }}{{ checklist.description ? ' - ' + checklist.description : '' }}
-              </option>
-            </select>
-            <p class="muted helper-text-info">
-              <Info :size="14" class="icon-inline-top" />
-              <span>Optional. Leave this empty for a story-first project, then create versions after user stories are ready.</span>
-            </p>
-          </div>
-
-          <!-- Additional Checklists -->
-          <div class="field">
-            <label class="label-with-icon">
-              <BookOpen :size="18" :stroke-width="2.1" />
-              Additional Checklists
-            </label>
-            <p class="muted helper-text">
-              Select all checklists you want to assign to this project
-            </p>
-            <div v-if="checklists.length === 0" class="muted empty-state-box">
-              No checklists available
-            </div>
-            <div v-else class="selection-grid">
-              <label 
-                v-for="checklist in checklists" 
-                :key="checklist.id" 
-                class="selection-card"
-              >
-                <input 
-                  type="checkbox" 
-                  :value="checklist.id" 
-                  v-model="form.checklist_ids"
-                  class="selection-check"
-                />
-                <div class="selection-body">
-                  <div class="selection-title">{{ checklist.name }}</div>
-                  <div v-if="checklist.description" class="muted selection-meta">
-                    {{ checklist.description }}
-                  </div>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <!-- Assign Testers -->
-          <div class="field section-space-top">
             <label class="label-with-icon">
               <Users :size="18" :stroke-width="2.1" />
-              Assign Testers
+              Assigner les testeurs
             </label>
             <p class="muted helper-text">
-              Select testers who will execute tests for this project
+              Sélectionnez les testeurs responsables de la préparation des checklists et de l’exécution des tests.
             </p>
             <div v-if="users.length === 0" class="muted empty-state-box">
-              No testers available
+              Aucun testeur disponible pour le moment.
             </div>
             <div v-else class="selection-grid">
-              <label 
-                v-for="user in users" 
-                :key="user.id" 
-                class="selection-card selection-card-green"
-              >
-                <input 
-                  type="checkbox" 
-                  :value="user.id" 
-                  v-model="form.tester_ids"
-                  class="selection-check"
-                />
+              <label v-for="user in users" :key="user.id" class="selection-card selection-card-green">
+                <input type="checkbox" :value="user.id" v-model="form.tester_ids" class="selection-check" />
                 <div class="selection-body">
                   <div class="selection-title">{{ user.name }}</div>
                   <div class="muted selection-meta">{{ user.email }}</div>
@@ -677,21 +613,78 @@ watch(
           </div>
         </div>
 
+        <div v-if="!form.id" class="card project-setup-section stack">
+          <div class="section-divider">
+            <h3 class="section-heading-with-icon-sm">
+              <CirclePlus :size="18" :stroke-width="2.2" />
+              <span>Backlog initial du projet</span>
+            </h3>
+          </div>
+
+          <p class="muted helper-text">
+            Importez un fichier contenant les User Stories initiales du projet afin de définir le périmètre fonctionnel du backlog dès la création.
+          </p>
+
+          <div class="story-source-summary">
+            <span class="mini-chip">{{ importedValidUserStoriesCount }} User Story{{ importedValidUserStoriesCount > 1 ? 'ies' : 'y' }} importée{{ importedValidUserStoriesCount > 1 ? 's' : '' }}</span>
+            <span v-if="importedInvalidUserStoriesCount > 0" class="mini-chip mini-chip-warn">
+              {{ importedInvalidUserStoriesCount }} ligne(s) ignorée(s)
+            </span>
+          </div>
+
+          <div class="card stack stack-gap-sm">
+            <div class="section-divider">
+              <h4 class="section-heading-with-icon-sm">
+                <Sparkles :size="16" :stroke-width="2.1" />
+                <span>Import depuis un fichier</span>
+              </h4>
+            </div>
+
+            <p class="muted helper-text">
+              Importez un fichier CSV, XLSX ou JSON contenant plusieurs User Stories structurées.
+            </p>
+
+            <div class="field">
+              <label class="field-label-strong">Fichier de User Stories</label>
+              <input ref="userStoriesFileInput" type="file" accept=".csv,.xlsx,.json" @change="onUserStoriesFileChange" />
+              <p class="muted helper-text">
+                Formats acceptés : CSV, XLSX ou JSON. Cette option est recommandée pour importer rapidement un backlog volumineux.
+              </p>
+            </div>
+
+            <div v-if="importValidationLoading" class="muted">Analyse du fichier en cours...</div>
+
+            <div v-if="importedStoriesFile" class="story-import-summary">
+              <p><strong>{{ importedStoriesFile.name }}</strong></p>
+              <p class="muted">
+                {{ importedValidUserStoriesCount }} User Story{{ importedValidUserStoriesCount > 1 ? 'ies' : 'y' }} importée{{ importedValidUserStoriesCount > 1 ? 's' : '' }}
+                <span v-if="importedInvalidUserStoriesCount > 0"> • {{ importedInvalidUserStoriesCount }} ligne(s) ignorée(s)</span>
+              </p>
+              <button type="button" class="btn btn-secondary btn-sm" @click="clearUserStoriesFile">
+                <X :size="14" />
+                <span>Retirer le fichier</span>
+              </button>
+            </div>
+
+            <div v-if="importedStoriesAnalysis?.errors?.length" class="stack stack-gap-sm">
+              <p class="muted">Lignes non importées :</p>
+              <div v-for="error in importedStoriesAnalysis.errors.slice(0, 5)" :key="`${error.row}-${error.message}`" class="error-row">
+                Ligne {{ error.row }} : {{ error.message }}
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="form-actions-row">
-          <button
-            class="btn btn-primary btn-min-wide"
-            type="submit"
-            :disabled="creating"
-            data-testid="projects-btn-submit"
-          >
+          <button class="btn btn-primary btn-min-wide" type="submit" :disabled="creating" data-testid="projects-btn-submit">
             <LoaderCircle v-if="creating" :size="16" class="spin" />
             <Save v-else-if="form.id" :size="16" />
             <Sparkles v-else :size="16" />
-            <span>{{ creating ? (form.id ? 'Updating...' : 'Creating...') : (form.id ? 'Update Project' : 'Create Project') }}</span>
+            <span>{{ creating ? (form.id ? 'Mise à jour...' : 'Création...') : (form.id ? 'Enregistrer les modifications' : 'Créer le projet') }}</span>
           </button>
           <button type="button" class="btn btn-secondary btn-inline-icon" @click="resetForm(true)">
             <X :size="16" />
-            <span>Close</span>
+            <span>Fermer</span>
           </button>
         </div>
       </form>
@@ -701,16 +694,16 @@ watch(
       <div class="section-divider">
         <h2 class="section-heading-with-icon">
           <ChartColumn :size="20" :stroke-width="2.2" />
-          <span>Project List</span>
+          <span>Liste des projets</span>
         </h2>
       </div>
 
       <p class="muted">
-        Open a project to reach the execution workspace, select a version, and use <strong>Run Test</strong> on executable items.
+        Ouvrez un projet pour accéder à son espace de suivi, consulter les versions d’exécution et lancer les tests sur les éléments exécutables.
       </p>
 
       <p v-if="listError" class="error" data-testid="projects-msg-error-list">{{ listError }}</p>
-      <p v-if="loadingProjects" class="muted">Loading projects...</p>
+      <p v-if="loadingProjects" class="muted">Chargement des projets...</p>
 
       <div v-if="!loadingProjects && filteredProjects.length > 0" class="projects-grid" data-testid="projects-table">
         <article v-for="project in filteredProjects" :key="project.id" class="project-card">
@@ -719,25 +712,32 @@ watch(
               <RouterLink :to="{ name: 'project-detail', params: { id: project.id } }" class="project-title-link">
                 {{ project.name }}
               </RouterLink>
-              <p class="muted meta-line">#{{ project.id }} • {{ project.creator?.name || 'Unknown creator' }}</p>
+              <p class="muted meta-line">#{{ project.id }} • {{ project.creator?.name || 'Créateur inconnu' }}</p>
             </div>
           </div>
 
-          <p class="muted description-fixed">{{ project.description || 'No description provided.' }}</p>
+          <p class="muted description-fixed">{{ project.description || 'Aucun contexte projet renseigné.' }}</p>
 
           <div class="project-meta-row">
-            <span class="mini-label">Checklists</span>
+            <span class="mini-label">Backlog</span>
             <div class="chip-row">
-              <span v-for="checklist in project.checklists || []" :key="checklist.id" class="mini-chip">{{ checklist.name }}</span>
-              <span v-if="!project.checklists || project.checklists.length === 0" class="muted">No checklist</span>
+              <span class="mini-chip">{{ project.user_stories_count || 0 }} User Story{{ (project.user_stories_count || 0) > 1 ? 'ies' : '' }}</span>
+              <span class="mini-chip">{{ project.versions_count || 0 }} version(s) d’exécution</span>
             </div>
           </div>
 
           <div class="project-meta-row">
-            <span class="mini-label">Testers</span>
+            <span class="mini-label">Objectifs</span>
+            <div class="chip-row">
+              <span class="muted">{{ project.test_objectives || 'Aucun objectif de test défini pour le moment.' }}</span>
+            </div>
+          </div>
+
+          <div class="project-meta-row">
+            <span class="mini-label">Testeurs</span>
             <div class="chip-row">
               <span v-for="tester in project.testers || []" :key="tester.id" class="mini-chip tester-chip">{{ tester.name }}</span>
-              <span v-if="!project.testers || project.testers.length === 0" class="muted">No tester assigned</span>
+              <span v-if="!project.testers || project.testers.length === 0" class="muted">Aucun testeur assigné</span>
             </div>
           </div>
 
@@ -745,15 +745,16 @@ watch(
             <a v-if="project.app_url" :href="project.app_url" target="_blank" rel="noopener noreferrer" class="muted app-url-text">
               {{ getHostname(project.app_url) }}
             </a>
-            <span v-else class="muted app-url-text">No app URL</span>
+            <span v-else class="muted app-url-text">Aucune URL renseignée</span>
 
             <div class="actions">
               <button v-if="canManageProject(project)" class="btn btn-secondary btn-sm" @click="editProject(project)">
                 <Pencil :size="14" />
-                <span>Edit</span>
+                <span>Modifier</span>
               </button>
               <button v-if="canManageProject(project)" class="btn btn-danger btn-sm" @click="deleteProject(project.id)">
                 <Trash2 :size="14" />
+                <span>Archiver</span>
               </button>
             </div>
           </div>
@@ -761,29 +762,17 @@ watch(
       </div>
 
       <div v-if="!loadingProjects && filteredProjects.length === 0" class="card empty-dashed-card">
-        <p class="muted">No projects found with current filters.</p>
+        <p class="muted">Aucun projet ne correspond aux filtres sélectionnés.</p>
       </div>
 
       <div class="pagination pagination-centered">
-        <button
-          class="btn btn-secondary btn-sm btn-nav-icon"
-          :disabled="pagination.current_page <= 1"
-          @click="loadProjects(pagination.current_page - 1)"
-          title="Go to previous page"
-        >
+        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="pagination.current_page <= 1" @click="loadProjects(pagination.current_page - 1)" title="Aller à la page précédente">
           <ArrowLeft :size="14" />
-          <span>Previous</span>
+          <span>Précédent</span>
         </button>
-        <span class="muted pagination-text">
-          Page {{ pagination.current_page }} of {{ pagination.last_page }}
-        </span>
-        <button
-          class="btn btn-secondary btn-sm btn-nav-icon"
-          :disabled="pagination.current_page >= pagination.last_page"
-          @click="loadProjects(pagination.current_page + 1)"
-          title="Go to next page"
-        >
-          <span>Next</span>
+        <span class="muted pagination-text">Page {{ pagination.current_page }} sur {{ pagination.last_page }}</span>
+        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="pagination.current_page >= pagination.last_page" @click="loadProjects(pagination.current_page + 1)" title="Aller à la page suivante">
+          <span>Suivant</span>
           <ArrowRight :size="14" />
         </button>
       </div>
@@ -825,6 +814,41 @@ watch(
   margin: 0.45rem 0 0;
 }
 
+.story-source-summary,
+.manual-story-card-head {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.manual-story-card,
+.story-import-summary {
+  padding: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 1rem;
+  background: rgba(248, 250, 252, 0.7);
+}
+
+.manual-story-card p,
+.story-import-summary p {
+  margin: 0.25rem 0 0;
+}
+
+.mini-chip-warn {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.error-row {
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.85rem;
+  background: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+}
+
 .dark .story-detail-metric {
   background: rgba(15, 23, 42, 0.92);
   border-color: rgba(51, 65, 85, 0.9);
@@ -836,5 +860,12 @@ watch(
 
 .dark .story-detail-metric strong {
   color: #f8fafc;
+}
+
+@media (max-width: 720px) {
+  .story-source-summary,
+  .manual-story-card-head {
+    flex-direction: column;
+  }
 }
 </style>

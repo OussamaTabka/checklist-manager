@@ -48,34 +48,34 @@ const projects = ref([])
 const users = ref([])
 
 const priorityOptions = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'critical', label: 'Critical' },
+  { value: 'low', label: 'Basse' },
+  { value: 'medium', label: 'Moyenne' },
+  { value: 'high', label: 'Haute' },
+  { value: 'critical', label: 'Critique' },
 ]
 
 const itemPriorityOptions = [
-  { value: 'Low', label: 'Low' },
-  { value: 'Medium', label: 'Medium' },
-  { value: 'High', label: 'High' },
+  { value: 'Low', label: 'Basse' },
+  { value: 'Medium', label: 'Moyenne' },
+  { value: 'High', label: 'Haute' },
 ]
 
 const criticalityOptions = [
-  { value: 'Minor', label: 'Minor' },
-  { value: 'Major', label: 'Major' },
-  { value: 'Critical', label: 'Critical' },
+  { value: 'Minor', label: 'Mineure' },
+  { value: 'Major', label: 'Majeure' },
+  { value: 'Critical', label: 'Critique' },
 ]
 
 const itemStatusOptions = [
-  { value: 'pending', label: 'Pending' },
-  { value: 'passed', label: 'Passed' },
-  { value: 'failed', label: 'Failed' },
+  { value: 'pending', label: 'En attente' },
+  { value: 'passed', label: 'Réussi' },
+  { value: 'failed', label: 'Échoué' },
 ]
 
 const statusOptions = [
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'ready_for_test', label: 'Ready for Test' },
-  { value: 'completed', label: 'Completed' },
+  { value: 'in_progress', label: 'En cours' },
+  { value: 'ready_for_test', label: 'Prêt pour test' },
+  { value: 'completed', label: 'Terminée' },
 ]
 
 const sectionIcons = {
@@ -156,17 +156,17 @@ function validate() {
   checklistsStore.clearErrors()
 
   if (!form.value.name.trim()) {
-    checklistsStore.errors.name = 'Name is required'
+    checklistsStore.errors.name = 'Le titre de la checklist est obligatoire.'
   }
   if (!form.value.description.trim()) {
-    checklistsStore.errors.description = 'Description is required'
+    checklistsStore.errors.description = 'La description de la checklist est obligatoire.'
   }
   if (form.value.items.length === 0) {
-    checklistsStore.errors.items = 'At least one scenario is required'
+    checklistsStore.errors.items = 'Au moins un scénario de test est obligatoire.'
   } else {
     for (let i = 0; i < form.value.items.length; i++) {
       if (!form.value.items[i].title.trim()) {
-        checklistsStore.errors[`item_${i}_title`] = `Scenario ${i + 1} title is required`
+        checklistsStore.errors[`item_${i}_title`] = `Le titre du scénario ${i + 1} est obligatoire.`
       }
     }
   }
@@ -228,8 +228,8 @@ onMounted(() => {
           <ArrowLeft :size="20" />
         </button>
         <div>
-          <h1>{{ isEditing ? 'Edit Checklist' : 'Create Checklist' }}</h1>
-          <p class="muted mt-1">Organize your requirements in 4 sections</p>
+          <h1>{{ isEditing ? 'Modifier la checklist' : 'Créer une checklist' }}</h1>
+          <p class="muted mt-1">Structurez vos besoins de test en quatre sections claires.</p>
         </div>
       </div>
     </div>
@@ -239,7 +239,7 @@ onMounted(() => {
       <div class="flex items-start gap-3">
         <AlertCircle :size="20" class="flex-shrink-0" />
         <div>
-          <strong>Please fix the following errors:</strong>
+          <strong>Veuillez corriger les points suivants :</strong>
           <ul class="mt-2 space-y-1">
             <li v-for="(error, key) in checklistsStore.errors" :key="key">• {{ error }}</li>
           </ul>
@@ -255,7 +255,7 @@ onMounted(() => {
       >
         <div class="flex items-center gap-3">
           <FileText :size="20" class="text-blue-600" />
-          <h2>General Information</h2>
+          <h2>Informations générales</h2>
         </div>
         <ChevronDown :size="20" :class="['transition-transform', expandedSections.info ? 'rotate-180' : '']" />
       </button>
@@ -263,29 +263,29 @@ onMounted(() => {
       <div v-show="expandedSections.info" class="space-y-4">
         <div class="grid grid-cols-2 gap-4">
           <div class="field col-span-2">
-            <label>Checklist Name *</label>
-            <input v-model="form.name" type="text" placeholder="E.g., Login Feature Testing" />
+            <label>Titre de la checklist *</label>
+            <input v-model="form.name" type="text" placeholder="Ex. : Tests de connexion" />
           </div>
 
           <div class="field col-span-2">
             <label>Description *</label>
-            <textarea v-model="form.description" rows="3" placeholder="Describe the purpose of this checklist"></textarea>
+            <textarea v-model="form.description" rows="3" placeholder="Décrivez l’objectif de cette checklist"></textarea>
           </div>
 
           <div class="field">
-            <label>Category</label>
+            <label>Catégorie</label>
             <input v-model="form.category" type="text" placeholder="Fonctionnel" />
           </div>
 
           <div class="field">
-            <label>Priority</label>
+            <label>Priorité</label>
             <select v-model="form.priority">
               <option v-for="opt in priorityOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
             </select>
           </div>
 
           <div class="field">
-            <label>Status</label>
+            <label>Statut</label>
             <select v-model="form.status">
               <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
             </select>
@@ -309,30 +309,30 @@ onMounted(() => {
 
       <div v-show="expandedSections.userStory" class="space-y-4">
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
-          <strong class="text-blue-900 block mb-2">User Story Format (Optional):</strong>
+          <strong class="text-blue-900 block mb-2">Format conseillé de User Story :</strong>
           <p class="text-blue-700 text-xs leading-relaxed">
-            Structure: "As a [role], I want [feature], So that [benefit]"
+            Structure : "En tant que [rôle], je veux [fonctionnalité], afin de [bénéfice]"
           </p>
         </div>
 
         <div class="field">
-          <label>As A (Role)</label>
-          <input v-model="form.as_a" placeholder="E.g., regular user, administrator" />
+          <label>En tant que</label>
+          <input v-model="form.as_a" placeholder="Ex. : utilisateur, administrateur" />
         </div>
 
         <div class="field">
-          <label>I Want That (Feature)</label>
-          <textarea v-model="form.i_want_that" rows="2" placeholder="Describe what the user wants to do"></textarea>
+          <label>Je veux</label>
+          <textarea v-model="form.i_want_that" rows="2" placeholder="Décrivez ce que l’utilisateur souhaite réaliser"></textarea>
         </div>
 
         <div class="field">
-          <label>So That (Benefit)</label>
-          <textarea v-model="form.so_that" rows="2" placeholder="Explain the business value or benefit"></textarea>
+          <label>Afin de</label>
+          <textarea v-model="form.so_that" rows="2" placeholder="Expliquez la valeur métier attendue"></textarea>
         </div>
 
         <div class="field">
-          <label>Acceptance Criteria</label>
-          <textarea v-model="form.acceptance_criteria" rows="3" placeholder="List the acceptance criteria or success conditions" class="font-mono text-sm"></textarea>
+          <label>Critères d’acceptation</label>
+          <textarea v-model="form.acceptance_criteria" rows="3" placeholder="Listez les critères d’acceptation ou conditions de réussite" class="font-mono text-sm"></textarea>
         </div>
       </div>
     </div>
@@ -345,7 +345,7 @@ onMounted(() => {
       >
         <div class="flex items-center gap-3">
           <Grid3x3 :size="20" class="text-purple-600" />
-          <h2>Business Rules</h2>
+          <h2>Règles métier</h2>
         </div>
         <ChevronDown :size="20" :class="['transition-transform', expandedSections.businessRules ? 'rotate-180' : '']" />
       </button>
@@ -355,7 +355,7 @@ onMounted(() => {
           <input
             v-model="form.business_rules[index]"
             type="text"
-            placeholder="E.g., Must validate email format"
+            placeholder="Ex. : Le format de l’adresse email doit être valide"
             class="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white transition-all focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
           />
           <button @click="removeBusinessRule(index)" class="btn btn-danger btn-sm">
@@ -365,7 +365,7 @@ onMounted(() => {
 
         <button @click="addBusinessRule" class="btn btn-secondary w-full">
           <Plus :size="16" />
-          Add Business Rule
+          Ajouter une règle métier
         </button>
       </div>
     </div>
@@ -378,7 +378,7 @@ onMounted(() => {
       >
         <div class="flex items-center gap-3">
           <CheckSquare :size="20" class="text-orange-600" />
-          <h2>Test Scenarios</h2>
+          <h2>Scénarios de test</h2>
           <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
             {{ form.items.length }}
           </span>
@@ -389,7 +389,7 @@ onMounted(() => {
       <div v-show="expandedSections.scenarios" class="space-y-4">
         <div v-for="(item, index) in form.items" :key="index" class="bg-gray-50 border border-gray-200 rounded-lg p-4">
           <div class="flex items-center justify-between mb-4">
-            <h4 class="font-semibold text-gray-900">Scenario {{ index + 1 }}</h4>
+            <h4 class="font-semibold text-gray-900">Scénario {{ index + 1 }}</h4>
             <button v-if="form.items.length > 1" @click="removeScenario(index)" class="btn btn-danger btn-sm">
               <Trash2 :size="16" />
             </button>
@@ -397,31 +397,31 @@ onMounted(() => {
 
           <div class="grid grid-cols-2 gap-4">
             <div class="field col-span-2">
-              <label>Title *</label>
-              <input v-model="form.items[index].title" placeholder="E.g., User enters valid email" />
+              <label>Titre *</label>
+              <input v-model="form.items[index].title" placeholder="Ex. : L’utilisateur saisit un email valide" />
             </div>
 
             <div class="field col-span-2">
               <label>Description</label>
-              <textarea v-model="form.items[index].description" rows="2" placeholder="Describe this test scenario"></textarea>
+              <textarea v-model="form.items[index].description" rows="2" placeholder="Décrivez ce scénario de test"></textarea>
             </div>
 
             <div class="field">
-              <label>Priority</label>
+              <label>Priorité</label>
               <select v-model="form.items[index].priority">
                 <option v-for="opt in itemPriorityOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
               </select>
             </div>
 
             <div class="field">
-              <label>Criticality</label>
+              <label>Criticité</label>
               <select v-model="form.items[index].criticality">
                 <option v-for="opt in criticalityOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
               </select>
             </div>
 
             <div class="field">
-              <label>Status</label>
+              <label>Statut</label>
               <select v-model="form.items[index].status">
                 <option v-for="opt in itemStatusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
               </select>
@@ -431,12 +431,12 @@ onMounted(() => {
 
         <button @click="addScenario" class="btn btn-secondary w-full">
           <Plus :size="16" />
-          Add Scenario
+          Ajouter un scénario
         </button>
 
         <button @click="generateScenariosWithAI" class="btn btn-primary w-full">
           <Wand2 :size="16" />
-          Generate Scenarios with AI
+          Générer des scénarios avec l’IA
         </button>
       </div>
     </div>
@@ -445,11 +445,11 @@ onMounted(() => {
     <div class="actions">
       <button @click="goBack" class="btn btn-secondary">
         <ArrowLeft :size="16" />
-        Cancel
+        Annuler
       </button>
       <button @click="submit" :disabled="submitting" class="btn btn-primary flex-1">
         <Zap v-if="!submitting" :size="16" />
-        {{ submitting ? 'Saving...' : isEditing ? 'Update Checklist' : 'Create Checklist' }}
+        {{ submitting ? 'Enregistrement...' : isEditing ? 'Enregistrer les modifications' : 'Créer la checklist' }}
       </button>
     </div>
   </section>

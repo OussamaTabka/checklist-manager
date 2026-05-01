@@ -168,6 +168,7 @@ class UserStoryController extends Controller
     public function generateChecklistWithAgent(Request $request, Project $project, UserStory $userStory)
     {
         $this->authorize('view', $project);
+        $this->ensureExecutionAccess($project);
 
         if ($userStory->project_id !== $project->id) {
             return response()->json(['error' => 'User story not found in this project'], 404);
@@ -194,7 +195,8 @@ class UserStoryController extends Controller
      */
     public function attachChecklist(Request $request, Project $project, UserStory $userStory)
     {
-        $this->authorize('update', $project);
+        $this->authorize('view', $project);
+        $this->ensureExecutionAccess($project);
 
         if ($userStory->project_id !== $project->id) {
             return response()->json(['error' => 'User story not found in this project'], 404);
@@ -225,7 +227,8 @@ class UserStoryController extends Controller
 
     public function approveGeneratedChecklist(Project $project, UserStory $userStory, Checklist $checklist)
     {
-        $this->authorize('update', $project);
+        $this->authorize('view', $project);
+        $this->ensureExecutionAccess($project);
 
         if ($userStory->project_id !== $project->id) {
             return response()->json(['error' => 'User story not found in this project'], 404);
@@ -275,7 +278,8 @@ class UserStoryController extends Controller
 
     public function adaptChecklist(Request $request, Project $project, UserStory $userStory, \App\Models\Checklist $checklist)
     {
-        $this->authorize('update', $project);
+        $this->authorize('view', $project);
+        $this->ensureExecutionAccess($project);
 
         if ($userStory->project_id !== $project->id) {
             return response()->json(['error' => 'User story not found in this project'], 404);
@@ -323,7 +327,8 @@ class UserStoryController extends Controller
      */
     public function detachChecklist(Project $project, UserStory $userStory, $checklistId)
     {
-        $this->authorize('update', $project);
+        $this->authorize('view', $project);
+        $this->ensureExecutionAccess($project);
 
         if ($userStory->project_id !== $project->id) {
             return response()->json(['error' => 'User story not found in this project'], 404);
@@ -379,5 +384,16 @@ class UserStoryController extends Controller
         $userStory->setAttribute('pending_drafts', $pendingDrafts);
 
         return $userStory;
+    }
+
+    private function ensureExecutionAccess(Project $project): void
+    {
+        $user = Auth::user();
+
+        abort_unless(
+            $user && $user->hasRole('testeur') && $project->testers()->where('users.id', $user->id)->exists(),
+            403,
+            'Only assigned testers can generate or attach execution checklists.'
+        );
     }
 }

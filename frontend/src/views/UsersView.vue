@@ -21,22 +21,23 @@ const form = reactive({
 const roleOptions = computed(() => {
   if (form.id) {
     return [
-      { value: 'admin', label: 'Admin' },
-      { value: 'chef', label: 'Chef de Projet' },
+      { value: 'admin', label: 'Administrateur' },
+      { value: 'chef', label: 'Chef de projet' },
       { value: 'testeur', label: 'Testeur' },
     ]
   }
 
   return [
-    { value: 'chef', label: 'Chef de Projet' },
+    { value: 'admin', label: 'Administrateur' },
+    { value: 'chef', label: 'Chef de projet' },
     { value: 'testeur', label: 'Testeur' },
   ]
 })
 
 const usersPageCopy = computed(() => ({
-  kicker: 'Admin Workspace',
-  title: 'Users & Roles',
-  description: 'Invite team members, control access, and keep the platform permissions model clean and predictable.',
+  kicker: 'Espace administrateur',
+  title: 'Utilisateurs et rôles',
+  description: 'Invitez les collaborateurs, attribuez les rôles et gardez un contrôle clair des accès à la plateforme.',
 }))
 
 function resetForm() {
@@ -82,10 +83,10 @@ async function submitUser() {
 
     if (form.id) {
       await apiRequest(`/users/${form.id}`, { method: 'PUT', body: payload }, auth.token)
-      successMessage.value = 'User updated successfully.'
+      successMessage.value = 'L’utilisateur a été mis à jour avec succès.'
     } else {
       await apiRequest('/users', { method: 'POST', body: payload }, auth.token)
-      successMessage.value = 'User created successfully. Invitation email sent.'
+      successMessage.value = 'L’utilisateur a été créé avec succès. Une invitation lui a été envoyée.'
     }
 
     resetForm()
@@ -101,7 +102,7 @@ async function resendInvitation(userId) {
 
   try {
     await apiRequest(`/users/${userId}/invitations/resend`, { method: 'POST' }, auth.token)
-    successMessage.value = 'Invitation resent successfully.'
+    successMessage.value = 'L’invitation a été renvoyée avec succès.'
     await loadUsers(pagination.current_page)
   } catch (error) {
     errorMessage.value = error.data?.message || error.message
@@ -114,7 +115,7 @@ async function revokeInvitation(userId) {
 
   try {
     await apiRequest(`/users/${userId}/invitations/revoke`, { method: 'POST' }, auth.token)
-    successMessage.value = 'Invitation revoked successfully.'
+    successMessage.value = 'L’invitation a été révoquée avec succès.'
     await loadUsers(pagination.current_page)
   } catch (error) {
     errorMessage.value = error.data?.message || error.message
@@ -127,7 +128,7 @@ async function deleteUser(userId) {
 
   try {
     await apiRequest(`/users/${userId}`, { method: 'DELETE' }, auth.token)
-    successMessage.value = 'User deleted successfully.'
+    successMessage.value = 'L’utilisateur a été supprimé avec succès.'
     await loadUsers(pagination.current_page)
   } catch (error) {
     errorMessage.value = error.data?.message || error.message
@@ -150,7 +151,7 @@ onMounted(async () => {
     </div>
 
     <div class="card stack">
-      <h2>{{ form.id ? `Edit user ${form.id}` : 'Create user' }}</h2>
+      <h2>{{ form.id ? `Modifier l’utilisateur #${form.id}` : 'Créer un utilisateur' }}</h2>
 
       <p v-if="errorMessage" class="error" data-testid="users-msg-error">{{ errorMessage }}</p>
       <p v-if="successMessage" class="success" data-testid="users-msg-success">{{ successMessage }}</p>
@@ -158,7 +159,7 @@ onMounted(async () => {
       <form class="stack" @submit.prevent="submitUser" data-testid="users-form">
         <div class="grid">
           <div class="field">
-            <label>Name</label>
+            <label>Nom complet</label>
             <input v-model="form.name" required data-testid="users-input-name" />
           </div>
 
@@ -168,35 +169,35 @@ onMounted(async () => {
           </div>
 
           <div class="field">
-            <label>Role</label>
+            <label>Rôle</label>
             <select v-model="form.role" required data-testid="users-select-role">
               <option v-for="option in roleOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
             </select>
           </div>
         </div>
 
-        <p v-if="!form.id" class="muted">The user will receive an invitation email to set their own password.</p>
+        <p v-if="!form.id" class="muted">L’utilisateur recevra un e-mail d’invitation pour définir son mot de passe.</p>
 
         <div class="actions">
-          <button class="btn btn-primary" type="submit" data-testid="users-btn-submit">{{ form.id ? 'Update user' : 'Create user' }}</button>
-          <button class="btn btn-secondary" type="button" @click="resetForm">Reset</button>
+          <button class="btn btn-primary" type="submit" data-testid="users-btn-submit">{{ form.id ? 'Enregistrer les modifications' : 'Créer l’utilisateur' }}</button>
+          <button class="btn btn-secondary" type="button" @click="resetForm">Réinitialiser</button>
         </div>
       </form>
     </div>
 
     <div class="card stack">
-      <h2>User list</h2>
-      <p v-if="loading" class="muted">Loading users...</p>
+      <h2>Liste des utilisateurs</h2>
+      <p v-if="loading" class="muted">Chargement des utilisateurs...</p>
 
       <div class="table-wrap" v-if="!loading">
         <table data-testid="users-table">
           <thead>
             <tr>
               <th>ID</th>
-              <th>Name</th>
+              <th>Nom</th>
               <th>Email</th>
-              <th>Role</th>
-              <th>Status</th>
+              <th>Rôle</th>
+              <th>Statut</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -205,31 +206,31 @@ onMounted(async () => {
               <td>{{ user.id }}</td>
               <td>{{ user.name }}</td>
               <td>{{ user.email }}</td>
-              <td>{{ user.roles?.[0]?.name || '-' }}</td>
-              <td>{{ user.account_status || 'active' }}</td>
+              <td>{{ roleOptions.find((option) => option.value === (user.roles?.[0]?.name || ''))?.label || '-' }}</td>
+              <td>{{ (user.account_status || 'active') === 'pending' ? 'Invitation en attente' : 'Actif' }}</td>
               <td>
                 <div class="actions">
-                  <button class="btn btn-secondary btn-sm" @click="editUser(user)">Edit</button>
+                  <button class="btn btn-secondary btn-sm" @click="editUser(user)">Modifier</button>
                   <button
                     v-if="(user.account_status || 'active') === 'pending'"
                     class="btn btn-secondary btn-sm"
                     @click="resendInvitation(user.id)"
                   >
-                    Resend Invite
+                    Renvoyer l’invitation
                   </button>
                   <button
                     v-if="(user.account_status || 'active') === 'pending'"
                     class="btn btn-secondary btn-sm"
                     @click="revokeInvitation(user.id)"
                   >
-                    Revoke Invite
+                    Révoquer l’invitation
                   </button>
-                  <button class="btn btn-danger btn-sm" @click="deleteUser(user.id)">Delete</button>
+                  <button class="btn btn-danger btn-sm" @click="deleteUser(user.id)">Supprimer</button>
                 </div>
               </td>
             </tr>
             <tr v-if="users.length === 0">
-              <td colspan="6" class="muted">No users found.</td>
+              <td colspan="6" class="muted">Aucun utilisateur trouvé pour le moment.</td>
             </tr>
           </tbody>
         </table>
@@ -241,14 +242,14 @@ onMounted(async () => {
           :disabled="pagination.current_page <= 1"
           @click="loadUsers(pagination.current_page - 1)"
         >
-          Previous
+          Précédent
         </button>
         <button
           class="btn btn-secondary btn-sm"
           :disabled="pagination.current_page >= pagination.last_page"
           @click="loadUsers(pagination.current_page + 1)"
         >
-          Next
+          Suivant
         </button>
       </div>
     </div>

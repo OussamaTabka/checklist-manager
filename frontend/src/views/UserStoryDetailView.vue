@@ -16,9 +16,9 @@ const storyId = route.params.id
 
 const statusLabels = {
   backlog: 'Backlog',
-  in_progress: 'In Progress',
-  ready_for_test: 'Ready for Test',
-  completed: 'Completed',
+  in_progress: 'En cours',
+  ready_for_test: 'Prêt pour test',
+  completed: 'Terminée',
 }
 
 const priorityColors = {
@@ -296,7 +296,7 @@ onMounted(() => {
         <ArrowLeft :size="20" />
       </button>
       <div class="story-detail-topbar-copy">
-        <h1>{{ storiesStore.currentStory?.title || 'Loading...' }}</h1>
+        <h1>{{ storiesStore.currentStory?.title || 'Chargement...' }}</h1>
         <p class="muted">Story ID: #{{ storyId }}</p>
       </div>
       <button
@@ -304,7 +304,7 @@ onMounted(() => {
         @click="editStory"
         class="btn btn-secondary"
       >
-        Edit story
+        Modifier la User Story
       </button>
     </div>
 
@@ -315,21 +315,21 @@ onMounted(() => {
     <div v-else-if="storiesStore.currentStory" class="stack stack-gap-lg">
       <div class="story-detail-hero">
         <div>
-          <p class="story-detail-kicker">Story workspace</p>
+          <p class="story-detail-kicker">Espace User Story</p>
           <h2>{{ storiesStore.currentStory.title }}</h2>
           <p class="story-detail-subtitle">
-            Review the requirement, adapt the best checklist, then move into the execution workspace to run tests automatically.
+            Analysez le besoin, adaptez la checklist la plus pertinente, puis passez à l’espace d’exécution pour lancer les tests.
           </p>
         </div>
 
         <div class="story-detail-hero-actions">
           <button
-            v-if="auth.isProjectManager"
+            v-if="auth.isTester"
             @click="openManualDraft"
             class="btn btn-secondary"
           >
             <Sparkles :size="16" />
-            <span>Add manual checklist</span>
+            <span>Ajouter une checklist manuelle</span>
           </button>
           <RouterLink
             v-if="projectId"
@@ -337,30 +337,31 @@ onMounted(() => {
             :to="{ name: 'project-detail', params: { id: projectId } }"
           >
             <FlaskConical :size="16" />
-            <span>Open execution workspace</span>
+            <span>Ouvrir l’espace d’exécution</span>
           </RouterLink>
           <button
+            v-if="auth.isTester"
             @click="generateChecklist"
             :disabled="storiesStore.isGenerating"
             class="btn btn-secondary"
           >
             <Zap :size="16" />
-            <span>{{ storiesStore.isGenerating ? 'Agent running...' : 'Launch agent' }}</span>
+            <span>{{ storiesStore.isGenerating ? 'Génération en cours...' : 'Lancer l’agent' }}</span>
           </button>
         </div>
       </div>
 
       <div class="story-detail-metrics">
         <article class="story-detail-metric">
-          <span>Status</span>
+          <span>Statut</span>
           <strong>{{ storyStatusLabel }}</strong>
         </article>
         <article class="story-detail-metric">
-          <span>Priority</span>
+          <span>Priorité</span>
           <strong>{{ storyPriorityLabel }}</strong>
         </article>
         <article class="story-detail-metric">
-          <span>Attached checklists</span>
+          <span>Checklists associées</span>
           <strong>{{ attachedChecklistCount }}</strong>
         </article>
         <article class="story-detail-metric">
@@ -382,7 +383,7 @@ onMounted(() => {
 
         <div class="card stack story-detail-summary-card">
           <div class="story-detail-card-head">
-            <h3>Acceptance criteria</h3>
+            <h3>Critères d’acceptation</h3>
             <CheckCircle2 :size="18" />
           </div>
           <div class="story-detail-criteria-box">
@@ -394,35 +395,35 @@ onMounted(() => {
       <div class="story-workflow-strip">
         <div class="story-workflow-step active">
           <span>1</span>
-          <strong>Review story</strong>
+          <strong>Analyser la story</strong>
         </div>
         <ArrowRight :size="16" class="story-workflow-arrow" />
         <div class="story-workflow-step active">
           <span>2</span>
-          <strong>Adapt checklist</strong>
+          <strong>Adapter la checklist</strong>
         </div>
         <ArrowRight :size="16" class="story-workflow-arrow" />
         <div class="story-workflow-step">
           <span>3</span>
-          <strong>Attach to project</strong>
+          <strong>Associer au projet</strong>
         </div>
         <ArrowRight :size="16" class="story-workflow-arrow" />
         <div class="story-workflow-step">
           <span>4</span>
-          <strong>Run Test in workspace</strong>
+          <strong>Exécuter le test</strong>
         </div>
       </div>
 
       <div v-if="currentSuggestions" class="card stack story-suggestions-card">
         <div class="story-detail-card-head story-detail-card-head-start">
           <div>
-            <h3>Checklist suggestions</h3>
+            <h3>Checklists suggérées</h3>
             <p class="muted">
-              Always review before attach. The assistant suggests reusable QA templates and highlights missing coverage.
+              Vérifiez chaque proposition avant rattachement. L’assistant suggère des modèles QA réutilisables et met en évidence les couvertures manquantes.
             </p>
           </div>
           <span class="story-recommendation-pill">
-            Recommended: {{ currentSuggestions.summary?.recommended_action || 'GENERATE_NEW' }}
+            Recommandation : {{ currentSuggestions.summary?.recommended_action || 'GENERATE_NEW' }}
           </span>
         </div>
 
@@ -435,7 +436,7 @@ onMounted(() => {
             <div class="story-suggestion-head">
               <div class="story-suggestion-copy">
                 <p class="story-suggestion-title">{{ suggestion.title || suggestion.name }}</p>
-                <p class="muted">{{ suggestion.description || 'No description' }}</p>
+                <p class="muted">{{ suggestion.description || 'Aucune description' }}</p>
                 <p class="story-suggestion-meta">
                   {{ suggestion.checklist_id }} | Score: {{ suggestion.score }} | {{ suggestion.items_count }} items | {{ suggestion.status }}
                 </p>
@@ -450,36 +451,36 @@ onMounted(() => {
                   class="btn btn-secondary btn-sm"
                   :disabled="previewLoading"
                 >
-                  {{ previewLoading ? 'Loading...' : 'View details' }}
+                  {{ previewLoading ? 'Chargement...' : 'Voir les détails' }}
                 </button>
                 <button
-                  v-if="auth.isProjectManager"
+                  v-if="auth.isTester"
                   @click="removeSuggestedChecklist(suggestion.source_checklist_id || suggestion.id)"
                   class="btn btn-danger btn-sm"
                   type="button"
                 >
                   <Trash2 :size="14" />
-                  <span>Delete</span>
+                  <span>Retirer</span>
                 </button>
               </div>
             </div>
 
             <div class="story-suggestion-grid">
               <div class="story-suggestion-chip story-suggestion-chip-good">
-                Coverage: {{ (suggestion.coverage || []).join(', ') || '-' }}
+                Couverture : {{ (suggestion.coverage || []).join(', ') || '-' }}
               </div>
               <div class="story-suggestion-chip story-suggestion-chip-warn">
-                Missing: {{ (suggestion.missing || []).join(', ') || '-' }}
+                Manques : {{ (suggestion.missing || []).join(', ') || '-' }}
               </div>
               <div class="story-suggestion-chip story-suggestion-chip-neutral">
-                Recommendation: {{ suggestion.recommendation }}
+                Recommandation : {{ suggestion.recommendation }}
               </div>
             </div>
           </div>
         </div>
 
         <p v-else class="muted">
-          No approved checklist is similar enough. Recommended next step: generate a new draft.
+          Aucune checklist approuvée n’est suffisamment proche. Étape recommandée : générer un nouveau brouillon.
         </p>
       </div>
 
@@ -488,13 +489,13 @@ onMounted(() => {
           <div>
             <h3 class="story-agent-title">
               <Sparkles :size="20" />
-              Checklist generation agent
+              Agent de génération de checklist
             </h3>
             <p class="muted">
-              The agent reuses approved checklists first, then generates only the missing test coverage.
+              L’agent réutilise d’abord les checklists approuvées, puis génère uniquement la couverture de test manquante.
             </p>
             <p class="story-agent-caption">
-              Active generator: <span>{{ storiesStore.generatorStatus.current || 'Determining...' }}</span>
+              Générateur actif : <span>{{ storiesStore.generatorStatus.current || 'Détection en cours...' }}</span>
             </p>
             <div v-if="currentAgentResult?.reuse_summary" class="story-agent-metrics">
               <span class="story-agent-metric">
@@ -509,11 +510,12 @@ onMounted(() => {
             </div>
           </div>
           <button
+            v-if="auth.isTester"
             @click="generateChecklist"
             :disabled="storiesStore.isGenerating"
             class="btn btn-primary"
           >
-            {{ storiesStore.isGenerating ? 'Agent running...' : 'Launch agent' }}
+            {{ storiesStore.isGenerating ? 'Génération en cours...' : 'Lancer l’agent' }}
           </button>
         </div>
       </div>
@@ -521,8 +523,8 @@ onMounted(() => {
       <div v-if="pendingDrafts.length > 0" class="stack stack-gap-sm">
         <div class="story-detail-card-head story-detail-card-head-start">
           <div>
-            <h3>Pending chef validation ({{ pendingDrafts.length }})</h3>
-            <p class="muted">Agent-generated drafts stay here until a chef reviews and approves them. They are not attached to the story yet.</p>
+            <h3>En attente de validation testeur ({{ pendingDrafts.length }})</h3>
+            <p class="muted">Agent-generated drafts stay here until the assigned tester reviews and approves them. They are not attached to the story yet.</p>
           </div>
         </div>
 
@@ -538,18 +540,18 @@ onMounted(() => {
               <p class="story-suggestion-meta">Lifecycle: {{ draft.lifecycle_status }} | Source: {{ draft.generated_from }}</p>
             </div>
             <button
-              v-if="auth.isProjectManager"
+              v-if="auth.isTester"
               @click="editPendingDraft(draft)"
               class="btn btn-secondary btn-sm"
             >
-              Review draft
+              Relire le brouillon
             </button>
             <button
-              v-if="auth.isProjectManager"
+              v-if="auth.isTester"
               @click="approveGeneratedChecklist(draft.id)"
               class="btn btn-primary btn-sm"
             >
-              Approve and attach
+              Approuver et associer
             </button>
           </div>
 
@@ -579,7 +581,7 @@ onMounted(() => {
       <div v-if="storiesStore.currentStory.checklists?.length > 0" class="stack stack-gap-sm">
         <div class="story-detail-card-head story-detail-card-head-start">
           <div>
-            <h3>Attached checklists ({{ storiesStore.currentStory.checklists.length }})</h3>
+            <h3>Checklists associées ({{ storiesStore.currentStory.checklists.length }})</h3>
             <p class="muted">These checklists are linked to the story. Automated Run Test happens in the project execution workspace.</p>
           </div>
           <RouterLink
@@ -587,7 +589,7 @@ onMounted(() => {
             class="btn btn-secondary btn-sm"
             :to="{ name: 'project-detail', params: { id: projectId } }"
           >
-            Open workspace
+            Ouvrir l’espace
           </RouterLink>
         </div>
 
@@ -602,7 +604,7 @@ onMounted(() => {
               <p class="muted">{{ checklist.description }}</p>
             </div>
             <button
-              v-if="auth.isProjectManager"
+              v-if="auth.isTester"
               @click="detachChecklist(checklist.id)"
               class="btn btn-danger btn-sm"
               title="Detach"
@@ -629,20 +631,20 @@ onMounted(() => {
 
           <div v-if="checklist.pivot?.is_generated_from_arxis" class="story-ai-origin">
             <Zap :size="16" />
-            Generated automatically by AI
+            Générée automatiquement par l’IA
           </div>
         </div>
       </div>
 
       <div v-else class="card empty-dashed-card story-empty-state">
         <AlertCircle :size="32" class="story-empty-icon" />
-        <p>No checklist attached yet.</p>
-        <p class="muted">Generate a checklist with AI or adapt a suggested template before moving to execution.</p>
+        <p>Aucune checklist n’est encore associée.</p>
+        <p class="muted">Générez une checklist avec l’IA ou adaptez un modèle suggéré avant de passer à l’exécution.</p>
       </div>
     </div>
 
     <div v-else class="card empty-dashed-card story-empty-state">
-      <p class="muted">Story not found.</p>
+      <p class="muted">User Story introuvable.</p>
     </div>
 
     <div v-if="previewOpen" class="fixed inset-0 z-50 bg-slate-950/40 flex items-center justify-center p-4">
@@ -717,7 +719,7 @@ onMounted(() => {
               </div>
             </div>
             <p class="text-xs text-slate-500 leading-5">
-              Review and editing happen before any attachment. The chef can add or remove items, then approve separately.
+              Review and editing happen before any attachment. The assigned tester can add or remove items, then approve separately.
             </p>
           </aside>
 

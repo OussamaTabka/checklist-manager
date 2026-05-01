@@ -42,7 +42,7 @@ class UserController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email'],
-            'role' => ['required', Rule::in(['chef', 'testeur'])],
+            'role' => ['required', Rule::in(['admin', 'chef', 'testeur'])],
         ]);
 
         $user = User::create([
@@ -77,7 +77,7 @@ class UserController extends Controller
         $data = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'email' => ['sometimes', 'required', 'email', Rule::unique('users')->ignore($user->id)],
-            'role' => ['sometimes', Rule::in(['admin', 'chef', 'testeur', 'admin_contenus'])],
+            'role' => ['sometimes', Rule::in(['admin', 'chef', 'testeur'])],
         ]);
 
         if (isset($data['name'])) {
@@ -112,7 +112,7 @@ class UserController extends Controller
     {
         $users = User::with(['roles:id,name'])
             ->whereHas('roles', function ($query) {
-                $query->whereIn('name', ['testeur', 'chef', 'admin_contenus', 'admin']);
+                $query->where('name', 'testeur');
             })
             ->orderBy('name')
             ->get();

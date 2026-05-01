@@ -12,7 +12,7 @@ class Project extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['name', 'description', 'app_url', 'created_by'];
+    protected $fillable = ['name', 'description', 'test_objectives', 'app_url', 'created_by'];
 
     public function versions(): HasMany
     {

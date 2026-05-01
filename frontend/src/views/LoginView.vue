@@ -33,8 +33,8 @@ async function onSubmit() {
   <section class="page page-auth-sm">
     <div class="card stack">
       <div>
-        <h1>Sign in</h1>
-        <p class="muted">Use your account credentials to access Checklist Manager.</p>
+        <h1>Connexion</h1>
+        <p class="muted">Utilisez vos identifiants pour accéder à IntelliTest.</p>
       </div>
 
       <p v-if="errorMessage" class="error" data-testid="login-msg-error">{{ errorMessage }}</p>
@@ -52,7 +52,7 @@ async function onSubmit() {
         </div>
 
         <div class="field">
-          <label>Password</label>
+          <label>Mot de passe</label>
           <input
             v-model="form.password"
             type="password"
@@ -63,7 +63,7 @@ async function onSubmit() {
         </div>
 
         <div class="auth-link-row">
-          <RouterLink :to="{ name: 'forgot-password' }" class="muted">Forgot password?</RouterLink>
+          <RouterLink :to="{ name: 'forgot-password' }" class="muted">Mot de passe oublié ?</RouterLink>
         </div>
 
         <button
@@ -72,7 +72,7 @@ async function onSubmit() {
           :disabled="isSubmitting"
           data-testid="login-btn-submit"
         >
-          {{ isSubmitting ? 'Signing in...' : 'Sign in' }}
+          {{ isSubmitting ? 'Connexion en cours...' : 'Se connecter' }}
         </button>
       </form>
     </div>

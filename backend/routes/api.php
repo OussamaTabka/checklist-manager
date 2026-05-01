@@ -57,7 +57,7 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
         // ==========================================
         // CONSULTATION & EXECUTION CHECKLISTS
         // ==========================================
-        Route::middleware(['role:admin|chef|admin_contenus|testeur'])->group(function () {
+        Route::middleware(['role:admin|chef|testeur'])->group(function () {
             Route::get('/checklists', [ChecklistController::class, 'index']);
             Route::get('/checklists/items/available', [ChecklistController::class, 'getAvailableItems']);
             Route::get('/checklists/{checklist}', [ChecklistController::class, 'show']);
@@ -76,7 +76,7 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
         // ==========================================
         // GESTION CHECKLISTS (CHEF & ADMIN_CONTENUS)
         // ==========================================
-        Route::middleware(['role:chef|admin_contenus'])->group(function () {
+        Route::middleware(['role:testeur'])->group(function () {
             Route::post('/checklists', [ChecklistController::class, 'store']);
             Route::put('/checklists/{checklist}', [ChecklistController::class, 'update']);
             Route::delete('/checklists/{checklist}', [ChecklistController::class, 'destroy']);
@@ -105,6 +105,9 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
             Route::post('/projects/{project}/user-stories', [UserStoryController::class, 'store']);
             Route::put('/projects/{project}/user-stories/{userStory}', [UserStoryController::class, 'update']);
             Route::delete('/projects/{project}/user-stories/{userStory}', [UserStoryController::class, 'destroy']);
+        });
+
+        Route::middleware(['role:testeur'])->group(function () {
             Route::delete('/projects/{project}/user-stories/{userStory}/checklists/{checklistId}', [UserStoryController::class, 'detachChecklist']);
             Route::post('/projects/{project}/user-stories/{userStory}/approve-draft/{checklist}', [UserStoryController::class, 'approveGeneratedChecklist']);
         });
@@ -112,7 +115,7 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
         // ==========================================
         // DASHBOARD & VUE D'ENSEMBLE
         // ==========================================
-        Route::middleware(['role:admin|chef|admin_contenus|testeur'])->group(function () {
+        Route::middleware(['role:admin|chef|testeur'])->group(function () {
             Route::get('/dashboard/summary', [\App\Http\Controllers\Api\DashboardController::class, 'summary']);
         });
 
@@ -124,16 +127,14 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
             Route::post('/projects', [ProjectController::class, 'store']);
             Route::put('/projects/{project}', [ProjectController::class, 'update']);
             Route::delete('/projects/{project}', [ProjectController::class, 'destroy']);
-            Route::post('/projects/{project}/versions', [ProjectController::class, 'createVersion']);
             Route::post('/projects/{project}/assign-testers', [ProjectController::class, 'assignTesters']);
-            Route::post('/projects/{project}/assign-checklists', [ProjectController::class, 'assignChecklists']);
             Route::get('/projects/{project}/export/{format?}', [ExportController::class, 'exportProject']);
         });
 
         // ==========================================
         // VUE PROJETS GÉNÉRALE (TOUS LES RÔLES)
         // ==========================================
-        Route::middleware(['role:admin|chef|admin_contenus|testeur'])->group(function () {
+        Route::middleware(['role:admin|chef|testeur'])->group(function () {
             Route::get('/projects', [ProjectController::class, 'index']);
             Route::get('/projects/{project}', [ProjectController::class, 'show']);
             Route::get('/project-versions/{projectVersion}/export/{format?}', [ExportController::class, 'exportProjectVersion']);
@@ -142,7 +143,8 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
         // ==========================================
         // VUE PROJETS & GESTION POUR LES UTILISATEURS STANDARD
         // ==========================================
-        Route::middleware(['role:chef|admin_contenus|testeur'])->group(function () {
+        Route::middleware(['role:chef|testeur'])->group(function () {
+            Route::post('/projects/{project}/versions', [ProjectController::class, 'createVersion']);
             // Get project version with items
             Route::get('/project-versions/{projectVersion}', [ProjectVersionController::class, 'show']);
             

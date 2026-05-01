@@ -68,13 +68,13 @@ const router = createRouter({
       path: '/checklists',
       name: 'checklists',
       component: ChecklistsView,
-      meta: { requiresAuth: true, roles: ['admin', 'chef', 'admin_contenus', 'testeur'] },
+      meta: { requiresAuth: true, roles: ['testeur'] },
     },
     {
       path: '/checklists/:id',
       name: 'checklist-detail',
       component: ChecklistDetailView,
-      meta: { requiresAuth: true, roles: ['admin', 'chef', 'admin_contenus', 'testeur'] },
+      meta: { requiresAuth: true, roles: ['testeur'] },
     },
     {
       path: '/users',
