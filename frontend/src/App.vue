@@ -36,23 +36,25 @@ function tr(text) {
 const roleLabel = computed(() =>
   auth.roles
     .map((role) => {
-      if (role === 'admin') return 'Administrateur'
-      if (role === 'chef') return 'Chef de projet'
-      if (role === 'testeur') return 'Testeur'
+      if (role === 'admin') return tr('Administrator')
+      if (role === 'chef') return tr('Project manager')
+      if (role === 'testeur') return tr('Tester')
       return role
     })
     .join(', ')
 )
 const workspaceLabel = computed(() => {
-  if (auth.roles.includes('chef')) return 'Pilotage projet'
-  if (auth.roles.includes('admin')) return 'Administration'
+  if (auth.roles.includes('chef')) return tr('Project Command')
+  if (auth.roles.includes('admin')) return tr('Administration')
   if (auth.roles.includes('testeur')) return 'Espace d’exécution'
-  return 'Espace de travail'
+  return tr('Workspace')
 })
 const profileInitial = computed(() => {
   const source = String(auth.user?.name || 'U').trim()
   return source ? source[0].toUpperCase() : 'U'
 })
+
+const profileAvatarUrl = computed(() => String(auth.user?.profile_photo_url || '').trim())
 
 const isSidebarCollapsed = ref(localStorage.getItem(SIDEBAR_STORAGE_KEY) === '1')
 const showProfileMenu = ref(false)
@@ -69,6 +71,11 @@ const headerMetrics = reactive({
   failedCriticalItems: 0,
 })
 
+const userNotifications = reactive({
+  items: [],
+  unreadCount: 0,
+})
+
 const searchIndex = reactive({
   projects: [],
   checklists: [],
@@ -78,23 +85,23 @@ const searchIndex = reactive({
 const sidebarSections = computed(() => {
   const sections = [
     {
-      title: 'Principal',
+      title: tr('MAIN'),
       items: [
-        { label: 'Dashboard', route: { name: 'dashboard' }, icon: Home, show: true },
-        { label: 'Projets', route: { name: 'projects' }, icon: FolderKanban, show: true },
+        { label: tr('Dashboard'), route: { name: 'dashboard' }, icon: Home, show: true },
+        { label: tr('Projects'), route: { name: 'projects' }, icon: FolderKanban, show: true },
       ],
     },
     {
-      title: 'Gestion des tests',
+      title: tr('TEST MANAGEMENT'),
       items: [
         {
-          label: 'User Stories',
+          label: tr('User Stories'),
           route: { name: 'stories' },
           icon: NotebookPen,
           show: auth.hasAnyRole(['admin', 'chef', 'testeur']),
         },
         {
-          label: 'Checklists',
+          label: tr('Checklists'),
           route: { name: 'checklists' },
           icon: ClipboardCheck,
           show: auth.canManageChecklists || auth.canTest,
@@ -102,7 +109,7 @@ const sidebarSections = computed(() => {
       ],
     },
     {
-      title: 'Administration',
+      title: tr('ADMIN'),
       items: [
         {
           label: 'Utilisateurs et rôles',
@@ -150,16 +157,27 @@ const failedAlertCount = computed(() => {
   return Number.isFinite(count) ? Math.max(0, count) : 0
 })
 
+const totalNotificationCount = computed(() => failedAlertCount.value + Number(userNotifications.unreadCount || 0))
+
 const notificationBadge = computed(() => {
-  if (failedAlertCount.value > 99) {
+  if (totalNotificationCount.value > 99) {
     return '99+'
   }
 
-  return String(failedAlertCount.value)
+  return String(totalNotificationCount.value)
 })
 
 const notificationItems = computed(() => {
   const items = []
+
+  userNotifications.items.forEach((item) => {
+    items.push({
+      key: `notification-${item.id}`,
+      tone: item.read_at ? 'info' : 'brand',
+      text: String(item.data?.message || 'Nouvelle notification'),
+      meta: String(item.data?.project_name || ''),
+    })
+  })
 
   if (headerMetrics.testsFailed > 0) {
     items.push({
@@ -192,7 +210,7 @@ const workspaceSignals = computed(() => [
   {
     label: 'Alertes',
     value: notificationBadge.value,
-    tone: failedAlertCount.value > 0 ? 'danger' : 'neutral',
+    tone: failedAlertCount.value > 0 ? 'danger' : userNotifications.unreadCount > 0 ? 'warning' : 'neutral',
     icon: TriangleAlert,
   },
   {
@@ -343,6 +361,21 @@ async function loadGlobalSearchIndex() {
   }
 }
 
+async function loadUserNotifications() {
+  if (!auth.isAuthenticated) {
+    return
+  }
+
+  try {
+    const response = await apiRequest('/notifications', {}, auth.token)
+    userNotifications.items = Array.isArray(response.items) ? response.items : []
+    userNotifications.unreadCount = Number(response.unread_count || 0)
+  } catch {
+    userNotifications.items = []
+    userNotifications.unreadCount = 0
+  }
+}
+
 function toggleSidebar() {
   isSidebarCollapsed.value = !isSidebarCollapsed.value
   localStorage.setItem(SIDEBAR_STORAGE_KEY, isSidebarCollapsed.value ? '1' : '0')
@@ -353,9 +386,27 @@ function toggleProfileMenu() {
   showNotificationPanel.value = false
 }
 
-function toggleNotifications() {
+async function toggleNotifications() {
   showNotificationPanel.value = !showNotificationPanel.value
   showProfileMenu.value = false
+
+  if (!showNotificationPanel.value) {
+    return
+  }
+
+  await loadUserNotifications()
+
+  if (userNotifications.unreadCount > 0) {
+    try {
+      await apiRequest('/notifications/read-all', { method: 'POST' }, auth.token)
+      userNotifications.unreadCount = 0
+      userNotifications.items = userNotifications.items.map((item) => ({
+        ...item,
+        read_at: item.read_at || new Date().toISOString(),
+      }))
+    } catch {
+    }
+  }
 }
 
 function handleGlobalSearchSubmit() {
@@ -373,7 +424,7 @@ async function selectSearchResult(result) {
 
 async function goToProfile() {
   showProfileMenu.value = false
-  await router.push({ name: 'dashboard' })
+  await router.push({ name: 'settings', query: { section: 'profile' } })
 }
 
 async function goToSettings() {
@@ -417,7 +468,7 @@ onMounted(async () => {
   document.addEventListener('click', handleDocumentClick)
 
   if (auth.isAuthenticated) {
-    await Promise.all([loadHeaderMetrics(), loadGlobalSearchIndex()])
+    await Promise.all([loadHeaderMetrics(), loadGlobalSearchIndex(), loadUserNotifications()])
   }
 })
 
@@ -429,7 +480,7 @@ watch(
   () => auth.isAuthenticated,
   async (isAuthenticated) => {
     if (isAuthenticated) {
-      await Promise.all([loadHeaderMetrics(), loadGlobalSearchIndex()])
+      await Promise.all([loadHeaderMetrics(), loadGlobalSearchIndex(), loadUserNotifications()])
       return
     }
 
@@ -437,6 +488,8 @@ watch(
     searchIndex.projects = []
     searchIndex.checklists = []
     searchIndex.users = []
+    userNotifications.items = []
+    userNotifications.unreadCount = 0
   },
 )
 
@@ -458,7 +511,7 @@ watch(
 
         <div class="topbar-search" ref="searchMenuRef">
           <form class="topbar-search-input" @submit.prevent="handleGlobalSearchSubmit">
-            <Search :size="16" :stroke-width="2.2" />
+            <Search :size="16" :stroke-width="1.9" />
             <input
               v-model="globalQuery"
               type="text"
@@ -489,12 +542,12 @@ watch(
         <div class="topbar-right">
           <div class="notifications-wrap" ref="notificationsRef">
             <button class="icon-btn" type="button" @click="toggleNotifications" title="Notifications">
-              <Bell :size="18" :stroke-width="2.2" />
-              <span v-if="failedAlertCount > 0" class="icon-badge">{{ notificationBadge }}</span>
+              <Bell :size="18" :stroke-width="1.9" />
+              <span v-if="totalNotificationCount > 0" class="icon-badge">{{ notificationBadge }}</span>
             </button>
 
             <div v-if="showNotificationPanel" class="notifications-panel">
-              <div class="notifications-title">Alertes</div>
+              <div class="notifications-title">Notifications</div>
               <div class="notifications-list">
                 <div
                   v-for="item in notificationItems"
@@ -502,7 +555,8 @@ watch(
                   class="notification-item"
                   :class="`notification-${item.tone}`"
                 >
-                  {{ item.text }}
+                  <span>{{ item.text }}</span>
+                  <small v-if="item.meta">{{ item.meta }}</small>
                 </div>
               </div>
             </div>
@@ -510,12 +564,15 @@ watch(
 
           <div class="profile-wrap" ref="profileMenuRef">
             <button class="profile-trigger" type="button" @click="toggleProfileMenu">
-              <div class="profile-avatar">{{ profileInitial }}</div>
+              <div class="profile-avatar">
+                <img v-if="profileAvatarUrl" :src="profileAvatarUrl" alt="Profile photo" class="profile-avatar-image" />
+                <span v-else>{{ profileInitial }}</span>
+              </div>
               <div class="profile-meta">
                 <strong>{{ auth.user?.name }}</strong>
                 <span>{{ roleLabel }}</span>
               </div>
-              <ChevronDown :size="16" :stroke-width="2.2" />
+              <ChevronDown :size="16" :stroke-width="1.9" />
             </button>
 
             <div v-if="showProfileMenu" class="profile-menu">
@@ -543,7 +600,10 @@ watch(
 
           <div class="sidebar-workspace-card" v-show="!isSidebarCollapsed">
             <div class="sidebar-workspace-top">
-              <div class="sidebar-workspace-avatar">{{ profileInitial }}</div>
+              <div class="sidebar-workspace-avatar">
+                <img v-if="profileAvatarUrl" :src="profileAvatarUrl" alt="Profile photo" class="profile-avatar-image" />
+                <span v-else>{{ profileInitial }}</span>
+              </div>
               <div class="sidebar-workspace-copy">
                 <p class="sidebar-workspace-label">{{ workspaceLabel }}</p>
                 <strong>{{ auth.user?.name }}</strong>
@@ -558,7 +618,7 @@ watch(
                 class="workspace-signal"
                 :class="`workspace-signal-${signal.tone}`"
               >
-                <component :is="signal.icon" :size="14" />
+                <component :is="signal.icon" :size="14" :stroke-width="1.9" />
                 <div class="workspace-signal-copy">
                   <span>{{ signal.label }}</span>
                   <strong>{{ signal.value }}</strong>
@@ -577,7 +637,7 @@ watch(
                 class="sidebar-item"
                 :title="item.label"
               >
-                <component :is="item.icon" :size="17" :stroke-width="2.2" />
+                <component :is="item.icon" :size="17" :stroke-width="1.9" />
                 <span v-show="!isSidebarCollapsed">{{ item.label }}</span>
               </RouterLink>
             </section>
@@ -592,7 +652,7 @@ watch(
               class="sidebar-quick-item"
               :title="action.label"
             >
-              <Plus :size="16" />
+              <Plus :size="16" :stroke-width="1.9" />
               <span v-show="!isSidebarCollapsed">{{ action.label }}</span>
             </RouterLink>
           </div>

@@ -3,17 +3,19 @@
 namespace App\Services\TestCaseGeneration;
 
 use App\Models\UserStory;
-use Illuminate\Support\Facades\Http;
+use App\Services\StoryContextExtractor;
 use Exception;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Http;
 
 /**
  * Local LLM Test Case Generator
- * 
+ *
  * Uses local LLM services like:
  * - Ollama (https://ollama.ai)
  * - LM Studio (https://lmstudio.ai)
  * - Llama2, Mistral, Neural Chat, etc.
- * 
+ *
  * Free, open-source, privacy-friendly, runs locally
  */
 class LocalLLMGenerator implements TestCaseGeneratorInterface
@@ -21,38 +23,39 @@ class LocalLLMGenerator implements TestCaseGeneratorInterface
     private string $baseUrl;
     private string $model;
     private int $timeout;
+    private float $temperature;
 
-    public function __construct()
-    {
+    public function __construct(
+        private ?StoryContextExtractor $storyContextExtractor = null
+    ) {
         $this->baseUrl = config('services.test_generation.llm_url', 'http://localhost:11434');
         $this->model = config('services.test_generation.llm_model', 'mistral');
-        $this->timeout = min(5, max(3, (int) config('services.test_generation.llm_timeout', 5)));
+        $this->timeout = max(5, min(45, (int) config('services.test_generation.llm_timeout', 30)));
+        $this->temperature = max(0, min(1, (float) config('services.test_generation.llm_temperature', 0.2)));
+        $this->storyContextExtractor ??= new StoryContextExtractor();
     }
 
-    /**
-     * Generate test cases using local LLM
-     *
-     * @param UserStory $userStory
-     * @return array
-     * @throws Exception
-     */
-    public function generateTestCases(UserStory $userStory): array
+    public function generateTestCases(UserStory $userStory, array $context = []): array
     {
         if (!$this->isAvailable()) {
             throw new Exception("Local LLM service not available. Ensure {$this->model} is running on {$this->baseUrl}");
         }
 
         try {
-            $prompt = $this->buildPrompt($userStory);
+            $storyContext = $context['story_context'] ?? $this->storyContextExtractor->extract($userStory);
+            $prompt = $this->buildPrompt($userStory, $storyContext, $context);
 
-            // Call local LLM API (Ollama format)
-            $response = Http::timeout($this->timeout)->post(
+            $response = Http::connectTimeout(5)->timeout($this->timeout)->post(
                 "{$this->baseUrl}/api/generate",
                 [
                     'model' => $this->model,
                     'prompt' => $prompt,
+                    'system' => $this->systemPrompt(),
                     'stream' => false,
-                    'temperature' => 0.7,
+                    'format' => $this->responseSchema(),
+                    'options' => [
+                        'temperature' => $this->temperature,
+                    ],
                 ]
             );
 
@@ -60,95 +63,155 @@ class LocalLLMGenerator implements TestCaseGeneratorInterface
                 throw new Exception("LLM error: {$response->status()}");
             }
 
-            $generated = $response->json('response', '');
-            return $this->parseTestCases($generated);
+            $generated = (string) $response->json('response', '');
+            $parsed = $this->parseStructuredResponse($generated);
 
+            return $parsed !== [] ? $parsed : $this->generateFallbackTestCases($userStory, $context);
         } catch (Exception $e) {
             throw new Exception("Failed to generate test cases with Local LLM: {$e->getMessage()}");
         }
     }
 
-    /**
-     * Check if local LLM is available
-     *
-     * @return bool
-     */
     public function isAvailable(): bool
     {
         try {
             $response = Http::timeout(5)->get("{$this->baseUrl}/api/tags");
-            return $response->successful();
-        } catch (Exception $e) {
+
+            if (!$response->successful()) {
+                return false;
+            }
+
+            $models = collect($response->json('models', []))
+                ->pluck('name')
+                ->filter()
+                ->values();
+
+            if ($models->isEmpty()) {
+                return true;
+            }
+
+            return $models->contains(fn (string $name) => str_starts_with($name, $this->model));
+        } catch (Exception) {
             return false;
         }
     }
 
-    /**
-     * Get service name
-     *
-     * @return string
-     */
     public function getName(): string
     {
         return "Local LLM ({$this->model})";
     }
 
-    /**
-     * Build an optimized prompt for test case generation
-     *
-     * @param UserStory $userStory
-     * @return string
-     */
-    private function buildPrompt(UserStory $userStory): string
+    private function systemPrompt(): string
     {
+        return 'You are a senior QA test designer. Produce precise, domain-specific, non-generic test cases in valid JSON only.';
+    }
+
+    private function buildPrompt(UserStory $userStory, array $storyContext, array $context): string
+    {
+        $acceptanceCriteria = $this->bulletList($storyContext['acceptance_criteria'] ?? []);
+        $businessRules = $this->bulletList($storyContext['business_rules'] ?? []);
+        $scenarios = $this->bulletList($storyContext['scenarios'] ?? []);
+        $reusedItems = $this->bulletList(
+            array_map(
+                fn (array $item) => trim(($item['title'] ?? '') . ' - ' . ($item['description'] ?? '')),
+                array_slice($context['reusable_items'] ?? [], 0, 6)
+            )
+        );
+        $generationFocus = $this->bulletList($context['generation_focus'] ?? []);
+        $gapSummary = $this->bulletList($context['gap_summary'] ?? []);
+
         return <<<PROMPT
-You are an expert QA engineer. Generate comprehensive test cases for this user story.
+Generate a compact, high-value QA checklist for this user story.
 
-USER STORY:
-Title: {$userStory->title}
+USER STORY TITLE:
+{$userStory->title}
 
-Description:
+DESCRIPTION:
 {$userStory->description}
 
-Acceptance Criteria:
-{$userStory->acceptance_criteria}
+ACTOR:
+{$storyContext['actor']}
+
+GOAL:
+{$storyContext['goal']}
+
+BENEFIT:
+{$storyContext['benefit']}
+
+ACCEPTANCE CRITERIA:
+{$acceptanceCriteria}
+
+BUSINESS RULES:
+{$businessRules}
+
+ADDITIONAL SCENARIOS:
+{$scenarios}
+
+ALREADY REUSED CHECKLIST ITEMS:
+{$reusedItems}
+
+MISSING COVERAGE TO PRIORITIZE:
+{$generationFocus}
+
+GAP SUMMARY:
+{$gapSummary}
 
 INSTRUCTIONS:
-Generate 5-8 test cases covering:
-1. Happy path (main functionality)
-2. Edge cases and boundary conditions
-3. Error scenarios
-4. Data validation
-5. Security considerations
-
-For EACH test case, use this exact format:
-
-TEST CASE: [name]
-SEVERITY: [low/medium/high/critical]
-DESCRIPTION: [what is being tested]
-STEPS:
-1. [Step 1]
-2. [Step 2]
-3. [Continue as needed]
-EXPECTED_RESULT: [What should happen]
----
-
-Be concise but thorough. Focus on testability and clarity.
+1. Generate only the highest-value cases that fill missing coverage or sharpen vague reused coverage.
+2. Avoid generic cases like "verify errors" unless tied to a concrete condition from the story.
+3. Prefer domain wording from the story.
+4. Cover business flow, negative cases, concurrency, data integrity, notifications, and integrations when relevant.
+5. Each test case must be specific enough that a tester can execute it without rewriting it.
+6. Return valid JSON matching the provided schema.
+7. Keep between 4 and 8 test cases.
 PROMPT;
     }
 
-    /**
-     * Parse LLM response into standard format
-     *
-     * @param string $response
-     * @return array
-     */
-    private function parseTestCases(string $response): array
+    private function responseSchema(): array
+    {
+        return [
+            'type' => 'object',
+            'properties' => [
+                'test_cases' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'name' => ['type' => 'string'],
+                            'description' => ['type' => 'string'],
+                            'expected_result' => ['type' => 'string'],
+                            'severity' => ['type' => 'string', 'enum' => ['low', 'medium', 'high', 'critical']],
+                            'category' => ['type' => 'string'],
+                            'covers' => [
+                                'type' => 'array',
+                                'items' => ['type' => 'string'],
+                            ],
+                        ],
+                        'required' => ['name', 'description', 'expected_result', 'severity'],
+                    ],
+                ],
+            ],
+            'required' => ['test_cases'],
+        ];
+    }
+
+    private function parseStructuredResponse(string $response): array
+    {
+        $decoded = json_decode(trim($response), true);
+
+        if (is_array($decoded) && isset($decoded['test_cases']) && is_array($decoded['test_cases'])) {
+            return $this->normalizeCases($decoded['test_cases']);
+        }
+
+        return $this->parseLegacyResponse($response);
+    }
+
+    private function parseLegacyResponse(string $response): array
     {
         $testCases = [];
-        
-        // Split by test case markers
-        $blocks = preg_split('/^TEST CASE:/m', $response, -1, PREG_SPLIT_NO_EMPTY);
+
+        preg_match_all('/^TEST CASE:\s*.*?(?=^TEST CASE:|\z)/ims', $response, $matches);
+        $blocks = $matches[0] ?? [];
 
         foreach ($blocks as $block) {
             $testCase = $this->parseTestCaseBlock($block);
@@ -157,15 +220,9 @@ PROMPT;
             }
         }
 
-        return !empty($testCases) ? $testCases : $this->generateFallbackTestCases();
+        return $this->normalizeCases($testCases);
     }
 
-    /**
-     * Parse individual test case block
-     *
-     * @param string $block
-     * @return array
-     */
     private function parseTestCaseBlock(string $block): array
     {
         $lines = explode("\n", trim($block));
@@ -180,60 +237,93 @@ PROMPT;
 
         foreach ($lines as $line) {
             $line = trim($line);
-            if (empty($line)) continue;
+            if ($line === '') {
+                continue;
+            }
 
-            if (preg_match('/^([A-Z_]+):\s*(.*)/', $line, $matches)) {
-                $key = strtolower($matches[1]);
-                $value = $matches[2];
+            if (preg_match('/^([A-Z][A-Z_ ]+):\s*(.*)/', $line, $matches)) {
+                $key = strtolower(str_replace(' ', '_', $matches[1]));
+                $value = trim($matches[2]);
 
                 switch ($key) {
+                    case 'test_case':
+                        $testCase['name'] = $value;
+                        break;
                     case 'severity':
                         $testCase['severity'] = strtolower($value);
                         break;
                     default:
-                        if ($key === 'test case') {
-                            $testCase['name'] = $value;
-                        } else {
-                            $testCase[$key] = $value;
-                        }
+                        $testCase[$key] = $value;
                 }
+
                 $currentSection = $key;
-            } else {
-                if ($currentSection) {
-                    $testCase[$currentSection] = ($testCase[$currentSection] ?? '') . ' ' . $line;
-                }
+                continue;
+            }
+
+            if ($currentSection !== '') {
+                $testCase[$currentSection] = trim(($testCase[$currentSection] ?? '') . ' ' . $line);
             }
         }
 
         return $testCase;
     }
 
-    /**
-     * Generate fallback test cases if parsing fails
-     *
-     * @return array
-     */
-    private function generateFallbackTestCases(): array
+    private function normalizeCases(array $cases): array
     {
-        return [
-            [
-                'name' => 'Happy Path Test',
-                'description' => 'Test normal/expected user flow',
-                'expected_result' => 'Feature works as expected',
-                'severity' => 'high',
-            ],
-            [
-                'name' => 'Edge Case Test',
-                'description' => 'Test boundary conditions and limits',
-                'expected_result' => 'System handles edge cases gracefully',
-                'severity' => 'medium',
-            ],
-            [
-                'name' => 'Error Handling Test',
-                'description' => 'Test error scenarios and error messages',
-                'expected_result' => 'Appropriate error messages displayed',
-                'severity' => 'high',
-            ],
-        ];
+        return Collection::make($cases)
+            ->map(function (array $testCase) {
+                return [
+                    'name' => trim((string) ($testCase['name'] ?? '')),
+                    'description' => trim((string) ($testCase['description'] ?? '')),
+                    'expected_result' => trim((string) ($testCase['expected_result'] ?? '')),
+                    'severity' => $this->normalizeSeverity((string) ($testCase['severity'] ?? 'medium')),
+                    'category' => trim((string) ($testCase['category'] ?? '')),
+                    'covers' => array_values(array_filter(array_map('strval', $testCase['covers'] ?? []))),
+                ];
+            })
+            ->filter(fn (array $testCase) => $testCase['name'] !== '' && $testCase['description'] !== '')
+            ->unique(fn (array $testCase) => strtolower($testCase['name']))
+            ->values()
+            ->all();
+    }
+
+    private function normalizeSeverity(string $severity): string
+    {
+        $severity = strtolower(trim($severity));
+
+        return in_array($severity, ['low', 'medium', 'high', 'critical'], true) ? $severity : 'medium';
+    }
+
+    private function generateFallbackTestCases(UserStory $userStory, array $context): array
+    {
+        $focus = array_values(array_filter(array_map('strval', $context['generation_focus'] ?? [])));
+        $baseTitle = trim((string) $userStory->title);
+
+        if ($focus === []) {
+            $focus = ['critical business flow', 'negative path', 'data validation'];
+        }
+
+        return collect($focus)
+            ->take(4)
+            ->map(fn (string $item, int $index) => [
+                'name' => sprintf('Gap %02d - %s', $index + 1, ucfirst($item)),
+                'description' => "Target the missing coverage area: {$item} for {$baseTitle}.",
+                'expected_result' => 'The behavior remains consistent, explicit, and testable for this coverage gap.',
+                'severity' => $index === 0 ? 'high' : 'medium',
+                'category' => 'gap-fill',
+                'covers' => [$item],
+            ])
+            ->all();
+    }
+
+    private function bulletList(array $items): string
+    {
+        $items = array_values(array_filter(array_map(fn ($item) => trim((string) $item), $items)));
+
+        if ($items === []) {
+            return '- None';
+        }
+
+        return implode("\n", array_map(fn (string $item) => "- {$item}", $items));
     }
 }

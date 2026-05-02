@@ -81,16 +81,23 @@ export async function apiRequest(path, options = {}, token = null) {
   try {
     const savedToken = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
     const effectiveToken = token || savedToken
+    const currentLanguage =
+      typeof document !== 'undefined' && document.documentElement?.lang
+        ? document.documentElement.lang
+        : 'fr'
 
     const response = await apiClient.request({
       url: path,
       method: options.method || 'GET',
       data: options.body,
-      headers: effectiveToken
-        ? {
-            Authorization: `Bearer ${effectiveToken}`,
-          }
-        : undefined,
+      headers: {
+        ...(effectiveToken
+          ? {
+              Authorization: `Bearer ${effectiveToken}`,
+            }
+          : {}),
+        'X-App-Language': currentLanguage,
+      },
     })
 
     return response.data

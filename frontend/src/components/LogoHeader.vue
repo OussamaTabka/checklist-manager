@@ -8,37 +8,38 @@ function refreshPage() {
 
 <template>
   <button class="logo-header" type="button" @click="refreshPage" title="Refresh page">
-    <!-- Icon -->
-    <div class="icon">
-      <svg viewBox="0 0 58 58" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <!-- Clipboard body -->
-        <rect x="5" y="10" width="48" height="44" rx="6" fill="white" fill-opacity="0.13" stroke="white" stroke-opacity="0.22" stroke-width="1.2"/>
-        <!-- Clip top -->
-        <rect x="19" y="5" width="20" height="10" rx="5" fill="white" fill-opacity="0.18"/>
-        <rect x="23" y="7" width="12" height="6" rx="3" fill="#1E40AF"/>
-
-        <!-- Row 1 checked -->
-        <rect x="12" y="23" width="22" height="3" rx="1.5" fill="white" fill-opacity="0.35"/>
-        <circle cx="46" cy="24.5" r="6.5" fill="#10B981"/>
-        <polyline points="42.5,24.5 45.5,27.5 49.5,21.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-
-        <!-- Row 2 checked -->
-        <rect x="12" y="33" width="17" height="3" rx="1.5" fill="white" fill-opacity="0.35"/>
-        <circle cx="46" cy="34.5" r="6.5" fill="#10B981"/>
-        <polyline points="42.5,34.5 45.5,37.5 49.5,31.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-
-        <!-- Row 3 pending -->
-        <rect x="12" y="43" width="20" height="3" rx="1.5" fill="white" fill-opacity="0.35"/>
-        <circle cx="46" cy="44.5" r="6.5" stroke="white" stroke-opacity="0.55" stroke-width="2" fill="white" fill-opacity="0.1"/>
-        <rect x="42" y="43" width="8" height="3" rx="1.5" fill="white" fill-opacity="0.65"/>
+    <div class="icon" aria-hidden="true">
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="11" y="7" width="26" height="34" rx="7" fill="url(#paper)" />
+        <rect x="11" y="7" width="26" height="34" rx="7" stroke="url(#border)" stroke-width="1.4" />
+        <path d="M18 6.5C18 4.84315 19.3431 3.5 21 3.5H27C28.6569 3.5 30 4.84315 30 6.5V9H18V6.5Z" fill="url(#clip)" />
+        <path d="M17.75 17H30.25" stroke="#294FA6" stroke-width="1.9" stroke-linecap="round" />
+        <path d="M17.75 23.5H25.5" stroke="#294FA6" stroke-width="1.9" stroke-linecap="round" />
+        <path d="M17.75 30H27.25" stroke="#294FA6" stroke-width="1.9" stroke-linecap="round" />
+        <circle cx="30.5" cy="24" r="5.5" fill="#1F6FEB" />
+        <path d="M28.1 24.1L29.75 25.75L33.1 22.45" stroke="white" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+        <defs>
+          <linearGradient id="paper" x1="24" y1="7" x2="24" y2="41" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#FFFFFF" />
+            <stop offset="1" stop-color="#EEF4FF" />
+          </linearGradient>
+          <linearGradient id="border" x1="11" y1="7" x2="38" y2="42" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#C7D8F7" />
+            <stop offset="1" stop-color="#DCE7FA" />
+          </linearGradient>
+          <linearGradient id="clip" x1="24" y1="3.5" x2="24" y2="9" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#0F172A" />
+            <stop offset="1" stop-color="#294FA6" />
+          </linearGradient>
+        </defs>
       </svg>
     </div>
 
-    <!-- Wordmark -->
     <div class="wordmark">
       <div class="brand-name">
         <span class="part1">Intelli</span><span class="part2">Test</span>
       </div>
+      <span class="brand-subtitle">QA workflow studio</span>
     </div>
   </button>
 </template>
@@ -47,7 +48,7 @@ function refreshPage() {
 .logo-header {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.75rem;
   border: 0;
   background: transparent;
   padding: 0;
@@ -55,14 +56,15 @@ function refreshPage() {
 }
 
 .icon {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-  border-radius: 8px;
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.88));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 16px 32px -24px rgba(15, 23, 42, 0.28);
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
@@ -74,14 +76,14 @@ function refreshPage() {
   top: 0;
   left: 0;
   right: 0;
-  height: 20px;
-  border-radius: 8px 8px 0 0;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.15), transparent);
+  height: 18px;
+  border-radius: 12px 12px 0 0;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.78), transparent);
 }
 
 .icon svg {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   position: relative;
   z-index: 1;
 }
@@ -93,28 +95,37 @@ function refreshPage() {
 }
 
 .brand-name {
-  font-family: 'Plus Jakarta Sans', -apple-system, 'Segoe UI', sans-serif;
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: -0.05em;
+  font-family: "Space Grotesk", -apple-system, "Segoe UI", sans-serif;
+  font-size: 1.02rem;
+  font-weight: 800;
+  letter-spacing: -0.06em;
   line-height: 1;
   display: flex;
   align-items: baseline;
 }
 
 .part1 {
-  color: white;
+  color: #0f172a;
 }
 
 .part2 {
-  background: linear-gradient(135deg, #87ceeb, #87ceeb);
+  background: linear-gradient(180deg, #1f6feb, #174fbb);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
+.brand-subtitle {
+  font-family: "Sora", -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+  font-weight: 700;
+}
+
 .logo-header:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.85);
+  outline: 2px solid rgba(31, 111, 235, 0.45);
   outline-offset: 4px;
   border-radius: 0.75rem;
 }

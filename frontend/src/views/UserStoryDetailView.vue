@@ -3,13 +3,15 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useUserStoriesStore } from '@/stores/userStories'
 import { useAuthStore } from '@/stores/auth'
+import { useSettingsStore } from '@/stores/settings'
 import { translateCurrentPhrase } from '@/lib/runtimeTranslations'
-import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, FlaskConical, Sparkles, Trash2, Zap } from 'lucide-vue-next'
+import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, FlaskConical, Minus, Plus, Sparkles, Trash2, Zap } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
 const storiesStore = useUserStoriesStore()
 const auth = useAuthStore()
+const settingsStore = useSettingsStore()
 
 const projectId = computed(() => route.query.projectId || null)
 const storyId = route.params.id
@@ -38,22 +40,25 @@ const criticalities = {
 }
 
 const currentSuggestions = computed(() => storiesStore.suggestionsByStoryId?.[storyId] || null)
+const visibleSuggestions = computed(() => currentSuggestions.value?.suggestions || [])
 const currentAgentResult = computed(() => storiesStore.agentResultsByStoryId?.[storyId] || null)
 const currentPreview = computed(() => storiesStore.previewByStoryId?.[storyId] || null)
 const pendingDrafts = computed(() => storiesStore.currentStory?.pending_drafts || [])
 const attachedChecklistCount = computed(() => storiesStore.currentStory?.checklists?.length || 0)
-const suggestedChecklistCount = computed(() => currentSuggestions.value?.suggestions?.length || 0)
+const suggestedChecklistCount = computed(() => visibleSuggestions.value.length || 0)
 const storyStatusLabel = computed(() => statusLabels[storiesStore.currentStory?.status] || storiesStore.currentStory?.status || '-')
 const storyPriorityLabel = computed(() => {
   const priority = storiesStore.currentStory?.priority || ''
   return priority ? priority.charAt(0).toUpperCase() + priority.slice(1) : '-'
 })
 const acceptanceCriteriaText = computed(() => storiesStore.currentStory?.acceptance_criteria || 'No acceptance criteria provided.')
+const currentLanguage = computed(() => settingsStore.language || 'fr')
 
 const previewOpen = ref(false)
 const previewLoading = ref(false)
 const adapting = ref(false)
 const attaching = ref(false)
+const collapsedDrafts = ref({})
 const previewMode = ref('suggestion')
 const previewChecklistId = ref(null)
 const previewForm = ref({
@@ -209,6 +214,58 @@ function closePreview() {
     return
   }
   previewOpen.value = false
+}
+
+function toggleDraftCollapse(draftId) {
+  collapsedDrafts.value = {
+    ...collapsedDrafts.value,
+    [draftId]: !collapsedDrafts.value[draftId],
+  }
+}
+
+function isDraftCollapsed(draftId) {
+  return Boolean(collapsedDrafts.value[draftId])
+}
+
+function localizeGeneratedText(text) {
+  const value = String(text || '')
+  if (!value) {
+    return value
+  }
+
+  if (currentLanguage.value === 'fr') {
+    return value
+      .replace(/^Successful payment creates order confirmation$/g, 'Le paiement reussi cree une confirmation de commande')
+      .replace(
+        /^Verify order number, receipt, customer email, and inventory updates after payment success\.$/g,
+        'Verifier le numero de commande, le recu, l email client et la mise a jour du stock apres un paiement reussi.'
+      )
+      .replace(/^Criterion (\d+):/g, 'Critere $1 :')
+      .replace(/Expected result:/g, 'Resultat attendu :')
+  }
+
+  if (currentLanguage.value === 'en') {
+    return value
+      .replace(/^Le paiement reussi cree une confirmation de commande$/g, 'Successful payment creates order confirmation')
+      .replace(
+        /^Verifier le numero de commande, le recu, l email client et la mise a jour du stock apres un paiement reussi\.$/g,
+        'Verify order number, receipt, customer email, and inventory updates after payment success.'
+      )
+      .replace(/^Critere (\d+)\s*:/g, 'Criterion $1:')
+      .replace(/Resultat attendu\s*:/g, 'Expected result:')
+      .replace(/^Cas nominal reussi pour /g, 'Successful happy path for ')
+      .replace(/^Validation des champs pour /g, 'Input validation for ')
+      .replace(/^Regles metier appliquees pour /g, 'Business rules enforced for ')
+      .replace(/^Gestion des erreurs pour /g, 'Error handling for ')
+      .replace(/^Notifications correctes pour /g, 'Notifications sent correctly for ')
+      .replace(/^Integrite des donnees preservee pour /g, 'Data integrity preserved for ')
+      .replace(/^Securite des donnees sensibles pour /g, 'Sensitive data stays protected for ')
+      .replace(/^Retours utilisateur clairs pour /g, 'Clear user feedback for ')
+      .replace(/^Prevention des actions en double pour /g, 'Duplicate actions are prevented for ')
+      .replace(/^Integrations externes fiables pour /g, 'External integrations are reliable for ')
+  }
+
+  return value
 }
 
 function addPreviewItem() {
@@ -414,7 +471,7 @@ onMounted(() => {
         </div>
       </div>
 
-      <div v-if="currentSuggestions" class="card stack story-suggestions-card">
+      <div v-if="visibleSuggestions.length" class="card stack story-suggestions-card">
         <div class="story-detail-card-head story-detail-card-head-start">
           <div>
             <h3>Checklists suggérées</h3>
@@ -427,9 +484,9 @@ onMounted(() => {
           </span>
         </div>
 
-        <div v-if="currentSuggestions.suggestions?.length" class="stack stack-gap-sm">
+        <div v-if="visibleSuggestions.length" class="stack stack-gap-sm">
           <div
-            v-for="suggestion in currentSuggestions.suggestions"
+            v-for="suggestion in visibleSuggestions"
             :key="suggestion.source_checklist_id || suggestion.id"
             class="story-suggestion-card"
           >
@@ -524,7 +581,7 @@ onMounted(() => {
         <div class="story-detail-card-head story-detail-card-head-start">
           <div>
             <h3>En attente de validation testeur ({{ pendingDrafts.length }})</h3>
-            <p class="muted">Agent-generated drafts stay here until the assigned tester reviews and approves them. They are not attached to the story yet.</p>
+            <p class="muted">Les brouillons generes par l agent restent ici jusqu a validation du testeur. Ils ne sont pas encore associes a la story.</p>
           </div>
         </div>
 
@@ -535,35 +592,46 @@ onMounted(() => {
         >
           <div class="story-attached-head">
             <div class="story-attached-copy">
-              <h4>{{ draft.name }}</h4>
-              <p class="muted">{{ draft.description }}</p>
-              <p class="story-suggestion-meta">Lifecycle: {{ draft.lifecycle_status }} | Source: {{ draft.generated_from }}</p>
+              <h4>{{ localizeGeneratedText(draft.name) }}</h4>
+              <p v-if="!isDraftCollapsed(draft.id)" class="muted">{{ localizeGeneratedText(draft.description) }}</p>
+              <p v-if="!isDraftCollapsed(draft.id)" class="story-suggestion-meta">Lifecycle: {{ draft.lifecycle_status }} | Source: {{ draft.generated_from }}</p>
             </div>
-            <button
-              v-if="auth.isTester"
-              @click="editPendingDraft(draft)"
-              class="btn btn-secondary btn-sm"
-            >
-              Relire le brouillon
-            </button>
-            <button
-              v-if="auth.isTester"
-              @click="approveGeneratedChecklist(draft.id)"
-              class="btn btn-primary btn-sm"
-            >
-              Approuver et associer
-            </button>
+            <div class="story-draft-actions">
+              <button
+                type="button"
+                class="story-collapse-btn"
+                :aria-label="isDraftCollapsed(draft.id) ? 'Developper le brouillon' : 'Reduire le brouillon'"
+                @click="toggleDraftCollapse(draft.id)"
+              >
+                <Minus v-if="!isDraftCollapsed(draft.id)" :size="16" />
+                <Plus v-else :size="16" />
+              </button>
+              <button
+                v-if="auth.isTester"
+                @click="editPendingDraft(draft)"
+                class="btn btn-secondary btn-sm"
+              >
+                Relire le brouillon
+              </button>
+              <button
+                v-if="auth.isTester"
+                @click="approveGeneratedChecklist(draft.id)"
+                class="btn btn-primary btn-sm"
+              >
+                Approuver et associer
+              </button>
+            </div>
           </div>
 
-          <div class="story-attached-items">
+          <div v-if="!isDraftCollapsed(draft.id)" class="story-attached-items">
             <div
               v-for="item in draft.items"
               :key="item.id"
               class="story-attached-item"
             >
               <div class="flex-1">
-                <p class="story-attached-item-title">{{ item.title }}</p>
-                <p v-if="item.description" class="muted">{{ item.description }}</p>
+                <p class="story-attached-item-title">{{ localizeGeneratedText(item.title) }}</p>
+                <p v-if="item.description" class="muted">{{ localizeGeneratedText(item.description) }}</p>
               </div>
               <span v-if="item.criticality" :class="['story-attached-criticality', criticalities[item.criticality] || 'bg-slate-100 text-slate-800']">
                 {{ item.criticality }}
@@ -573,7 +641,7 @@ onMounted(() => {
 
           <div class="story-ai-origin">
             <Zap :size="16" />
-            Pending validation before attachment
+            En attente de validation avant association
           </div>
         </div>
       </div>
@@ -600,8 +668,8 @@ onMounted(() => {
         >
           <div class="story-attached-head">
             <div class="story-attached-copy">
-              <h4>{{ checklist.name }}</h4>
-              <p class="muted">{{ checklist.description }}</p>
+              <h4>{{ localizeGeneratedText(checklist.name) }}</h4>
+              <p class="muted">{{ localizeGeneratedText(checklist.description) }}</p>
             </div>
             <button
               v-if="auth.isTester"
@@ -620,8 +688,8 @@ onMounted(() => {
               class="story-attached-item"
             >
               <div class="flex-1">
-                <p class="story-attached-item-title">{{ item.title }}</p>
-                <p v-if="item.description" class="muted">{{ item.description }}</p>
+                <p class="story-attached-item-title">{{ localizeGeneratedText(item.title) }}</p>
+                <p v-if="item.description" class="muted">{{ localizeGeneratedText(item.description) }}</p>
               </div>
               <span v-if="item.criticality" :class="['story-attached-criticality', criticalities[item.criticality] || 'bg-slate-100 text-slate-800']">
                 {{ item.criticality }}
@@ -1040,6 +1108,32 @@ onMounted(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.story-draft-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.story-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: #ffffff;
+  color: #0f172a;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.story-collapse-btn:hover {
+  background: #f8fafc;
+  border-color: rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
 }
 
 .story-suggestion-copy,

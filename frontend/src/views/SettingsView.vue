@@ -1,18 +1,26 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
 import { t } from '@/lib/translations'
 import { translatePhrase } from '@/lib/runtimeTranslations'
-import { ArrowLeft, Check, Globe, Moon, Palette } from 'lucide-vue-next'
-import { useRouter } from 'vue-router'
+import { ArrowLeft, Check, Globe, Moon, Palette, Camera, UserRound, Trash2 } from 'lucide-vue-next'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const settingsStore = useSettingsStore()
 
 const showNotification = ref(false)
 const notificationMessage = ref('')
+const isSavingProfile = ref(false)
+const selectedPhotoFile = ref(null)
+const photoPreviewUrl = ref('')
+const removeProfilePhoto = ref(false)
+const profileForm = ref({
+  name: '',
+})
 
 function tr(text) {
   return translatePhrase(text, settingsStore.language)
@@ -54,6 +62,13 @@ function showSavedMessage(message) {
   }, 2000)
 }
 
+function hydrateProfileForm() {
+  profileForm.value.name = auth.user?.name || ''
+  photoPreviewUrl.value = auth.user?.profile_photo_url || ''
+  selectedPhotoFile.value = null
+  removeProfilePhoto.value = false
+}
+
 function changeLanguage(langCode) {
   settingsStore.setLanguage(langCode)
   showSavedMessage(t('msg.saved', settingsStore.language))
@@ -71,6 +86,56 @@ function toggleDarkMode() {
 function goBack() {
   router.back()
 }
+
+function onProfilePhotoSelected(event) {
+  const [file] = event.target.files || []
+  if (!file) {
+    return
+  }
+
+  selectedPhotoFile.value = file
+  removeProfilePhoto.value = false
+  photoPreviewUrl.value = URL.createObjectURL(file)
+}
+
+function clearSelectedPhoto() {
+  selectedPhotoFile.value = null
+  removeProfilePhoto.value = true
+  photoPreviewUrl.value = ''
+}
+
+async function saveProfile() {
+  isSavingProfile.value = true
+
+  try {
+    const payload = new FormData()
+    payload.append('name', profileForm.value.name.trim())
+
+    if (selectedPhotoFile.value) {
+      payload.append('profile_photo', selectedPhotoFile.value)
+    }
+
+    if (removeProfilePhoto.value) {
+      payload.append('remove_profile_photo', '1')
+    }
+
+    await auth.updateProfile(payload)
+    hydrateProfileForm()
+    showSavedMessage(tr('Profile updated successfully'))
+  } catch (error) {
+    showSavedMessage(error?.message || tr('Unable to update profile'))
+  } finally {
+    isSavingProfile.value = false
+  }
+}
+
+watch(
+  () => auth.user,
+  () => {
+    hydrateProfileForm()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -96,6 +161,63 @@ function goBack() {
     </Transition>
 
     <div class="settings-grid-pro">
+      <article class="settings-panel-pro" :id="route.query.section === 'profile' ? 'profile-section' : undefined">
+        <div class="settings-panel-head">
+          <div class="settings-panel-icon bg-slate-100 text-slate-700">
+            <UserRound :size="18" />
+          </div>
+          <div>
+            <h2>{{ tr('Profile') }}</h2>
+            <p>{{ tr('Update your visible identity in the workspace.') }}</p>
+          </div>
+        </div>
+
+        <div class="profile-settings-layout">
+          <div class="profile-photo-stack">
+            <div class="profile-photo-frame">
+              <img v-if="photoPreviewUrl" :src="photoPreviewUrl" alt="Profile preview" class="profile-photo-preview" />
+              <span v-else>{{ (profileForm.name || auth.user?.email || 'U').charAt(0).toUpperCase() }}</span>
+            </div>
+
+            <div class="actions">
+              <label class="btn btn-secondary btn-sm profile-upload-btn">
+                <Camera :size="16" />
+                <span>{{ tr('Change photo') }}</span>
+                <input type="file" accept="image/*" class="sr-only" @change="onProfilePhotoSelected" />
+              </label>
+              <button
+                v-if="photoPreviewUrl"
+                type="button"
+                class="btn btn-secondary btn-sm"
+                @click="clearSelectedPhoto"
+              >
+                <Trash2 :size="16" />
+                <span>{{ tr('Remove photo') }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="stack">
+            <div class="field">
+              <label>{{ tr('Full name') }}</label>
+              <input v-model="profileForm.name" type="text" maxlength="255" :placeholder="tr('Your name')" />
+            </div>
+
+            <div class="field">
+              <label>{{ tr('Email') }}</label>
+              <input :value="auth.user?.email || ''" type="email" disabled />
+            </div>
+
+            <div class="actions">
+              <button type="button" class="btn btn-primary" :disabled="isSavingProfile" @click="saveProfile">
+                <Check :size="16" />
+                <span>{{ isSavingProfile ? tr('Saving...') : tr('Save profile') }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </article>
+
       <article class="settings-panel-pro">
         <div class="settings-panel-head">
           <div class="settings-panel-icon bg-blue-50 text-blue-700">
@@ -166,5 +288,53 @@ function goBack() {
 .slide-leave-to {
   opacity: 0;
   transform: translateY(-8px);
+}
+
+.profile-settings-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.profile-photo-stack {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.profile-photo-frame {
+  width: 164px;
+  height: 164px;
+  border-radius: 1.4rem;
+  background: linear-gradient(180deg, rgba(31, 111, 235, 0.18), rgba(15, 23, 42, 0.08));
+  color: #174fbb;
+  display: grid;
+  place-items: center;
+  font-size: 3rem;
+  font-weight: 800;
+  border: 1px solid rgba(100, 116, 139, 0.18);
+  overflow: hidden;
+}
+
+.profile-photo-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-upload-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .profile-settings-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-photo-frame {
+    width: 120px;
+    height: 120px;
+  }
 }
 </style>

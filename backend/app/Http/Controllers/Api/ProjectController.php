@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Models\ProjectVersion;
 use App\Models\UserStory;
 use App\Models\User;
+use App\Notifications\TesterAssignedToProjectNotification;
 use App\Models\VersionItem;
 use App\Services\ProjectUserStoryImportService;
 use Illuminate\Http\Request;
@@ -199,6 +200,7 @@ class ProjectController extends Controller
             ]);
 
             $project->testers()->attach($testerIds);
+            $this->notifyNewAssignedTesters($project, $testerIds);
             $userId = Auth::id();
 
             foreach ($validStories as $storyData) {
@@ -265,7 +267,8 @@ class ProjectController extends Controller
         ]);
 
         if (array_key_exists('tester_ids', $data)) {
-            $project->testers()->sync($data['tester_ids']);
+            $syncChanges = $project->testers()->sync($data['tester_ids']);
+            $this->notifyNewAssignedTesters($project, $syncChanges['attached'] ?? []);
         }
 
         return response()->json(
@@ -302,9 +305,28 @@ class ProjectController extends Controller
             return response()->json(['message' => 'One or more testers not found or invalid role'], 422);
         }
 
-        $project->testers()->sync($data['tester_ids']);
+        $syncChanges = $project->testers()->sync($data['tester_ids']);
+        $this->notifyNewAssignedTesters($project, $syncChanges['attached'] ?? []);
 
         return response()->json($project->load('testers:id,name,email'), 200);
+    }
+
+    private function notifyNewAssignedTesters(Project $project, array $testerIds): void
+    {
+        $testerIds = array_values(array_unique(array_map('intval', $testerIds)));
+
+        if ($testerIds === []) {
+            return;
+        }
+
+        $assignedBy = Auth::user();
+
+        User::whereIn('id', $testerIds)
+            ->whereHas('roles', fn ($query) => $query->where('name', 'testeur'))
+            ->get()
+            ->each(fn (User $tester) => $tester->notify(
+                new TesterAssignedToProjectNotification($project, $assignedBy)
+            ));
     }
 
     private function ensureExecutionAccess(Project $project): void

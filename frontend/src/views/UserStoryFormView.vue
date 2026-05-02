@@ -36,6 +36,8 @@ const form = ref({
   title: '',
   description: '',
   acceptance_criteria: '',
+  business_rules: '',
+  scenarios: '',
   status: 'backlog',
   priority: 'medium',
 })
@@ -93,6 +95,21 @@ const acceptanceLines = computed(() => {
     .filter(Boolean)
 })
 
+function stringifyList(value) {
+  if (Array.isArray(value)) {
+    return value.join('\n')
+  }
+
+  return String(value || '')
+}
+
+function splitLines(value) {
+  return String(value || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+}
+
 const readiness = computed(() => [
   {
     label: 'Story liée au projet',
@@ -133,6 +150,7 @@ async function loadContext() {
   } finally {
     loadingContext.value = false
   }
+
 }
 
 async function loadStory() {
@@ -144,6 +162,8 @@ async function loadStory() {
         title: story.title || '',
         description: story.description || '',
         acceptance_criteria: story.acceptance_criteria || '',
+        business_rules: stringifyList(story.business_rules),
+        scenarios: stringifyList(story.scenarios),
         status: story.status || 'backlog',
         priority: story.priority || 'medium',
       }
@@ -182,6 +202,20 @@ function applyTemplate() {
       'Given [droits ou données nécessaires], When [exécution du scénario], Then [traçabilité ou état final attendu]',
     ].join('\n')
   }
+  if (!form.value.business_rules.trim()) {
+    form.value.business_rules = [
+      'La regle metier 1 s applique avant validation',
+      'L action ne doit pas etre autorisee si les prerequis sont absents',
+    ].join('\n')
+  }
+
+  if (!form.value.scenarios.trim()) {
+    form.value.scenarios = [
+      'Cas nominal',
+      'Cas invalide',
+      'Cas limite',
+    ].join('\n')
+  }
 }
 
 async function submit() {
@@ -193,6 +227,8 @@ async function submit() {
     const payload = {
       ...form.value,
       story_id: form.value.story_id || null,
+      business_rules: splitLines(form.value.business_rules),
+      scenarios: splitLines(form.value.scenarios),
     }
 
     const story = isEditing
@@ -296,6 +332,36 @@ onMounted(async () => {
               :class="{ 'is-invalid': errors.description }"
             ></textarea>
             <small v-if="errors.description">{{ errors.description }}</small>
+          </label>
+        </section>
+
+        <section class="story-section">
+          <div class="story-section-title">
+            <Layers3 :size="18" />
+            <div>
+              <h2>Logique métier</h2>
+              <p>Ajoutez les règles et scénarios métier qui doivent guider la recommandation et la génération de checklist.</p>
+            </div>
+          </div>
+
+          <label class="story-field">
+            <span>Règles métier</span>
+            <textarea
+              v-model="form.business_rules"
+              rows="5"
+              placeholder="- Seuls les rendez-vous futurs peuvent etre annules&#10;- Le creneau libere doit redevenir disponible"
+            ></textarea>
+            <small>Une ligne = une règle métier</small>
+          </label>
+
+          <label class="story-field">
+            <span>Scénarios métier</span>
+            <textarea
+              v-model="form.scenarios"
+              rows="4"
+              placeholder="- Cas nominal&#10;- Refus utilisateur&#10;- Echec technique"
+            ></textarea>
+            <small>Une ligne = un scénario métier</small>
           </label>
         </section>
 

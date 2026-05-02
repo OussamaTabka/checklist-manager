@@ -72,13 +72,13 @@ class TestCaseGenerationService
      * @return array{generator: TestCaseGeneratorInterface, generator_name: string, test_cases: array}
      * @throws Exception
      */
-    public function generateTestCasesForUserStory(UserStory $userStory): array
+    public function generateTestCasesForUserStory(UserStory $userStory, array $context = []): array
     {
         $errors = [];
 
         foreach (TestCaseGeneratorFactory::orderedAvailableGenerators() as $generator) {
             try {
-                $testCases = $generator->generateTestCases($userStory);
+                $testCases = $generator->generateTestCases($userStory, $context);
 
                 if (!empty($testCases)) {
                     return [

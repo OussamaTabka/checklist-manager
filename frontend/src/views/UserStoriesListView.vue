@@ -22,6 +22,8 @@ const currentProject = computed(() => {
   return projects.value.find((project) => String(project.id) === String(projectId.value)) || null
 })
 
+const canAddStories = computed(() => auth.hasAnyRole(['admin', 'chef']))
+
 const roleStoryCopy = computed(() => {
   switch (auth.primaryRole) {
     case 'admin':
@@ -54,6 +56,12 @@ async function loadProjects() {
   try {
     const response = await apiRequest('/projects')
     projects.value = Array.isArray(response?.data) ? response.data : []
+  } catch (err) {
+    projects.value = []
+
+    if (err?.status !== 401) {
+      throw err
+    }
   } finally {
     loadingProjects.value = false
   }
@@ -127,15 +135,24 @@ const priorityLabels = {
 }
 
 async function loadStories() {
-  const resolvedProjectId = await resolveProjectId()
+  try {
+    const resolvedProjectId = await resolveProjectId()
 
-  if (!resolvedProjectId) {
-    storiesStore.stories = []
-    return
+    if (!resolvedProjectId) {
+      storiesStore.stories = []
+      return
+    }
+
+    await storiesStore.fetchStories(resolvedProjectId)
+    await storiesStore.fetchGeneratorStatus(resolvedProjectId)
+  } catch (err) {
+    if (err?.status === 401) {
+      storiesStore.stories = []
+      return
+    }
+
+    throw err
   }
-
-  await storiesStore.fetchStories(resolvedProjectId)
-  await storiesStore.fetchGeneratorStatus(resolvedProjectId)
 }
 
 async function deleteStory(storyId, event) {
@@ -211,7 +228,7 @@ watch(
           </RouterLink>
 
           <RouterLink
-            v-if="auth.isProjectManager && projectId"
+            v-if="canAddStories && projectId"
             :to="{ name: 'story-create', query: { projectId } }"
             class="btn btn-primary btn-sm"
           >
@@ -318,7 +335,7 @@ watch(
             <h3>{{ story.title }}</h3>
           </div>
           <button
-            v-if="auth.isProjectManager"
+            v-if="canAddStories"
             @click.stop="deleteStory(story.id, $event)"
             class="story-delete-btn"
             title="Supprimer"
@@ -351,7 +368,7 @@ watch(
         Commencez par sélectionner un projet, puis ajoutez des User Stories qui serviront de base à la génération intelligente de checklists.
       </p>
       <RouterLink
-        v-if="auth.isProjectManager && projectId"
+        v-if="canAddStories && projectId"
         :to="{ name: 'story-create', query: { projectId } }"
         class="btn btn-primary btn-sm"
       >

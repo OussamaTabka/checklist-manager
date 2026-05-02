@@ -155,7 +155,8 @@ class UserStoryController extends Controller
     }
 
     /**
-     * Generate checklist from AI/LLM for a user story
+     * Backward-compatible endpoint alias kept for existing clients and tests.
+     * Internally, checklist generation is now handled by the current agent flow.
      */
     public function generateChecklistFromArxis(Request $request, Project $project, UserStory $userStory)
     {

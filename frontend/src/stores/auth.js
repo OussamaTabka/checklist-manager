@@ -28,6 +28,21 @@ export const useAuthStore = defineStore('auth', () => {
     return 'user'
   })
 
+  function persistAuthUser() {
+    if (!user.value || !token.value) {
+      localStorage.removeItem('auth_user')
+      return
+    }
+
+    localStorage.setItem('auth_user', JSON.stringify({ user: user.value, roles: roles.value }))
+  }
+
+  function applyAuthPayload(data = {}) {
+    user.value = data.user || null
+    roles.value = data.roles || []
+    persistAuthUser()
+  }
+
   function clear() {
     token.value = ''
     user.value = null
@@ -84,7 +99,7 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.setItem('auth_token', data.token)
     }
 
-    localStorage.setItem('auth_user', JSON.stringify({ user: data.user, roles: data.roles }))
+    persistAuthUser()
 
     return data
   }
@@ -108,13 +123,18 @@ export const useAuthStore = defineStore('auth', () => {
   async function fetchMe() {
     try {
       const data = await apiRequest('/me', {}, token.value)
-      user.value = data.user
-      roles.value = data.roles || []
+      applyAuthPayload(data)
       return data
     } catch {
       clear()
       return null
     }
+  }
+
+  async function updateProfile(payload) {
+    const data = await apiRequest('/me/profile', { method: 'POST', body: payload }, token.value)
+    applyAuthPayload(data)
+    return data
   }
 
   async function logout() {
@@ -155,6 +175,7 @@ export const useAuthStore = defineStore('auth', () => {
     requestPasswordReset,
     resetPassword,
     fetchMe,
+    updateProfile,
     logout,
     hasAnyRole,
   }

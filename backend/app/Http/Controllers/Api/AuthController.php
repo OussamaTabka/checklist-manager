@@ -8,6 +8,7 @@ use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class AuthController extends Controller
@@ -64,6 +65,45 @@ class AuthController extends Controller
         return response()->json([
             'user' => $request->user(),
             'roles' => $request->user()->getRoleNames(),
+        ]);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        /** @var \App\Models\User|null $user */
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'profile_photo' => ['nullable', 'image', 'max:3072'],
+            'remove_profile_photo' => ['nullable', 'boolean'],
+        ]);
+
+        $user->name = $data['name'];
+
+        if (($data['remove_profile_photo'] ?? false) && $user->profile_photo_path) {
+            Storage::disk('public')->delete($user->profile_photo_path);
+            $user->profile_photo_path = null;
+        }
+
+        if ($request->hasFile('profile_photo')) {
+            if ($user->profile_photo_path) {
+                Storage::disk('public')->delete($user->profile_photo_path);
+            }
+
+            $user->profile_photo_path = $request->file('profile_photo')->store('profile-photos', 'public');
+        }
+
+        $user->save();
+
+        return response()->json([
+            'user' => $user->fresh(),
+            'roles' => $user->getRoleNames(),
+            'message' => 'Profile updated successfully.',
         ]);
     }
 

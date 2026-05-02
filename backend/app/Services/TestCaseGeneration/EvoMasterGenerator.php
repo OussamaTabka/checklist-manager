@@ -32,7 +32,7 @@ class EvoMasterGenerator implements TestCaseGeneratorInterface
      * @return array
      * @throws Exception
      */
-    public function generateTestCases(UserStory $userStory): array
+    public function generateTestCases(UserStory $userStory, array $context = []): array
     {
         if (!$this->isAvailable()) {
             throw new Exception('EvoMaster service is not available. Ensure it is running on ' . $this->baseUrl . ':' . $this->port);
@@ -40,7 +40,7 @@ class EvoMasterGenerator implements TestCaseGeneratorInterface
 
         try {
             // Prepare prompt for EvoMaster
-            $prompt = $this->buildPrompt($userStory);
+            $prompt = $this->buildPrompt($userStory, $context);
 
             // Call EvoMaster API
             $response = Http::timeout(30)->post(
@@ -49,6 +49,7 @@ class EvoMasterGenerator implements TestCaseGeneratorInterface
                     'user_story_title' => $userStory->title,
                     'description' => $userStory->description,
                     'acceptance_criteria' => $userStory->acceptance_criteria,
+                    'generation_context' => $context,
                     'prompt' => $prompt,
                 ]
             );
@@ -96,8 +97,11 @@ class EvoMasterGenerator implements TestCaseGeneratorInterface
      * @param UserStory $userStory
      * @return string
      */
-    private function buildPrompt(UserStory $userStory): string
+    private function buildPrompt(UserStory $userStory, array $context = []): string
     {
+        $focus = implode(', ', $context['generation_focus'] ?? []);
+        $focusSection = $focus !== '' ? "\nFocus missing coverage on: {$focus}" : '';
+
         return <<<PROMPT
 Generate comprehensive test cases for the following user story:
 
@@ -108,6 +112,7 @@ Description:
 
 Acceptance Criteria:
 {$userStory->acceptance_criteria}
+{$focusSection}
 
 For each test case, provide:
 1. A clear test name

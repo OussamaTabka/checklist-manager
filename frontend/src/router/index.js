@@ -92,13 +92,13 @@ const router = createRouter({
       path: '/stories/create',
       name: 'story-create',
       component: UserStoryFormView,
-      meta: { requiresAuth: true, roles: ['chef'] },
+      meta: { requiresAuth: true, roles: ['admin', 'chef'] },
     },
     {
       path: '/stories/import',
       name: 'story-import',
       component: UserStoryImportView,
-      meta: { requiresAuth: true, roles: ['chef'] },
+      meta: { requiresAuth: true, roles: ['admin', 'chef'] },
     },
     {
       path: '/stories/:id',
@@ -110,7 +110,7 @@ const router = createRouter({
       path: '/stories/:id/edit',
       name: 'story-edit',
       component: UserStoryFormView,
-      meta: { requiresAuth: true, roles: ['chef'] },
+      meta: { requiresAuth: true, roles: ['admin', 'chef'] },
     },
     {
       path: '/settings',

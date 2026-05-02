@@ -184,6 +184,99 @@ const PHRASES = {
   aria_close: { en: 'Close', fr: 'Fermer', ar: 'اغلاق' },
 }
 
+Object.assign(PHRASES, {
+  common_administrator: { en: 'Administrator', fr: 'Administrateur', ar: 'مدير النظام' },
+  common_project_manager: { en: 'Project manager', fr: 'Chef de projet', ar: 'مدير المشروع' },
+  common_tester: { en: 'Tester', fr: 'Testeur', ar: 'مختبر' },
+  common_administration: { en: 'Administration', fr: 'Administration', ar: 'الادارة' },
+  common_execution_space: { en: 'Execution Space', fr: 'Espace Execution', ar: 'مساحة التنفيذ' },
+  common_notifications: { en: 'Notifications', fr: 'Notifications', ar: 'الاشعارات' },
+  common_profile_updated_successfully: { en: 'Profile updated successfully', fr: 'Profil mis a jour avec succes', ar: 'تم تحديث الملف الشخصي بنجاح' },
+  common_unable_to_update_profile: { en: 'Unable to update profile', fr: 'Impossible de mettre a jour le profil', ar: 'تعذر تحديث الملف الشخصي' },
+  common_update_visible_identity: { en: 'Update your visible identity in the workspace.', fr: 'Mettez a jour votre identite visible dans l espace de travail.', ar: 'قم بتحديث هويتك الظاهرة في مساحة العمل.' },
+  common_change_photo: { en: 'Change photo', fr: 'Changer la photo', ar: 'تغيير الصورة' },
+  common_remove_photo: { en: 'Remove photo', fr: 'Retirer la photo', ar: 'ازالة الصورة' },
+  common_full_name: { en: 'Full name', fr: 'Nom complet', ar: 'الاسم الكامل' },
+  common_your_name: { en: 'Your name', fr: 'Votre nom', ar: 'اسمك' },
+  common_save_profile: { en: 'Save profile', fr: 'Enregistrer le profil', ar: 'حفظ الملف الشخصي' },
+  common_saving: { en: 'Saving...', fr: 'Enregistrement...', ar: 'جار الحفظ...' },
+  common_refresh_page: { en: 'Refresh page', fr: 'Actualiser la page', ar: 'تحديث الصفحة' },
+  common_back_to_signin: { en: 'Back to sign in', fr: 'Retour a la connexion', ar: 'العودة الى تسجيل الدخول' },
+  auth_setup_account: { en: 'Set up your account', fr: 'Configurer votre compte', ar: 'اعداد حسابك' },
+  auth_choose_password: { en: 'Choose your password to activate your account.', fr: 'Choisissez votre mot de passe pour activer votre compte.', ar: 'اختر كلمة المرور لتفعيل حسابك.' },
+  auth_validating_invitation: { en: 'Validating invitation link...', fr: 'Validation du lien d invitation...', ar: 'جار التحقق من رابط الدعوة...' },
+  auth_invitation_for: { en: 'Invitation for', fr: 'Invitation pour', ar: 'دعوة من اجل' },
+  auth_new_password: { en: 'New password', fr: 'Nouveau mot de passe', ar: 'كلمة مرور جديدة' },
+  auth_confirm_password: { en: 'Confirm password', fr: 'Confirmer le mot de passe', ar: 'تأكيد كلمة المرور' },
+  auth_reset_password: { en: 'Reset password', fr: 'Reinitialiser le mot de passe', ar: 'اعادة تعيين كلمة المرور' },
+  auth_reset_password_help: { en: 'Enter your account email and choose a new password.', fr: 'Saisissez votre email et choisissez un nouveau mot de passe.', ar: 'ادخل بريدك الالكتروني واختر كلمة مرور جديدة.' },
+  common_role_label: { en: 'Role:', fr: 'Role :', ar: 'الدور:' },
+  app_brand_subtitle: { en: 'QA workflow studio', fr: 'Studio de workflow QA', ar: 'استوديو سير عمل QA' },
+  projects_create: { en: 'Create a project', fr: 'Creer un projet', ar: 'انشاء مشروع' },
+  projects_search: { en: 'Search a project...', fr: 'Rechercher un projet...', ar: 'ابحث عن مشروع...' },
+  projects_show_filters: { en: 'Show filters', fr: 'Afficher les filtres', ar: 'اظهار عوامل التصفية' },
+  projects_hide_filters: { en: 'Hide filters', fr: 'Masquer les filtres', ar: 'اخفاء عوامل التصفية' },
+  projects_applied_filters: { en: 'Applied filters :', fr: 'Filtres appliques :', ar: 'عوامل التصفية المطبقة:' },
+  projects_loading: { en: 'Loading projects...', fr: 'Chargement des projets...', ar: 'جار تحميل المشاريع...' },
+  projects_no_match: { en: 'No project matches the selected filters.', fr: 'Aucun projet ne correspond aux filtres selectionnes.', ar: 'لا يوجد مشروع يطابق عوامل التصفية المحددة.' },
+  stories_import_title: { en: 'Import User Stories', fr: 'Importer des User Stories', ar: 'استيراد قصص المستخدم' },
+  stories_import_help: { en: 'Import CSV, XLSX or JSON with preview, validation, and error reporting.', fr: 'Import CSV, XLSX ou JSON avec apercu, validation et rapport d erreurs.', ar: 'استورد CSV او XLSX او JSON مع معاينة وتحقق وتقرير اخطاء.' },
+  stories_form_workspace: { en: 'User Story Workspace', fr: 'Espace User Story', ar: 'مساحة قصة المستخدم' },
+  stories_form_new: { en: 'New user story', fr: 'Nouvelle user story', ar: 'قصة مستخدم جديدة' },
+  stories_form_edit: { en: 'Edit user story', fr: 'Editer la user story', ar: 'تعديل قصة المستخدم' },
+})
+
+const PATTERN_TRANSLATORS = [
+  {
+    test: /^page (\d+) sur (\d+)$/i,
+    translate: (m, language) => ({
+      en: `Page ${m[1]} of ${m[2]}`,
+      fr: `Page ${m[1]} sur ${m[2]}`,
+      ar: `الصفحة ${m[1]} من ${m[2]}`,
+    })[language],
+  },
+  {
+    test: /^(\d+) checklist\(s\)$/i,
+    translate: (m, language) => ({
+      en: `${m[1]} checklist(s)`,
+      fr: `${m[1]} checklist(s)`,
+      ar: `${m[1]} قائمة تحقق`,
+    })[language],
+  },
+  {
+    test: /^(\d+) test\(s\) ont echoue recemment$/i,
+    translate: (m, language) => ({
+      en: `${m[1]} test(s) failed recently`,
+      fr: `${m[1]} test(s) ont echoue recemment`,
+      ar: `${m[1]} اختبار/اختبارات فشلت مؤخرا`,
+    })[language],
+  },
+  {
+    test: /^(\d+) element\(s\) critique\(s\) sont en echec$/i,
+    translate: (m, language) => ({
+      en: `${m[1]} critical item(s) are failing`,
+      fr: `${m[1]} element(s) critique(s) sont en echec`,
+      ar: `${m[1]} عنصر/عناصر حرجة في حالة فشل`,
+    })[language],
+  },
+  {
+    test: /^(\d+) user stor(?:y|ies) importee(?:s)?$/i,
+    translate: (m, language) => ({
+      en: `${m[1]} imported user stor${m[1] === '1' ? 'y' : 'ies'}`,
+      fr: `${m[1]} User Story${m[1] === '1' ? '' : 'ies'} importee${m[1] === '1' ? '' : 's'}`,
+      ar: `${m[1]} قصة مستخدم مستوردة`,
+    })[language],
+  },
+  {
+    test: /^(\d+) ligne\(s\) ignoree\(s\)$/i,
+    translate: (m, language) => ({
+      en: `${m[1]} ignored line(s)`,
+      fr: `${m[1]} ligne(s) ignoree(s)`,
+      ar: `${m[1]} سطر/اسطر تم تجاهلها`,
+    })[language],
+  },
+]
+
 const INDEX = new Map()
 Object.entries(PHRASES).forEach(([key, values]) => {
   Object.values(values).forEach((value) => {
@@ -206,6 +299,15 @@ function normalize(text) {
 function translateKnownPhrase(sourceText, language) {
   const key = INDEX.get(normalize(sourceText))
   if (!key) {
+    const normalizedSource = normalize(sourceText)
+
+    for (const pattern of PATTERN_TRANSLATORS) {
+      const match = normalizedSource.match(pattern.test)
+      if (match) {
+        return pattern.translate(match, language) || sourceText
+      }
+    }
+
     return sourceText
   }
 
@@ -305,6 +407,7 @@ export function initRuntimeTranslations(pinia) {
   const settings = useSettingsStore(pinia)
 
   const runTranslation = () => {
+    document.documentElement.lang = settings.language
     translateTree(settings.language)
   }
 

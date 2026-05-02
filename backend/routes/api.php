@@ -4,6 +4,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\InvitationController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\UserInvitationController;
 use App\Http\Controllers\Api\ChecklistController;
@@ -33,7 +34,10 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
         // ==========================================
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
+        Route::post('/me/profile', [AuthController::class, 'updateProfile']);
         Route::get('/token', [AuthController::class, 'getToken']); // Get API token for authenticated user
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
 
         // ==========================================
         // SYSTEM DATA - Accessible to all authenticated users

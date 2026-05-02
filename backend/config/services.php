@@ -39,11 +39,6 @@ return [
         'url' => env('TEST_AGENT_URL', env('VITE_TEST_AGENT_URL', 'http://localhost:8000')),
     ],
 
-    'arxis' => [
-        'base_url' => env('ARXIS_BASE_URL', 'https://api.arxis.io/v1'),
-        'api_key' => env('ARXIS_API_KEY'),
-    ],
-
     'test_generation' => [
         // Provider: 'local-llm' (default), 'evomaster', or 'fallback'
         'provider' => env('TEST_GENERATION_PROVIDER', 'local-llm'),
@@ -52,6 +47,7 @@ return [
         'llm_url' => env('LLM_API_URL', 'http://localhost:11434'),
         'llm_model' => env('LLM_MODEL', 'mistral'), // mistral, llama2, neural-chat, etc.
         'llm_timeout' => env('LLM_TIMEOUT', 5),
+        'llm_temperature' => env('LLM_TEMPERATURE', 0.2),
         
         // EvoMaster Configuration
         'evomaster_url' => env('EVOMASTER_URL', 'http://localhost'),
