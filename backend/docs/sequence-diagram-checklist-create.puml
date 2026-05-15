@@ -1,0 +1,136 @@
+@startuml
+title Sequence Diagram - Create Checklist (Form Already Filled)
+
+autonumber 1
+hide footbox
+skinparam responseMessageBelowArrow true
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 140
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+actor Utilisateur
+
+box "Frontend" #D9E8FF
+participant "<<view>>\nChecklistsView.vue" as ChecklistsView
+participant "<<service>>\napi.js / apiRequest()" as ApiRequest
+end box
+
+box "Backend" #DFF2DF
+participant "<<middleware>>\nauth:sanctum" as AuthMw
+participant "<<middleware>>\nrole:testeur" as RoleMw
+participant "<<controller>>\nApi\\ChecklistController" as ChecklistController
+participant "<<model>>\nProject" as ProjectModel
+participant "<<model>>\nChecklist" as ChecklistModel
+participant "<<model>>\nChecklistItem" as ChecklistItemModel
+end box
+
+database "Database\n<<tables>>\nchecklists\nchecklist_items\nprojects\nusers" as DB
+
+alt [auth.canManageChecklists == true]
+  Utilisateur -> ChecklistsView : click "Creer une checklist"
+  ChecklistsView -> ChecklistsView : openCreateChecklistForm()
+  ChecklistsView -> ChecklistsView : resetForm()
+  ChecklistsView -> ChecklistsView : showChecklistForm = true
+else [auth.canManageChecklists == false]
+  ChecklistsView --> Utilisateur : form is not displayed
+end
+
+Utilisateur -> ChecklistsView : submit form
+ChecklistsView -> ChecklistsView : submitChecklist()
+ChecklistsView -> ChecklistsView : submitting.value = true
+ChecklistsView -> ChecklistsView : build payload from already-filled form
+
+alt [projectId present in route.query]
+  ChecklistsView -> ChecklistsView : payload.project_id = Number(form.project_id || projectId)
+  ChecklistsView -> ChecklistsView : payload.template_scope = 'project'
+  ChecklistsView -> ChecklistsView : payload.lifecycle_status = 'draft'
+else [projectId absent]
+  ChecklistsView -> ChecklistsView : payload.project_id = null
+  ChecklistsView -> ChecklistsView : payload.template_scope = 'global'
+  ChecklistsView -> ChecklistsView : payload.lifecycle_status = 'approved'
+end
+
+loop [for each form item in form.items.map(...)]
+  ChecklistsView -> ChecklistsView : map item -> { ...(id ? { id } : {}),\ntitle, description, priority, criticality }
+end
+
+ChecklistsView -> ApiRequest : apiRequest('/checklists',\n{ method: 'POST', body: payload }, auth.token)
+ApiRequest -> AuthMw : POST /api/checklists
+AuthMw -> RoleMw : authenticated request
+RoleMw -> ChecklistController : ChecklistController::store(Request $request)
+ChecklistController -> ChecklistController : $request->validate([...])
+
+alt [validation KO]
+  ChecklistController --> ApiRequest : 422 validation errors
+  ApiRequest --> ChecklistsView : throw Error(localized message)
+  ChecklistsView -> ChecklistsView : errorMessage = localizeError(error,\n'error_generic', settings.language)
+  ChecklistsView -> ChecklistsView : submitting.value = false
+else [validation OK]
+  alt [project_id provided]
+    ChecklistController -> ProjectModel : Project::findOrFail($data['project_id'])
+    ProjectModel -> DB : select project by id
+    DB --> ProjectModel : project row
+    ProjectModel --> ChecklistController : Project instance
+    ChecklistController -> ChecklistController : ensureTesterOwnsProject(Project $project)
+  else [project_id null]
+    ChecklistController -> ChecklistController : skip ensureTesterOwnsProject()
+  end
+
+  ChecklistController -> ChecklistController : DB::beginTransaction()
+  ChecklistController -> ChecklistModel : Checklist::create([...])
+  ChecklistModel -> DB : insert into checklists
+  DB --> ChecklistModel : created checklist row
+  ChecklistModel --> ChecklistController : Checklist instance
+
+  loop [foreach ($data['items'] as $index => $item)]
+    ChecklistController -> ChecklistItemModel : ChecklistItem::create([...])
+    ChecklistItemModel -> DB : insert into checklist_items
+    DB --> ChecklistItemModel : created checklist_item row
+    ChecklistItemModel --> ChecklistController : ChecklistItem instance
+  end
+
+  alt [success]
+    ChecklistController -> ChecklistController : DB::commit()
+    ChecklistController -> ChecklistModel : $checklist->load('items')
+    ChecklistModel -> DB : select checklist + related items
+    DB --> ChecklistModel : hydrated checklist with items
+    ChecklistModel --> ChecklistController : checklist JSON-ready model
+    ChecklistController --> ApiRequest : response()->json($checklist->load('items'), 201)
+    ApiRequest --> ChecklistsView : created checklist payload
+    ChecklistsView -> ChecklistsView : successMessage = localizeMessage(\n'Checklist creee avec succes.', settings.language)
+    ChecklistsView -> ChecklistsView : resetForm()
+    ChecklistsView -> ChecklistsView : showChecklistForm = false
+    ChecklistsView -> ChecklistsView : loadChecklists()
+    ChecklistsView -> ApiRequest : apiRequest(withQuery('/checklists',\n{ page, ...(projectId ? { project_id: projectId } : {}) }),\n{}, auth.token)
+    ApiRequest -> AuthMw : GET /api/checklists
+    AuthMw -> RoleMw : authenticated request
+    RoleMw -> ChecklistController : ChecklistController::index(Request $request)
+    ChecklistController -> DB : paginate($perPage)
+    DB --> ChecklistController : paginated checklists JSON
+    ChecklistController --> ApiRequest : response()->json($query->paginate($perPage))
+    ApiRequest --> ChecklistsView : { data, current_page, last_page }
+    ChecklistsView -> ChecklistsView : assign checklists.value and pagination
+    ChecklistsView -> ChecklistsView : submitting.value = false
+    ChecklistsView --> Utilisateur : updated list + success feedback
+  else [exception during transaction]
+    ChecklistController -> ChecklistController : DB::rollBack()
+    ChecklistController --> ApiRequest : response()->json(['message' => 'Error creating checklist'], 500)
+    ApiRequest --> ChecklistsView : throw Error(localized message)
+    ChecklistsView -> ChecklistsView : errorMessage = localizeError(error,\n'error_generic', settings.language)
+    ChecklistsView -> ChecklistsView : submitting.value = false
+  end
+end
+
+note over ChecklistController,DB
+Checklist creation only:
+- starts from click "Creer une checklist"
+- assumes the form is already filled before submit
+- checklist is not linked to a user story
+- no UserStoryController
+- no user_story_checklists pivot
+- no AppMap trace source
+- security uses auth:sanctum then role:testeur
+end note
+
+@enduml

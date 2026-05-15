@@ -3,21 +3,78 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Mail\UserInvitationMail;
 use App\Models\User;
 use App\Models\UserAccountEvent;
 use App\Models\UserInvitation;
+use App\Services\UserPasswordSetupService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class UserInvitationController extends Controller
 {
+    public function __construct(
+        private readonly UserPasswordSetupService $passwordSetupService
+    ) {
+    }
+
     public function resend(Request $request, User $user)
     {
         if ($user->account_status === 'active') {
-            return response()->json(['message' => 'This account is already active.'], 422);
+            return response()->json(['message' => 'Ce compte est deja actif.'], 422);
         }
+
+        if ($user->account_status === 'disabled') {
+            return response()->json(['message' => "Impossible de renvoyer l'invitation pour un compte archive."], 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $this->passwordSetupService->revoke($user);
+
+            UserInvitation::where('user_id', $user->id)
+                ->where('status', 'pending')
+                ->update([
+                    'status' => 'revoked',
+                    'revoked_at' => now(),
+                ]);
+
+            $passwordSetup = $this->passwordSetupService->sendInitializationEmail($user, $request->user());
+
+            $this->recordEvent($user->id, $request->user()->id, 'password_setup_email_resent', [
+                'expires_at' => $passwordSetup['expires_at']->toISOString(),
+                'delivery_method' => $passwordSetup['delivery_method'],
+            ], $request);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => $passwordSetup['delivery_method'] === 'log'
+                    ? "En mode local, l'email d'initialisation a ete journalise."
+                    : "L'email d'initialisation du mot de passe a ete renvoye avec succes.",
+                'expires_at' => $passwordSetup['expires_at']->toISOString(),
+                'delivery_method' => $passwordSetup['delivery_method'],
+                'delivery_notice' => $passwordSetup['delivery_notice'],
+            ]);
+        } catch (Throwable $exception) {
+            DB::rollBack();
+            report($exception);
+
+            return response()->json([
+                'message' => "Le renvoi de l'email d'initialisation a echoue.",
+                'error' => app()->isLocal() ? $exception->getMessage() : null,
+            ], 500);
+        }
+    }
+
+    public function revoke(Request $request, User $user)
+    {
+        if ($user->account_status === 'active') {
+            return response()->json(['message' => 'Ce compte est deja actif.'], 422);
+        }
+
+        $this->passwordSetupService->revoke($user);
 
         UserInvitation::where('user_id', $user->id)
             ->where('status', 'pending')
@@ -26,76 +83,9 @@ class UserInvitationController extends Controller
                 'revoked_at' => now(),
             ]);
 
-        [$invitation, $token] = $this->issueInvitation($user, $request->user()->id);
-        $this->sendInvitationEmail($user, $request->user(), $invitation, $token);
+        $this->recordEvent($user->id, $request->user()->id, 'password_setup_email_revoked', [], $request);
 
-        $this->recordEvent($user->id, $request->user()->id, 'invitation_resent', [
-            'invitation_id' => $invitation->id,
-            'expires_at' => optional($invitation->expires_at)->toISOString(),
-        ], $request);
-
-        return response()->json([
-            'message' => 'Invitation resent successfully.',
-            'expires_at' => optional($invitation->expires_at)->toISOString(),
-        ]);
-    }
-
-    public function revoke(Request $request, User $user)
-    {
-        $updated = UserInvitation::where('user_id', $user->id)
-            ->where('status', 'pending')
-            ->update([
-                'status' => 'revoked',
-                'revoked_at' => now(),
-            ]);
-
-        if (!$updated) {
-            return response()->json(['message' => 'No pending invitation found.'], 422);
-        }
-
-        $this->recordEvent($user->id, $request->user()->id, 'invitation_revoked', [], $request);
-
-        return response()->json(['message' => 'Invitation revoked successfully.']);
-    }
-
-    private function issueInvitation(User $user, int $inviterId): array
-    {
-        $selector = Str::random(32);
-        $token = Str::random(64);
-        $expiresAt = now()->addHours(config('invitations.expires_hours', 24));
-
-        $invitation = UserInvitation::create([
-            'id' => (string) Str::uuid(),
-            'user_id' => $user->id,
-            'invited_by' => $inviterId,
-            'selector' => $selector,
-            'token_hash' => hash('sha256', $token),
-            'status' => 'pending',
-            'expires_at' => $expiresAt,
-            'last_sent_at' => now(),
-            'send_count' => 1,
-        ]);
-
-        return [$invitation, $token];
-    }
-
-    private function sendInvitationEmail(User $user, User $inviter, UserInvitation $invitation, string $token): void
-    {
-        $frontendUrl = rtrim((string) config('app.frontend_url'), '/');
-        $setupLink = sprintf(
-            '%s/accept-invitation?selector=%s&token=%s',
-            $frontendUrl,
-            urlencode($invitation->selector),
-            urlencode($token)
-        );
-
-        Mail::to($user->email)->send(new UserInvitationMail(
-            user: $user,
-            setupLink: $setupLink,
-            role: $user->roles->first()?->name ?? 'testeur',
-            inviterName: $inviter->name,
-            expiresAt: $invitation->expires_at->toDayDateTimeString()
-        ));
+        return response()->json(['message' => "L'invitation a ete revoquee avec succes."]);
     }
 
     private function recordEvent(int $userId, ?int $actorId, string $eventType, array $payload, Request $request): void

@@ -96,7 +96,6 @@ class ProjectTesterNotificationTest extends TestCase
     {
         Role::findOrCreate('admin', 'web');
         Role::findOrCreate('chef', 'web');
-        Role::findOrCreate('admin_contenus', 'web');
         Role::findOrCreate('testeur', 'web');
     }
 }

@@ -5,10 +5,16 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Comment;
 use App\Models\VersionItem;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
 class CommentController extends Controller
 {
+    public function __construct(
+        private readonly NotificationService $notificationService
+    ) {
+    }
+
     public function index(VersionItem $versionItem)
     {
         $comments = $versionItem->comments()->with('user')->orderBy('created_at', 'desc')->get();
@@ -42,6 +48,8 @@ class CommentController extends Controller
         $comment = $versionItem->comments()->create($commentData);
 
         $comment->load('user');
+        $this->notificationService->notifyCommentAdded($comment);
+
         return response()->json($comment, 201);
     }
 

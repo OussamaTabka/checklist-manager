@@ -60,6 +60,9 @@ class ChecklistAdaptationService
                     'criticality' => $item['criticality'],
                     'status' => $item['status'],
                     'order' => $item['order'],
+                    'source_type' => 'reused',
+                    'source_checklist_id' => $sourceChecklist->id,
+                    'source_checklist_name' => $sourceChecklist->name,
                 ]);
             }
 

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AssertionFailureError = exports.MissingEnvVarError = void 0;
+exports.AmbiguousTargetError = exports.InputDataMissingError = exports.UnsupportedTestCaseError = exports.PreconditionFailureError = exports.AssertionFailureError = exports.MissingEnvVarError = void 0;
 exports.normalizeError = normalizeError;
 exports.summarizeResults = summarizeResults;
 class MissingEnvVarError extends Error {
@@ -19,6 +19,34 @@ class AssertionFailureError extends Error {
     }
 }
 exports.AssertionFailureError = AssertionFailureError;
+class PreconditionFailureError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'PreconditionFailureError';
+    }
+}
+exports.PreconditionFailureError = PreconditionFailureError;
+class UnsupportedTestCaseError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'UnsupportedTestCaseError';
+    }
+}
+exports.UnsupportedTestCaseError = UnsupportedTestCaseError;
+class InputDataMissingError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'InputDataMissingError';
+    }
+}
+exports.InputDataMissingError = InputDataMissingError;
+class AmbiguousTargetError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'AmbiguousTargetError';
+    }
+}
+exports.AmbiguousTargetError = AmbiguousTargetError;
 function normalizeError(error) {
     if (error instanceof MissingEnvVarError) {
         return {
@@ -29,6 +57,30 @@ function normalizeError(error) {
     if (error instanceof AssertionFailureError) {
         return {
             error_type: 'assertion_failed',
+            error_message: error.message,
+        };
+    }
+    if (error instanceof PreconditionFailureError) {
+        return {
+            error_type: 'precondition_failed',
+            error_message: error.message,
+        };
+    }
+    if (error instanceof UnsupportedTestCaseError) {
+        return {
+            error_type: 'unsupported_test_case',
+            error_message: error.message,
+        };
+    }
+    if (error instanceof InputDataMissingError) {
+        return {
+            error_type: 'input_data_missing',
+            error_message: error.message,
+        };
+    }
+    if (error instanceof AmbiguousTargetError) {
+        return {
+            error_type: 'ambiguous_target',
             error_message: error.message,
         };
     }

@@ -6,14 +6,14 @@ import { translatePhrase } from '@/lib/runtimeTranslations'
 import { ArrowLeft, Check, Globe, Moon, Palette, Camera, UserRound, Trash2 } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useToastStore } from '@/stores/toast'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 const settingsStore = useSettingsStore()
+const toast = useToastStore()
 
-const showNotification = ref(false)
-const notificationMessage = ref('')
 const isSavingProfile = ref(false)
 const selectedPhotoFile = ref(null)
 const photoPreviewUrl = ref('')
@@ -55,11 +55,7 @@ const settingsCopy = computed(() => {
 })
 
 function showSavedMessage(message) {
-  notificationMessage.value = message
-  showNotification.value = true
-  setTimeout(() => {
-    showNotification.value = false
-  }, 2000)
+  toast.success(message, 2500)
 }
 
 function hydrateProfileForm() {
@@ -123,7 +119,7 @@ async function saveProfile() {
     hydrateProfileForm()
     showSavedMessage(tr('Profile updated successfully'))
   } catch (error) {
-    showSavedMessage(error?.message || tr('Unable to update profile'))
+    toast.error(error?.message || tr('Unable to update profile'))
   } finally {
     isSavingProfile.value = false
   }
@@ -152,13 +148,6 @@ watch(
         <p>{{ settingsCopy.description }}</p>
       </div>
     </div>
-
-    <Transition name="slide">
-      <div v-if="showNotification" class="settings-toast">
-        <Check :size="16" />
-        <span>{{ notificationMessage }}</span>
-      </div>
-    </Transition>
 
     <div class="settings-grid-pro">
       <article class="settings-panel-pro" :id="route.query.section === 'profile' ? 'profile-section' : undefined">
@@ -279,17 +268,6 @@ watch(
 </template>
 
 <style scoped>
-.slide-enter-active,
-.slide-leave-active {
-  transition: all 0.25s ease;
-}
-
-.slide-enter-from,
-.slide-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
-}
-
 .profile-settings-layout {
   display: grid;
   grid-template-columns: 220px 1fr;

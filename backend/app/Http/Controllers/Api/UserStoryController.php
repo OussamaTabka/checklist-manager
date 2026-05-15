@@ -4,10 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Checklist;
-use App\Models\UserStory;
 use App\Models\Project;
-use App\Services\ChecklistGenerationAgentService;
+use App\Models\UserStory;
 use App\Services\ChecklistAdaptationService;
+use App\Services\ChecklistGenerationAgentService;
+use App\Services\ChecklistGenerationTextService;
 use App\Services\ChecklistRecommendationService;
 use App\Services\ChecklistSuggestionReviewService;
 use App\Services\TestCaseGenerationService;
@@ -16,30 +17,16 @@ use Illuminate\Support\Facades\Auth;
 
 class UserStoryController extends Controller
 {
-    private TestCaseGenerationService $testCaseGenerator;
-    private ChecklistRecommendationService $checklistRecommendations;
-    private ChecklistGenerationAgentService $checklistGenerationAgent;
-    private ChecklistSuggestionReviewService $checklistSuggestionReview;
-    private ChecklistAdaptationService $checklistAdaptation;
-
     public function __construct(
-        TestCaseGenerationService $testCaseGenerator,
-        ChecklistRecommendationService $checklistRecommendations,
-        ChecklistGenerationAgentService $checklistGenerationAgent,
-        ChecklistSuggestionReviewService $checklistSuggestionReview,
-        ChecklistAdaptationService $checklistAdaptation
-    )
-    {
-        $this->testCaseGenerator = $testCaseGenerator;
-        $this->checklistRecommendations = $checklistRecommendations;
-        $this->checklistGenerationAgent = $checklistGenerationAgent;
-        $this->checklistSuggestionReview = $checklistSuggestionReview;
-        $this->checklistAdaptation = $checklistAdaptation;
+        private TestCaseGenerationService $testCaseGenerator,
+        private ChecklistRecommendationService $checklistRecommendations,
+        private ChecklistGenerationAgentService $checklistGenerationAgent,
+        private ChecklistSuggestionReviewService $checklistSuggestionReview,
+        private ChecklistAdaptationService $checklistAdaptation,
+        private ChecklistGenerationTextService $generationText,
+    ) {
     }
 
-    /**
-     * Get all user stories for a project
-     */
     public function index(Project $project)
     {
         $this->authorize('view', $project);
@@ -53,9 +40,6 @@ class UserStoryController extends Controller
         return response()->json($userStories);
     }
 
-    /**
-     * Create a new user story
-     */
     public function store(Request $request, Project $project)
     {
         $this->authorize('update', $project);
@@ -88,13 +72,10 @@ class UserStoryController extends Controller
         return response()->json($userStory->load(['creator', 'checklists']), 201);
     }
 
-    /**
-     * Get a specific user story
-     */
     public function show(Project $project, UserStory $userStory)
     {
         $this->authorize('view', $project);
-        
+
         if ($userStory->project_id !== $project->id) {
             return response()->json(['error' => 'User story not found in this project'], 404);
         }
@@ -102,9 +83,6 @@ class UserStoryController extends Controller
         return response()->json($this->buildUserStoryPayload($userStory));
     }
 
-    /**
-     * Update a user story
-     */
     public function update(Request $request, Project $project, UserStory $userStory)
     {
         $this->authorize('update', $project);
@@ -138,9 +116,6 @@ class UserStoryController extends Controller
         return response()->json($userStory->load(['creator', 'checklists']));
     }
 
-    /**
-     * Delete a user story
-     */
     public function destroy(Project $project, UserStory $userStory)
     {
         $this->authorize('delete', $project);
@@ -154,18 +129,11 @@ class UserStoryController extends Controller
         return response()->json(null, 204);
     }
 
-    /**
-     * Backward-compatible endpoint alias kept for existing clients and tests.
-     * Internally, checklist generation is now handled by the current agent flow.
-     */
     public function generateChecklistFromArxis(Request $request, Project $project, UserStory $userStory)
     {
         return $this->generateChecklistWithAgent($request, $project, $userStory);
     }
 
-    /**
-     * Generate a reusable checklist draft using the checklist agent.
-     */
     public function generateChecklistWithAgent(Request $request, Project $project, UserStory $userStory)
     {
         $this->authorize('view', $project);
@@ -176,7 +144,10 @@ class UserStoryController extends Controller
         }
 
         try {
-            $result = $this->checklistGenerationAgent->generateDraftForUserStory($userStory);
+            $result = $this->checklistGenerationAgent->generateDraftForUserStory(
+                $userStory,
+                $this->generationText->normalizeLanguage($request->header('X-App-Language'))
+            );
 
             return response()->json([
                 ...$result,
@@ -191,9 +162,6 @@ class UserStoryController extends Controller
         }
     }
 
-    /**
-     * Attach an existing checklist to a user story
-     */
     public function attachChecklist(Request $request, Project $project, UserStory $userStory)
     {
         $this->authorize('view', $project);
@@ -208,7 +176,6 @@ class UserStoryController extends Controller
             'reviewed' => 'required|accepted',
         ]);
 
-        // Check if already attached
         if ($userStory->checklists()->where('checklist_id', $validated['checklist_id'])->exists()) {
             return response()->json(['error' => 'Checklist is already attached to this user story'], 409);
         }
@@ -256,6 +223,31 @@ class UserStoryController extends Controller
             'user_story' => $this->buildUserStoryPayload($userStory->fresh()),
             'approved_checklist' => $checklist->fresh()->load('items'),
         ], 201);
+    }
+
+    public function rejectGeneratedChecklist(Project $project, UserStory $userStory, Checklist $checklist)
+    {
+        $this->authorize('view', $project);
+        $this->ensureExecutionAccess($project);
+
+        if ($userStory->project_id !== $project->id) {
+            return response()->json(['error' => 'User story not found in this project'], 404);
+        }
+
+        if ((int) $checklist->source_user_story_id !== (int) $userStory->id) {
+            return response()->json(['error' => 'Checklist draft does not belong to this user story'], 422);
+        }
+
+        $checklist->update([
+            'lifecycle_status' => 'archived',
+            'is_active' => false,
+        ]);
+
+        return response()->json([
+            'message' => 'Checklist draft rejected.',
+            'user_story' => $this->buildUserStoryPayload($userStory->fresh()),
+            'rejected_checklist_id' => $checklist->id,
+        ]);
     }
 
     public function previewSuggestedChecklist(Project $project, UserStory $userStory, \App\Models\Checklist $checklist)
@@ -323,9 +315,6 @@ class UserStoryController extends Controller
         ], 201);
     }
 
-    /**
-     * Detach a checklist from a user story
-     */
     public function detachChecklist(Project $project, UserStory $userStory, $checklistId)
     {
         $this->authorize('view', $project);
@@ -340,9 +329,6 @@ class UserStoryController extends Controller
         return response()->json($this->buildUserStoryPayload($userStory->fresh()));
     }
 
-    /**
-     * Get available test case generators and their status
-     */
     public function getGeneratorsStatus(Project $project)
     {
         $this->authorize('view', $project);
@@ -354,9 +340,6 @@ class UserStoryController extends Controller
         ]);
     }
 
-    /**
-     * Suggest reusable checklists for the given user story before generating a new one.
-     */
     public function suggestChecklists(Project $project, UserStory $userStory)
     {
         $this->authorize('view', $project);

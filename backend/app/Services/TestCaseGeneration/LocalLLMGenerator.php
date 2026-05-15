@@ -3,6 +3,7 @@
 namespace App\Services\TestCaseGeneration;
 
 use App\Models\UserStory;
+use App\Services\ChecklistGenerationTextService;
 use App\Services\StoryContextExtractor;
 use Exception;
 use Illuminate\Support\Collection;
@@ -26,13 +27,15 @@ class LocalLLMGenerator implements TestCaseGeneratorInterface
     private float $temperature;
 
     public function __construct(
-        private ?StoryContextExtractor $storyContextExtractor = null
+        private ?StoryContextExtractor $storyContextExtractor = null,
+        private ?ChecklistGenerationTextService $generationText = null,
     ) {
         $this->baseUrl = config('services.test_generation.llm_url', 'http://localhost:11434');
         $this->model = config('services.test_generation.llm_model', 'mistral');
         $this->timeout = max(5, min(45, (int) config('services.test_generation.llm_timeout', 30)));
         $this->temperature = max(0, min(1, (float) config('services.test_generation.llm_temperature', 0.2)));
         $this->storyContextExtractor ??= new StoryContextExtractor();
+        $this->generationText ??= app(ChecklistGenerationTextService::class);
     }
 
     public function generateTestCases(UserStory $userStory, array $context = []): array
@@ -43,7 +46,8 @@ class LocalLLMGenerator implements TestCaseGeneratorInterface
 
         try {
             $storyContext = $context['story_context'] ?? $this->storyContextExtractor->extract($userStory);
-            $prompt = $this->buildPrompt($userStory, $storyContext, $context);
+            $language = $this->generationText->normalizeLanguage($context['language'] ?? 'fr');
+            $prompt = $this->buildPrompt($userStory, $storyContext, $context, $language);
 
             $response = Http::connectTimeout(5)->timeout($this->timeout)->post(
                 "{$this->baseUrl}/api/generate",
@@ -106,7 +110,7 @@ class LocalLLMGenerator implements TestCaseGeneratorInterface
         return 'You are a senior QA test designer. Produce precise, domain-specific, non-generic test cases in valid JSON only.';
     }
 
-    private function buildPrompt(UserStory $userStory, array $storyContext, array $context): string
+    private function buildPrompt(UserStory $userStory, array $storyContext, array $context, string $language): string
     {
         $acceptanceCriteria = $this->bulletList($storyContext['acceptance_criteria'] ?? []);
         $businessRules = $this->bulletList($storyContext['business_rules'] ?? []);
@@ -119,6 +123,8 @@ class LocalLLMGenerator implements TestCaseGeneratorInterface
         );
         $generationFocus = $this->bulletList($context['generation_focus'] ?? []);
         $gapSummary = $this->bulletList($context['gap_summary'] ?? []);
+
+        $targetLanguage = $language === 'en' ? 'English' : 'French';
 
         return <<<PROMPT
 Generate a compact, high-value QA checklist for this user story.
@@ -162,8 +168,10 @@ INSTRUCTIONS:
 3. Prefer domain wording from the story.
 4. Cover business flow, negative cases, concurrency, data integrity, notifications, and integrations when relevant.
 5. Each test case must be specific enough that a tester can execute it without rewriting it.
-6. Return valid JSON matching the provided schema.
-7. Keep between 4 and 8 test cases.
+6. Write every field in {$targetLanguage}.
+7. Do not prefix test case names with "Criterion", "Critere", "TC-", or numeric references.
+8. Return valid JSON matching the provided schema.
+9. Keep between 4 and 8 test cases.
 PROMPT;
     }
 
@@ -272,13 +280,19 @@ PROMPT;
     {
         return Collection::make($cases)
             ->map(function (array $testCase) {
+                $language = $this->generationText->normalizeLanguage($testCase['language'] ?? 'fr');
+
                 return [
-                    'name' => trim((string) ($testCase['name'] ?? '')),
-                    'description' => trim((string) ($testCase['description'] ?? '')),
-                    'expected_result' => trim((string) ($testCase['expected_result'] ?? '')),
+                    'name' => $this->generationText->localizeCaseName((string) ($testCase['name'] ?? ''), $language),
+                    'description' => $this->generationText->localizeChecklistText((string) ($testCase['description'] ?? ''), $language),
+                    'expected_result' => $this->generationText->localizeChecklistText((string) ($testCase['expected_result'] ?? ''), $language),
                     'severity' => $this->normalizeSeverity((string) ($testCase['severity'] ?? 'medium')),
-                    'category' => trim((string) ($testCase['category'] ?? '')),
-                    'covers' => array_values(array_filter(array_map('strval', $testCase['covers'] ?? []))),
+                    'category' => $this->generationText->localizeChecklistText((string) ($testCase['category'] ?? ''), $language),
+                    'covers' => array_values(array_filter(array_map(
+                        fn ($cover) => $this->generationText->localizeChecklistText((string) $cover, $language),
+                        $testCase['covers'] ?? []
+                    ))),
+                    'language' => $language,
                 ];
             })
             ->filter(fn (array $testCase) => $testCase['name'] !== '' && $testCase['description'] !== '')
@@ -296,6 +310,7 @@ PROMPT;
 
     private function generateFallbackTestCases(UserStory $userStory, array $context): array
     {
+        $language = $this->generationText->normalizeLanguage($context['language'] ?? 'fr');
         $focus = array_values(array_filter(array_map('strval', $context['generation_focus'] ?? [])));
         $baseTitle = trim((string) $userStory->title);
 
@@ -306,12 +321,13 @@ PROMPT;
         return collect($focus)
             ->take(4)
             ->map(fn (string $item, int $index) => [
-                'name' => sprintf('Gap %02d - %s', $index + 1, ucfirst($item)),
-                'description' => "Target the missing coverage area: {$item} for {$baseTitle}.",
-                'expected_result' => 'The behavior remains consistent, explicit, and testable for this coverage gap.',
+                'name' => $this->generationText->localizeCaseName(ucfirst($item), $language),
+                'description' => $this->generationText->localizeChecklistText("Target the missing coverage area: {$item} for {$baseTitle}.", $language),
+                'expected_result' => $this->generationText->localizeChecklistText('The behavior remains consistent, explicit, and testable for this coverage gap.', $language),
                 'severity' => $index === 0 ? 'high' : 'medium',
                 'category' => 'gap-fill',
-                'covers' => [$item],
+                'covers' => [$this->generationText->localizeChecklistText($item, $language)],
+                'language' => $language,
             ])
             ->all();
     }

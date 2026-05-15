@@ -1,0 +1,15 @@
+{
+  "run_id": "demo-form-success-001",
+  "external_id": 9001,
+  "test_case_title": "Contact form submits successfully with valid information",
+  "test_case_description": "Given a visitor opens the contact page, when the visitor fills the form with a full name, email, phone number, and message then submits it, then a success confirmation should be visible and the page must remain stable.",
+  "test_case_text": "Open the contact page. Fill the contact form with full name, email, phone number, and message. Submit the form. Verify a success message or confirmation appears after submission.",
+  "base_url": "http://localhost:5173/contact",
+  "use_auth": false,
+  "environment_name": "local-demo",
+  "notes": "Use this sample to verify that the agent generates a structured form plan, required inputs, and preflight checks instead of a minimal goto-only script.",
+  "priority": "High",
+  "criticality": "Major",
+  "current_status": "Not Tested",
+  "target_type": "version_item"
+}

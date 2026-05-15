@@ -3,6 +3,7 @@
 namespace App\Services\TestCaseGeneration;
 
 use App\Services\StoryContextExtractor;
+use App\Services\ChecklistGenerationTextService;
 use App\Models\UserStory;
 use Illuminate\Support\Collection;
 
@@ -22,9 +23,11 @@ class FallbackGenerator implements TestCaseGeneratorInterface
     private const CREATE_KEYWORDS = ['book', 'booking', 'reserve', 'reservation', 'prendre', 'creer', 'create'];
 
     public function __construct(
-        private ?StoryContextExtractor $storyContextExtractor = null
+        private ?StoryContextExtractor $storyContextExtractor = null,
+        private ?ChecklistGenerationTextService $generationText = null
     ) {
         $this->storyContextExtractor ??= new StoryContextExtractor();
+        $this->generationText ??= app(ChecklistGenerationTextService::class);
     }
 
     /**
@@ -35,6 +38,7 @@ class FallbackGenerator implements TestCaseGeneratorInterface
      */
     public function generateTestCases(UserStory $userStory, array $context = []): array
     {
+        $language = $this->generationText->normalizeLanguage($context['language'] ?? 'fr');
         $storyContext = $context['story_context'] ?? $this->storyContextExtractor->extract($userStory);
         $storyIntent = $this->detectStoryIntent($userStory, $storyContext);
         $criterionCases = [];
@@ -70,6 +74,12 @@ class FallbackGenerator implements TestCaseGeneratorInterface
         $testCases = $this->removeNearDuplicates($testCases);
 
         return Collection::make($testCases)
+            ->map(function (array $item) use ($language) {
+                $localized = $this->generationText->localizeCase($item, $language);
+                $localized['language'] = $language;
+
+                return $localized;
+            })
             ->unique(fn (array $item) => strtolower(trim((string) ($item['name'] ?? ''))))
             ->take(12)
             ->values()
@@ -114,6 +124,7 @@ class FallbackGenerator implements TestCaseGeneratorInterface
                     'description' => $criterion,
                     'expected_result' => 'Le critere est respecte.',
                     'severity' => $this->determineSeverity($index),
+                    'category' => 'acceptance_criterion',
                 ];
             }
         }
@@ -297,7 +308,7 @@ class FallbackGenerator implements TestCaseGeneratorInterface
             $short = rtrim(substr($short, 0, 67)) . '...';
         }
 
-        return sprintf('Critere %02d : %s', $index + 1, $short);
+        return $short;
     }
 
     private function generateDomainSpecificCases(UserStory $userStory, array $context, string $storyIntent = 'generic'): array
@@ -483,7 +494,7 @@ class FallbackGenerator implements TestCaseGeneratorInterface
     {
         $cases = Collection::make($testCases);
 
-        if (count($criterionCases) > 0 && $this->countByPrefix($cases->all(), 'Critere ') < min(3, count($criterionCases))) {
+        if (count($criterionCases) > 0 && $this->countCriterionCases($cases->all()) < min(3, count($criterionCases))) {
             $cases = $cases->merge(array_slice($criterionCases, 0, min(3, count($criterionCases))));
         }
 
@@ -573,10 +584,10 @@ class FallbackGenerator implements TestCaseGeneratorInterface
             ->all();
     }
 
-    private function countByPrefix(array $cases, string $prefix): int
+    private function countCriterionCases(array $cases): int
     {
         return Collection::make($cases)
-            ->filter(fn (array $item) => str_starts_with((string) ($item['name'] ?? ''), $prefix))
+            ->filter(fn (array $item) => ($item['category'] ?? null) === 'acceptance_criterion')
             ->count();
     }
 
@@ -746,7 +757,7 @@ class FallbackGenerator implements TestCaseGeneratorInterface
         return array_values(array_filter($cases, function (array $case) use ($referenceTexts) {
             $name = strtolower(trim((string) ($case['name'] ?? '')));
 
-            if (str_starts_with($name, 'critere ')) {
+            if (($case['category'] ?? null) === 'acceptance_criterion') {
                 return true;
             }
 

@@ -25,6 +25,7 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:password-reset-link');
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:password-reset');
+    Route::post('/set-password', [AuthController::class, 'setPassword'])->middleware('throttle:password-reset');
     Route::get('/invitations/validate', [InvitationController::class, 'validateInvitation'])->middleware('throttle:invitation-validate');
     Route::post('/invitations/accept', [InvitationController::class, 'acceptInvitation'])->middleware('throttle:invitation-accept');
 
@@ -36,8 +37,14 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/me/profile', [AuthController::class, 'updateProfile']);
         Route::get('/token', [AuthController::class, 'getToken']); // Get API token for authenticated user
-        Route::get('/notifications', [NotificationController::class, 'index']);
-        Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+        Route::middleware('role:chef|testeur')->group(function () {
+            Route::get('/notifications', [NotificationController::class, 'index']);
+            Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+            Route::patch('/notifications/{id}/read', [NotificationController::class, 'markRead']);
+            Route::patch('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+            Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+            Route::patch('/notifications/{id}/archive', [NotificationController::class, 'archive']);
+        });
 
         // ==========================================
         // SYSTEM DATA - Accessible to all authenticated users
@@ -54,6 +61,8 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
             Route::get('/users/{user}', [UserController::class, 'show']);
             Route::put('/users/{user}', [UserController::class, 'update']);
             Route::delete('/users/{user}', [UserController::class, 'destroy']);
+            Route::post('/users/{user}/restore', [UserController::class, 'restore']);
+            Route::delete('/users/{user}/permanent', [UserController::class, 'permanentDestroy']);
             Route::post('/users/{user}/invitations/resend', [UserInvitationController::class, 'resend'])->middleware('throttle:invitation-send');
             Route::post('/users/{user}/invitations/revoke', [UserInvitationController::class, 'revoke'])->middleware('throttle:invitation-send');
         });
@@ -67,6 +76,8 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
             Route::get('/checklists/{checklist}', [ChecklistController::class, 'show']);
             Route::patch('/checklists/{checklist}/items/{item}/status', [ChecklistController::class, 'updateItemStatus']);
             Route::get('/checklists/{checklist}/items/{item}/history', [ChecklistController::class, 'getItemHistory']);
+            Route::get('/checklists/{checklist}/items/{item}/comment', [ChecklistController::class, 'getItemComment']);
+            Route::patch('/checklists/{checklist}/items/{item}/comment', [ChecklistController::class, 'updateItemComment']);
             Route::get('/checklists/{checklist}/items/{item}/execution', [ChecklistItemExecutionController::class, 'show']);
             Route::post('/checklists/{checklist}/items/{item}/runs', [ChecklistItemExecutionController::class, 'run']);
             Route::get('/checklists/{id}/export/json', [ChecklistController::class, 'exportJson']);
@@ -114,6 +125,7 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
         Route::middleware(['role:testeur'])->group(function () {
             Route::delete('/projects/{project}/user-stories/{userStory}/checklists/{checklistId}', [UserStoryController::class, 'detachChecklist']);
             Route::post('/projects/{project}/user-stories/{userStory}/approve-draft/{checklist}', [UserStoryController::class, 'approveGeneratedChecklist']);
+            Route::post('/projects/{project}/user-stories/{userStory}/reject-draft/{checklist}', [UserStoryController::class, 'rejectGeneratedChecklist']);
         });
 
         // ==========================================
@@ -128,9 +140,12 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
         // ==========================================
         Route::middleware(['role:chef'])->group(function () {
             Route::get('/projects/metadata', [ProjectController::class, 'metadata']);
+            Route::get('/projects/validate-name', [ProjectController::class, 'validateName']);
             Route::post('/projects', [ProjectController::class, 'store']);
             Route::put('/projects/{project}', [ProjectController::class, 'update']);
             Route::delete('/projects/{project}', [ProjectController::class, 'destroy']);
+            Route::post('/projects/{project}/restore', [ProjectController::class, 'restore']);
+            Route::delete('/projects/{project}/permanent', [ProjectController::class, 'permanentDestroy']);
             Route::post('/projects/{project}/assign-testers', [ProjectController::class, 'assignTesters']);
             Route::get('/projects/{project}/export/{format?}', [ExportController::class, 'exportProject']);
         });

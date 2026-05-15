@@ -15,7 +15,6 @@ class RolesAndAdminSeeder extends Seeder
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $chefRole = Role::firstOrCreate(['name' => 'chef']);
         $testeurRole = Role::firstOrCreate(['name' => 'testeur']);
-        $adminContenuRole = Role::firstOrCreate(['name' => 'admin_contenus']);
 
         // Création utilisateur ADMINISTRATEUR SYSTÈME par défaut
         $admin = User::firstOrCreate(
@@ -40,18 +39,6 @@ class RolesAndAdminSeeder extends Seeder
 
         // Attribution rôle chef (Gestion complète des projets et checklists)
         $chef->syncRoles(['chef']);
-
-        // Création utilisateur ADMINISTRATEUR CONTENUS par défaut (optionnel)
-        $adminContenu = User::firstOrCreate(
-            ['email' => 'admin_contenus@test.com'],
-            [
-                'name' => 'Admin Contenus',
-                'password' => Hash::make('password123'),
-            ]
-        );
-
-        // Attribution rôle admin_contenus (Gestion qualité des checklists)
-        $adminContenu->syncRoles(['admin_contenus']);
 
         // Création utilisateur TESTEUR par défaut
         $testeur = User::firstOrCreate(

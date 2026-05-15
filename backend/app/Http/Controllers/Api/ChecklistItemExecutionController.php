@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Jobs\ExecuteSingleTestCaseRun;
 use App\Models\Checklist;
 use App\Models\ChecklistItem;
+use App\Models\ChecklistItemHistory;
 use App\Models\TestResult;
 use App\Models\TestRun;
+use App\Services\ExecutionProfileService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +17,11 @@ use Illuminate\Support\Str;
 
 class ChecklistItemExecutionController extends Controller
 {
+    public function __construct(
+        private readonly ExecutionProfileService $executionProfileService,
+    ) {
+    }
+
     public function show(Checklist $checklist, ChecklistItem $item)
     {
         $this->ensureChecklistOwnership($checklist, $item);
@@ -33,6 +40,7 @@ class ChecklistItemExecutionController extends Controller
 
         $latestRun = $this->pickLatestRun($latestTargetedRun, $latestResult?->testRun);
         $executionState = $this->resolveExecutionState($item, $latestRun, $latestResult);
+        $executionProfile = $this->resolveExecutionProfile($item, $latestRun);
 
         $artifactPayload = $latestResult?->artifacts;
         if (!is_array($artifactPayload)) {
@@ -59,12 +67,24 @@ class ChecklistItemExecutionController extends Controller
                 : null;
         }
 
+        $resultPayload = is_array($latestResult?->result_payload) ? $latestResult->result_payload : [];
+        $generatedPlan = is_array($resultPayload['generated_plan'] ?? null)
+            ? $resultPayload['generated_plan']
+            : (is_array($executionProfile['last_generated_plan'] ?? null) ? $executionProfile['last_generated_plan'] : null);
+        $failureSource = is_array($resultPayload['failure_source'] ?? null) ? $resultPayload['failure_source'] : null;
+
         return response()->json([
             'id' => $item->id,
             'title' => $item->title,
             'description' => $item->description,
             'status' => $this->displayStatus($item->status),
+            'qa_comment' => $item->qa_comment,
+            'tested_at' => optional($item->tested_at)->toISOString(),
+            'tested_by' => $item->tester()->first(['id', 'name', 'email']),
             'execution_state' => $executionState,
+            'execution_profile' => $executionProfile,
+            'generated_plan' => $generatedPlan,
+            'failure_source' => $failureSource,
             'last_run_id' => $latestRun?->run_id,
             'last_run_status' => $latestRun ? $this->mapRunStatus($latestRun->status) : null,
             'last_run_started_at' => optional($latestRun?->started_at)->toISOString(),
@@ -89,6 +109,8 @@ class ChecklistItemExecutionController extends Controller
             'watch_mode' => ['sometimes', 'boolean'],
             'environment_name' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'provided_inputs' => ['nullable', 'array'],
+            'provided_inputs.*' => ['nullable', 'string', 'max:4000'],
         ]);
 
         $run = TestRun::create([
@@ -113,11 +135,22 @@ class ChecklistItemExecutionController extends Controller
                 'watch_mode' => array_key_exists('watch_mode', $data) ? (bool) $data['watch_mode'] : true,
                 'environment_name' => (string) ($data['environment_name'] ?? ''),
                 'notes' => (string) ($data['notes'] ?? ''),
+                'provided_inputs' => is_array($data['provided_inputs'] ?? null) ? $data['provided_inputs'] : [],
                 'priority' => (string) ($item->priority ?? ''),
                 'criticality' => (string) ($item->criticality ?? ''),
                 'current_status' => (string) ($item->status ?? ''),
                 'checklist_id' => (int) $checklist->id,
             ],
+        ]);
+
+        ChecklistItemHistory::create([
+            'checklist_item_id' => $item->id,
+            'changed_by' => Auth::id(),
+            'field_name' => 'execution',
+            'old_value' => $this->displayStatus($item->status),
+            'new_value' => 'queued',
+            'change_type' => 'automated_test_started',
+            'notes' => 'Automated test requested for run ' . $run->run_id,
         ]);
 
         $watchMode = array_key_exists('watch_mode', $data) ? (bool) $data['watch_mode'] : true;
@@ -209,5 +242,37 @@ class ChecklistItemExecutionController extends Controller
             'Passed', 'Failed', 'Blocked' => $status,
             default => 'Not Tested',
         };
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function resolveExecutionProfile(ChecklistItem $item, ?TestRun $latestRun): array
+    {
+        $profile = is_array($item->execution_profile) ? $item->execution_profile : [];
+        if ($profile !== []) {
+            return $profile;
+        }
+
+        $item->loadMissing('checklist.project');
+        $baseUrl = $latestRun?->base_url ?: $item->checklist?->project?->app_url;
+        if (!is_string($baseUrl) || trim($baseUrl) === '') {
+            return [];
+        }
+
+        try {
+            $generated = $this->executionProfileService->generateForChecklistItem($item, $baseUrl, [
+                'run_id' => 'profile-checklist-item-' . $item->id,
+                'use_auth' => true,
+            ]);
+
+            $item->update([
+                'execution_profile' => $generated['execution_profile'],
+            ]);
+
+            return $generated['execution_profile'];
+        } catch (\Throwable) {
+            return [];
+        }
     }
 }

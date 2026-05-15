@@ -1,0 +1,15 @@
+{
+  "run_id": "demo-non-ui-blocked-001",
+  "external_id": 9002,
+  "test_case_title": "Protected API rejects missing bearer token",
+  "test_case_description": "Verify that protected API endpoints return an authorization error when no bearer token is provided.",
+  "test_case_text": "Call a protected API endpoint without a bearer token and verify the response status code and error payload.",
+  "base_url": "http://localhost:5173",
+  "use_auth": false,
+  "environment_name": "local-demo",
+  "notes": "Use this sample to verify that the planner blocks non-UI cases explicitly instead of generating a misleading Playwright smoke script.",
+  "priority": "High",
+  "criticality": "Critical",
+  "current_status": "Not Tested",
+  "target_type": "version_item"
+}

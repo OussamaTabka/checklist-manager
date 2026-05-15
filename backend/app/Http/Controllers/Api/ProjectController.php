@@ -8,19 +8,21 @@ use App\Models\Project;
 use App\Models\ProjectVersion;
 use App\Models\UserStory;
 use App\Models\User;
-use App\Notifications\TesterAssignedToProjectNotification;
 use App\Models\VersionItem;
+use App\Services\NotificationService;
 use App\Services\ProjectUserStoryImportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use RuntimeException;
 
 class ProjectController extends Controller
 {
     public function __construct(
-        private readonly ProjectUserStoryImportService $projectUserStoryImportService
+        private readonly ProjectUserStoryImportService $projectUserStoryImportService,
+        private readonly NotificationService $notificationService
     ) {
     }
 
@@ -83,15 +85,26 @@ class ProjectController extends Controller
         }
     }
 
-    public function index()
+    public function index(Request $request)
     {
+        $data = $request->validate([
+            'status' => ['nullable', Rule::in(['active', 'archived'])],
+        ]);
+        $status = $data['status'] ?? 'active';
+
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        $query = Project::with([
-            'creator:id,name,email',
-            'testers:id,name,email',
-        ])->withCount(['userStories', 'versions']);
+        $query = Project::query()
+            ->when(
+                $status === 'archived',
+                fn ($projectQuery) => $projectQuery->onlyTrashed()
+            )
+            ->with([
+                'creator:id,name,email',
+                'testers:id,name,email',
+            ])
+            ->withCount(['userStories', 'versions']);
 
         if ($user->hasRole('chef') && !$user->hasRole('admin')) {
             $query->where('created_by', $user->id);
@@ -101,13 +114,20 @@ class ProjectController extends Controller
             $query->whereHas('testers', fn ($testerQuery) => $testerQuery->where('users.id', $user->id));
         }
 
-        return response()->json($query->orderByDesc('id')->paginate(10));
+        $query->when(
+            $status === 'archived',
+            fn ($projectQuery) => $projectQuery->orderByDesc('deleted_at')->orderByDesc('id'),
+            fn ($projectQuery) => $projectQuery->orderByDesc('id')
+        );
+
+        return response()->json($query->paginate(10)->withQueryString());
     }
 
     public function metadata()
     {
         $testers = User::with(['roles:id,name'])
             ->select(['id', 'name', 'email'])
+            ->where('account_status', 'active')
             ->whereHas('roles', function ($query) {
                 $query->where('name', 'testeur');
             })
@@ -116,6 +136,29 @@ class ProjectController extends Controller
 
         return response()->json([
             'testers' => $testers,
+        ]);
+    }
+
+    public function validateName(Request $request)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'ignore_id' => ['nullable', 'integer'],
+        ]);
+
+        $query = Project::query()
+            ->whereRaw('LOWER(name) = ?', [mb_strtolower(trim($data['name']))])
+            ->whereNull('deleted_at');
+
+        if (!empty($data['ignore_id'])) {
+            $query->where('id', '!=', (int) $data['ignore_id']);
+        }
+
+        $exists = $query->exists();
+
+        return response()->json([
+            'exists' => $exists,
+            'message' => $exists ? 'Un projet avec ce nom existe déjà.' : null,
         ]);
     }
 
@@ -143,17 +186,24 @@ class ProjectController extends Controller
         $this->authorize('create', Project::class);
 
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('projects', 'name')->where(fn ($query) => $query->whereNull('deleted_at')),
+            ],
             'description' => ['nullable', 'string'],
             'test_objectives' => ['nullable', 'string'],
             'app_url' => ['required', 'url', 'max:2048'],
             'tester_ids' => ['required', 'array', 'min:1'],
             'tester_ids.*' => ['integer', 'exists:users,id'],
             'user_stories_file' => ['nullable', 'file', 'mimes:csv,txt,xlsx,json'],
+            'manual_user_stories' => ['nullable'],
         ]);
 
         $testerIds = $data['tester_ids'] ?? [];
         $testers = User::whereIn('id', $testerIds)
+            ->where('account_status', 'active')
             ->whereHas('roles', fn ($q) => $q->where('name', 'testeur'))
             ->get();
 
@@ -162,6 +212,9 @@ class ProjectController extends Controller
         }
 
         try {
+            $manualStories = $this->projectUserStoryImportService->prepareManualStories(
+                $request->input('manual_user_stories', [])
+            );
             $importedStories = $this->projectUserStoryImportService->prepareImportedStories(
                 $request->file('user_stories_file')
             );
@@ -171,19 +224,25 @@ class ProjectController extends Controller
             ], 422);
         }
 
-        $validStories = $importedStories['stories'];
+        $validStories = [
+            ...$manualStories['stories'],
+            ...$importedStories['stories'],
+        ];
         $summary = [
-            'manual_created' => 0,
+            'manual_created' => count($manualStories['stories']),
             'imported_created' => count($importedStories['stories']),
             'total_created' => count($validStories),
-            'failed_manuals' => 0,
+            'failed_manuals' => $manualStories['failed_count'],
             'failed_imports' => $importedStories['failed_count'],
-            'errors' => $importedStories['errors'],
+            'errors' => [
+                ...$manualStories['errors'],
+                ...$importedStories['errors'],
+            ],
         ];
 
         if ($summary['total_created'] < 1) {
             return response()->json([
-                'message' => 'Veuillez importer un fichier contenant au moins une User Story valide.',
+                'message' => 'Veuillez ajouter ou importer au moins une User Story valide.',
                 'user_stories_summary' => $summary,
             ], 422);
         }
@@ -211,6 +270,7 @@ class ProjectController extends Controller
                 ]);
             }
 
+            $this->notificationService->notifyProjectCreated($project, Auth::user());
             DB::commit();
 
             return response()->json(
@@ -241,7 +301,15 @@ class ProjectController extends Controller
         $this->authorize('update', $project);
 
         $data = $request->validate([
-            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'name' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('projects', 'name')
+                    ->ignore($project->id)
+                    ->where(fn ($query) => $query->whereNull('deleted_at')),
+            ],
             'description' => ['nullable', 'string'],
             'test_objectives' => ['nullable', 'string'],
             'app_url' => ['sometimes', 'required', 'url', 'max:2048'],
@@ -251,6 +319,7 @@ class ProjectController extends Controller
 
         if (array_key_exists('tester_ids', $data)) {
             $testers = User::whereIn('id', $data['tester_ids'])
+                ->where('account_status', 'active')
                 ->whereHas('roles', fn ($q) => $q->where('name', 'testeur'))
                 ->get();
 
@@ -288,6 +357,42 @@ class ProjectController extends Controller
         return response()->json(null, 204);
     }
 
+    public function restore(int $project)
+    {
+        $project = Project::withTrashed()->findOrFail($project);
+        $this->authorize('delete', $project);
+
+        if (!$project->trashed()) {
+            return response()->json(['message' => 'Ce projet n\'est pas archive.'], 422);
+        }
+
+        $project->restore();
+
+        return response()->json([
+            'message' => 'Projet restaure avec succes.',
+            'project' => $project->load([
+                'creator:id,name,email',
+                'testers:id,name,email',
+            ]),
+        ]);
+    }
+
+    public function permanentDestroy(int $project)
+    {
+        $project = Project::withTrashed()->findOrFail($project);
+        $this->authorize('delete', $project);
+
+        if (!$project->trashed()) {
+            return response()->json(['message' => 'Le projet doit d\'abord etre archive avant suppression definitive.'], 422);
+        }
+
+        $project->forceDelete();
+
+        return response()->json([
+            'message' => 'Projet supprime definitivement avec succes.',
+        ]);
+    }
+
     public function assignTesters(Request $request, Project $project)
     {
         $this->authorize('update', $project);
@@ -298,6 +403,7 @@ class ProjectController extends Controller
         ]);
 
         $testers = User::whereIn('id', $data['tester_ids'])
+            ->where('account_status', 'active')
             ->whereHas('roles', fn ($q) => $q->where('name', 'testeur'))
             ->get();
 
@@ -319,14 +425,13 @@ class ProjectController extends Controller
             return;
         }
 
-        $assignedBy = Auth::user();
-
-        User::whereIn('id', $testerIds)
+        $testers = User::whereIn('id', $testerIds)
+            ->where('account_status', 'active')
             ->whereHas('roles', fn ($query) => $query->where('name', 'testeur'))
             ->get()
-            ->each(fn (User $tester) => $tester->notify(
-                new TesterAssignedToProjectNotification($project, $assignedBy)
-            ));
+            ->values();
+
+        $this->notificationService->notifyProjectAssigned($project, $testers, Auth::user());
     }
 
     private function ensureExecutionAccess(Project $project): void

@@ -12,10 +12,12 @@ class VersionItem extends Model
         'project_version_id',
         'title','description','priority','criticality','order',
         'status','tested_by','tested_at',
+        'execution_profile',
     ];
 
     protected $casts = [
         'tested_at' => 'datetime',
+        'execution_profile' => 'array',
     ];
 
     public function version(): BelongsTo

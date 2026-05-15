@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Filter,
-  FolderKanban,
   Search,
   TrendingUp,
   Workflow,
@@ -15,9 +14,12 @@ import {
   Sparkles,
 } from 'lucide-vue-next'
 import { apiRequest } from '@/lib/api'
+import { localizeError } from '@/lib/localization'
 import { useAuthStore } from '@/stores/auth'
+import { useSettingsStore } from '@/stores/settings'
 
 const auth = useAuthStore()
+const settings = useSettingsStore()
 
 const loading = ref(false)
 const errorMessage = ref('')
@@ -225,7 +227,7 @@ async function loadDashboard() {
       testsFailed.value = projectSuccessRows.value.reduce((sum, row) => sum + (Number(row.failed) || 0), 0)
     }
   } catch (error) {
-    errorMessage.value = error.data?.message || error.message
+    errorMessage.value = localizeError(error, 'error_generic', settings.language)
   } finally {
     loading.value = false
   }
@@ -245,13 +247,6 @@ onMounted(async () => {
         <p class="dashboard-command-text">{{ roleDashboardCopy.description }}</p>
       </div>
 
-      <div class="dashboard-command-actions">
-        <button class="btn btn-secondary btn-sm" @click="loadDashboard" data-testid="dashboard-btn-refresh">Refresh</button>
-        <RouterLink v-if="auth.canManageProjects" :to="{ name: 'projects', query: { create: '1' } }" class="btn btn-primary btn-sm">
-          <FolderKanban :size="16" />
-          <span>New Project</span>
-        </RouterLink>
-      </div>
     </div>
 
     <p v-if="errorMessage" class="error" data-testid="dashboard-msg-error">{{ errorMessage }}</p>
@@ -362,8 +357,8 @@ onMounted(async () => {
           <p class="dashboard-section-kicker">Live table</p>
           <h2>{{ roleDashboardCopy.tableTitle }}</h2>
         </div>
-        <RouterLink :to="{ name: 'stories' }" class="dashboard-inline-link">
-          <span>Open user stories</span>
+        <RouterLink :to="{ name: 'projects' }" class="dashboard-inline-link">
+          <span>Open projects</span>
           <ArrowRight :size="15" />
         </RouterLink>
       </div>

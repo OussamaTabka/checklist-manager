@@ -39,6 +39,8 @@ class ChecklistController extends Controller
             $query->where(function ($builder) use ($projectId) {
                 $builder
                     ->where('project_id', $projectId)
+                    ->orWhere('template_scope', 'global')
+                    ->orWhereNull('project_id')
                     ->orWhereHas('userStories', fn ($storyQuery) => $storyQuery->where('project_id', $projectId))
                     ->orWhereHas('sourceUserStory', fn ($storyQuery) => $storyQuery->where('project_id', $projectId));
             });
@@ -49,13 +51,17 @@ class ChecklistController extends Controller
             $query->where(function ($builder) use ($assignedProjectIds) {
                 $builder
                     ->where('created_by', Auth::id())
+                    ->orWhere('template_scope', 'global')
+                    ->orWhereNull('project_id')
                     ->orWhereIn('project_id', $assignedProjectIds)
                     ->orWhereHas('userStories', fn ($storyQuery) => $storyQuery->whereIn('project_id', $assignedProjectIds))
                     ->orWhereHas('sourceUserStory', fn ($storyQuery) => $storyQuery->whereIn('project_id', $assignedProjectIds));
             });
         }
 
-        return response()->json($query->paginate(10));
+        $perPage = min(max($request->integer('per_page', 10), 1), 100);
+
+        return response()->json($query->paginate($perPage));
     }
 
     public function store(Request $request)
@@ -63,7 +69,7 @@ class ChecklistController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string'],
             'description' => ['nullable', 'string'],
-            'project_id' => ['required', 'exists:projects,id'],
+            'project_id' => ['nullable', 'exists:projects,id'],
             'as_a' => ['nullable', 'string'],
             'i_want_that' => ['nullable', 'string'],
             'so_that' => ['nullable', 'string'],
@@ -87,12 +93,15 @@ class ChecklistController extends Controller
             'items.*.status' => ['nullable', 'in:pending,passed,failed,blocked'],
         ]);
 
-        $project = Project::findOrFail($data['project_id']);
-        $this->ensureTesterOwnsProject($project);
+        $project = !empty($data['project_id']) ? Project::findOrFail($data['project_id']) : null;
+
+        if ($project) {
+            $this->ensureTesterOwnsProject($project);
+        }
 
         if (!empty($data['source_user_story_id'])) {
             $story = UserStory::findOrFail($data['source_user_story_id']);
-            abort_unless((int) $story->project_id === (int) $project->id, 422, 'User story does not belong to this project.');
+            abort_unless($project && (int) $story->project_id === (int) $project->id, 422, 'User story does not belong to this project.');
         }
 
         DB::beginTransaction();
@@ -101,7 +110,7 @@ class ChecklistController extends Controller
             $checklist = Checklist::create([
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
-                'project_id' => $project->id,
+                'project_id' => $project?->id,
                 'as_a' => $data['as_a'] ?? null,
                 'i_want_that' => $data['i_want_that'] ?? null,
                 'so_that' => $data['so_that'] ?? null,
@@ -113,8 +122,8 @@ class ChecklistController extends Controller
                 'category' => $data['category'] ?? 'Execution',
                 'created_by' => Auth::id(),
                 'is_active' => $data['is_active'] ?? true,
-                'template_scope' => $data['template_scope'] ?? 'project',
-                'lifecycle_status' => $data['lifecycle_status'] ?? 'draft',
+                'template_scope' => $data['template_scope'] ?? ($project ? 'project' : 'global'),
+                'lifecycle_status' => $data['lifecycle_status'] ?? ($project ? 'draft' : 'approved'),
                 'generated_from' => $data['generated_from'] ?? 'manual',
                 'source_user_story_id' => $data['source_user_story_id'] ?? null,
             ]);
@@ -143,7 +152,7 @@ class ChecklistController extends Controller
     public function show(Checklist $checklist)
     {
         if ($checklist->project_id) {
-            $this->ensureTesterOwnsProject(Project::findOrFail($checklist->project_id));
+            $this->ensureChecklistAccessible(Project::findOrFail($checklist->project_id));
         }
 
         return response()->json($checklist->load(['items.tester']));
@@ -476,9 +485,7 @@ class ChecklistController extends Controller
 
     public function updateItemStatus(Request $request, Checklist $checklist, ChecklistItem $item)
     {
-        if ((int) $item->checklist_id !== (int) $checklist->id) {
-            return response()->json(['message' => 'Checklist item does not belong to this checklist.'], 422);
-        }
+        $this->ensureChecklistItemBelongsToChecklist($checklist, $item);
 
         $data = $request->validate([
             'status' => ['required', 'in:Not Tested,Passed,Failed,Blocked'],
@@ -509,38 +516,99 @@ class ChecklistController extends Controller
         return response()->json([
             'message' => 'Checklist item status updated.',
             'status' => $newStatus,
+            'qa_comment' => $item->qa_comment,
             'tested_by' => $item->tester()->first(['id', 'name', 'email']),
             'tested_at' => optional($item->tested_at)->toISOString(),
-            'history' => $item->history()->with('changedBy:id,name,email')->get(),
+            'history' => $this->formatChecklistItemHistoryCollection($item),
         ]);
     }
 
     public function getItemHistory(Checklist $checklist, ChecklistItem $item)
     {
-        if ((int) $item->checklist_id !== (int) $checklist->id) {
-            return response()->json(['message' => 'Checklist item does not belong to this checklist.'], 422);
-        }
+        $this->ensureChecklistItemBelongsToChecklist($checklist, $item);
+
+        return response()->json($this->formatChecklistItemHistoryCollection($item));
+    }
+
+    public function getItemComment(Checklist $checklist, ChecklistItem $item)
+    {
+        $this->ensureChecklistItemBelongsToChecklist($checklist, $item);
+
+        $latestCommentHistory = $item->history()
+            ->whereIn('change_type', ['comment_added', 'comment_updated'])
+            ->with('changedBy:id,name,email')
+            ->latest()
+            ->first();
 
         return response()->json(
-            $item->history()->with('changedBy:id,name,email')->get()->map(function (ChecklistItemHistory $history) {
-                return [
-                    'id' => $history->id,
-                    'field_name' => $history->field_name,
-                    'old_value' => $history->old_value,
-                    'new_value' => $history->new_value,
-                    'change_type' => $history->change_type,
-                    'notes' => $history->notes,
-                    'created_at' => optional($history->created_at)->toISOString(),
-                    'changed_by' => $history->changedBy,
-                ];
-            })->values()
+            [
+                'comment' => $item->qa_comment,
+                'updated_at' => optional($latestCommentHistory?->created_at)->toISOString(),
+                'updated_by' => $latestCommentHistory?->changedBy,
+            ]
         );
+    }
+
+    public function updateItemComment(Request $request, Checklist $checklist, ChecklistItem $item)
+    {
+        $this->ensureChecklistItemBelongsToChecklist($checklist, $item);
+
+        $data = $request->validate([
+            'comment' => ['required', 'string', 'min:1', 'max:2000'],
+        ]);
+
+        $newComment = trim($data['comment']);
+        $oldComment = $item->qa_comment;
+        $changeType = blank($oldComment) ? 'comment_added' : 'comment_updated';
+
+        $item->update([
+            'qa_comment' => $newComment,
+        ]);
+
+        ChecklistItemHistory::create([
+            'checklist_item_id' => $item->id,
+            'changed_by' => Auth::id(),
+            'field_name' => 'qa_comment',
+            'old_value' => $oldComment,
+            'new_value' => $newComment,
+            'change_type' => $changeType,
+            'notes' => null,
+        ]);
+
+        return response()->json([
+            'message' => 'Checklist item comment updated.',
+            'comment' => $item->qa_comment,
+            'history' => $this->formatChecklistItemHistoryCollection($item),
+        ]);
     }
 
     private function authorizeChecklistDesign(Checklist $checklist): void
     {
-        abort_unless($checklist->project_id, 403, 'Only project execution checklists can be edited here.');
+        if (!$checklist->project_id) {
+            abort_unless(
+                Auth::id() && (int) $checklist->created_by === (int) Auth::id(),
+                403,
+                'Only the creator can edit this system checklist.'
+            );
+            return;
+        }
+
         $this->ensureTesterOwnsProject(Project::findOrFail($checklist->project_id));
+    }
+
+    private function ensureChecklistAccessible(Project $project): void
+    {
+        $user = Auth::user();
+
+        abort_unless(
+            $user && (
+                $user->hasRole('admin') ||
+                $user->hasRole('chef') ||
+                ($user->hasRole('testeur') && $project->testers()->where('users.id', $user->id)->exists())
+            ),
+            403,
+            'Only assigned testers, project managers, or admins can view this execution checklist.'
+        );
     }
 
     private function ensureTesterOwnsProject(Project $project): void
@@ -552,6 +620,37 @@ class ChecklistController extends Controller
             403,
             'Only assigned testers can manage execution checklists for this project.'
         );
+    }
+
+    private function ensureChecklistItemBelongsToChecklist(Checklist $checklist, ChecklistItem $item): void
+    {
+        if ((int) $item->checklist_id !== (int) $checklist->id) {
+            abort(422, 'Checklist item does not belong to this checklist.');
+        }
+    }
+
+    private function formatChecklistItemHistoryCollection(ChecklistItem $item)
+    {
+        return $item->history()
+            ->with('changedBy:id,name,email')
+            ->get()
+            ->map(fn (ChecklistItemHistory $history) => $this->formatChecklistItemHistoryEntry($history))
+            ->values();
+    }
+
+    private function formatChecklistItemHistoryEntry(ChecklistItemHistory $history): array
+    {
+        return [
+            'id' => $history->id,
+            'field_name' => $history->field_name,
+            'old_value' => $history->old_value,
+            'new_value' => $history->new_value,
+            'change_type' => $history->change_type,
+            'action_type' => $history->change_type,
+            'notes' => $history->notes,
+            'created_at' => optional($history->created_at)->toISOString(),
+            'changed_by' => $history->changedBy,
+        ];
     }
 
     private function normalizeItemStatus(string $status): string

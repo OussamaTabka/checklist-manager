@@ -6,10 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\VersionItem;
 use App\Models\ItemChange;
 use App\Models\TestRun;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
 class VersionItemController extends Controller
 {
+    public function __construct(
+        private readonly NotificationService $notificationService
+    ) {
+    }
+
     public function updateStatus(Request $request, VersionItem $versionItem)
     {
         $data = $request->validate([
@@ -41,6 +47,11 @@ class VersionItemController extends Controller
             'new_value' => $data['status'],
             'change_type' => 'status_changed',
         ]);
+
+        $versionItem->loadMissing('version.project');
+        if ($versionItem->version) {
+            $this->notificationService->syncPendingTestNotifications($versionItem->version->fresh(['project.creator.roles', 'project.testers.roles', 'items:id,project_version_id,status']));
+        }
 
         return response()->json([
             'message' => 'Status updated',

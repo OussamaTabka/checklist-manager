@@ -25,7 +25,7 @@ class UserInvitationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'You are invited to Checklist Manager',
+            subject: 'Invitation to IntelliTest',
         );
     }
 

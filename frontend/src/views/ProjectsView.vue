@@ -1,13 +1,16 @@
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
+  Archive,
   ArrowLeft,
   ArrowRight,
   ChartColumn,
   CirclePlus,
+  Ellipsis,
   LoaderCircle,
   Pencil,
+  RotateCcw,
   Rocket,
   Search,
   Save,
@@ -22,14 +25,23 @@ import {
   analyzeImportedUserStories,
 } from '@/lib/projectUserStories'
 import { useAuthStore } from '@/stores/auth'
-import { translateCurrentPhrase } from '@/lib/runtimeTranslations'
+import { useSettingsStore } from '@/stores/settings'
+import { useToastStore } from '@/stores/toast'
+import { localizeError, localizeMessage, tr } from '@/lib/localization'
 
 const auth = useAuthStore()
+const settings = useSettingsStore()
+const toast = useToastStore()
 const route = useRoute()
 const router = useRouter()
 
 const projects = ref([])
+const archivedProjects = ref([])
 const pagination = reactive({
+  current_page: 1,
+  last_page: 1,
+})
+const archivedPagination = reactive({
   current_page: 1,
   last_page: 1,
 })
@@ -39,13 +51,20 @@ const listError = ref('')
 const createError = ref('')
 const successMessage = ref('')
 const loadingProjects = ref(false)
+const loadingArchivedProjects = ref(false)
 const creating = ref(false)
 const showProjectForm = ref(false)
 const showAdvancedFilters = ref(false)
+const openProjectMenuId = ref(null)
 const importValidationLoading = ref(false)
 const importedStoriesFile = ref(null)
 const importedStoriesAnalysis = ref(null)
 const userStoriesFileInput = ref(null)
+const manualStorySeed = ref(1)
+const manualStories = ref([])
+const projectNameError = ref('')
+const checkingProjectName = ref(false)
+const projectNameValidationTimer = ref(null)
 
 const filters = reactive({
   name: '',
@@ -137,6 +156,15 @@ const hasActiveFilters = computed(() => activeFilterBadges.value.length > 0)
 const importedValidUserStoriesCount = computed(() => importedStoriesAnalysis.value?.validCount || 0)
 const importedInvalidUserStoriesCount = computed(() => importedStoriesAnalysis.value?.invalidCount || 0)
 const hasImportedUserStories = computed(() => importedValidUserStoriesCount.value >= 1)
+const manualValidUserStoriesCount = computed(() =>
+  manualStories.value.filter(
+    (story) =>
+      story.title.trim() !== '' &&
+      story.description.trim() !== '' &&
+      story.acceptance_criteria.trim() !== ''
+  ).length
+)
+const isProjectNameTaken = computed(() => projectNameError.value !== '')
 
 const projectMetrics = computed(() => {
   const totalProjects = projects.value.length
@@ -177,20 +205,145 @@ const filteredProjects = computed(() => {
   })
 })
 
-async function loadProjects(page = 1) {
+function createEmptyManualStory() {
+  const localId = manualStorySeed.value
+  manualStorySeed.value += 1
+
+  return {
+    localId,
+    title: '',
+    description: '',
+    acceptance_criteria: '',
+    priority: 'medium',
+    status: 'backlog',
+  }
+}
+
+function addManualStory() {
+  manualStories.value = [...manualStories.value, createEmptyManualStory()]
+}
+
+function removeManualStory(localId) {
+  manualStories.value = manualStories.value.filter((story) => story.localId !== localId)
+}
+
+function buildManualStoriesPayload() {
+  return manualStories.value
+    .map((story) => ({
+      title: story.title.trim(),
+      description: story.description.trim(),
+      acceptance_criteria: story.acceptance_criteria.trim(),
+      priority: story.priority,
+      status: story.status,
+    }))
+    .filter(
+      (story) =>
+        story.title !== '' ||
+        story.description !== '' ||
+        story.acceptance_criteria !== ''
+    )
+}
+
+function buildUserStoriesSuccessMessage(summary) {
+  const createdParts = []
+  const manualCreated = Number(summary?.manual_created || 0)
+  const importedCreated = Number(summary?.imported_created || 0)
+  const failedManuals = Number(summary?.failed_manuals || 0)
+  const failedImports = Number(summary?.failed_imports || 0)
+  const ignoredCount = failedManuals + failedImports
+
+  if (manualCreated > 0) {
+    createdParts.push(`${manualCreated} User Stor${manualCreated > 1 ? 'ies manuelles' : 'y manuelle'}`)
+  }
+
+  if (importedCreated > 0) {
+    createdParts.push(`${importedCreated} User Stor${importedCreated > 1 ? 'ies importées' : 'y importée'}`)
+  }
+
+  if (createdParts.length === 0) {
+    return tr('project_created_success', {}, settings.language)
+  }
+
+  const createdText = createdParts.join(' et ')
+  const totalCreated = manualCreated + importedCreated
+  const addedVerb = totalCreated > 1 ? 'ajoutées' : 'ajoutée'
+  if (ignoredCount > 0) {
+    return localizeMessage(`Projet cree avec succes. ${createdText} ${addedVerb} et ${ignoredCount} ligne(s) ont ete ignoree(s).`, settings.language)
+  }
+
+  return localizeMessage(`Projet cree avec succes. ${createdText} ${addedVerb}.`, settings.language)
+}
+
+async function validateProjectName() {
+  const trimmedName = form.name.trim()
+
+  if (!showProjectForm.value || trimmedName === '') {
+    projectNameError.value = ''
+    checkingProjectName.value = false
+    return true
+  }
+
+  checkingProjectName.value = true
+
+  try {
+    const response = await apiRequest(
+      withQuery('/projects/validate-name', {
+        name: trimmedName,
+        ignore_id: form.id,
+      }),
+      {},
+      auth.token
+    )
+
+    projectNameError.value = response?.exists ? tr('project_name_exists', {}, settings.language) : ''
+    return !response?.exists
+  } catch (error) {
+    projectNameError.value = localizeError(error, 'project_name_check_failed', settings.language)
+    return false
+  } finally {
+    checkingProjectName.value = false
+  }
+}
+
+async function loadProjects(page = pagination.current_page || 1) {
   loadingProjects.value = true
   listError.value = ''
 
   try {
-    const data = await apiRequest(withQuery('/projects', { page }), {}, auth.token)
+    const data = await apiRequest(withQuery('/projects', { page, status: 'active' }), {}, auth.token)
     projects.value = data.data || []
     pagination.current_page = data.current_page
     pagination.last_page = data.last_page
   } catch (error) {
-    listError.value = error.data?.message || error.message
+    listError.value = localizeError(error, 'error_generic', settings.language)
   } finally {
     loadingProjects.value = false
   }
+}
+
+async function loadArchivedProjects(page = archivedPagination.current_page || 1) {
+  if (!auth.canManageProjects) {
+    archivedProjects.value = []
+    return
+  }
+
+  loadingArchivedProjects.value = true
+  listError.value = ''
+
+  try {
+    const data = await apiRequest(withQuery('/projects', { page, status: 'archived' }), {}, auth.token)
+    archivedProjects.value = data.data || []
+    archivedPagination.current_page = data.current_page
+    archivedPagination.last_page = data.last_page
+  } catch (error) {
+    listError.value = localizeError(error, 'error_generic', settings.language)
+  } finally {
+    loadingArchivedProjects.value = false
+  }
+}
+
+async function loadProjectLists(activePage = pagination.current_page || 1, archivedPage = archivedPagination.current_page || 1) {
+  await Promise.all([loadProjects(activePage), loadArchivedProjects(archivedPage)])
 }
 
 async function loadProjectMetadata() {
@@ -203,8 +356,7 @@ async function loadProjectMetadata() {
     users.value = data.testers || []
   } catch (error) {
     users.value = []
-    createError.value =
-      error.data?.message || error.message || 'Impossible de charger les données nécessaires à la création du projet.'
+    createError.value = localizeError(error, 'project_metadata_failed', settings.language)
   }
 }
 
@@ -214,6 +366,12 @@ async function submitProject() {
   creating.value = true
 
   try {
+    const projectNameIsValid = await validateProjectName()
+    if (!projectNameIsValid) {
+      createError.value = tr('project_choose_another_name', {}, settings.language)
+      return
+    }
+
     if (form.id) {
       const payload = {
         name: form.name,
@@ -224,14 +382,16 @@ async function submitProject() {
       }
 
       await apiRequest(`/projects/${form.id}`, { method: 'PUT', body: payload }, auth.token)
-      successMessage.value = 'Le projet a été mis à jour avec succès.'
+      successMessage.value = tr('project_updated_success', {}, settings.language)
     } else {
       if (importedStoriesFile.value && !importedStoriesAnalysis.value) {
         await analyzeSelectedUserStoriesFile()
       }
 
-      if (!hasImportedUserStories.value) {
-        createError.value = 'Veuillez importer un fichier contenant au moins une User Story valide.'
+      const manualStoriesPayload = buildManualStoriesPayload()
+
+      if (!hasImportedUserStories.value && manualValidUserStoriesCount.value === 0) {
+        createError.value = tr('user_story_required', {}, settings.language)
         return
       }
 
@@ -249,30 +409,28 @@ async function submitProject() {
         payload.append('user_stories_file', importedStoriesFile.value)
       }
 
+      if (manualStoriesPayload.length > 0) {
+        payload.append('manual_user_stories', JSON.stringify(manualStoriesPayload))
+      }
+
       const response = await apiRequest('/projects', { method: 'POST', body: payload }, auth.token)
       const summary = response?.user_stories_summary
 
       if (summary) {
-        const ignoredCount = Number(summary.failed_imports || 0)
-        if (ignoredCount > 0) {
-          successMessage.value = `Projet créé avec succès. ${summary.total_created} User Stories ont été ajoutées et ${ignoredCount} ligne(s) ont été ignorée(s).`
-        } else {
-          successMessage.value = `Projet créé avec succès. ${summary.total_created} User Stories ont été ajoutées.`
-        }
+        successMessage.value = buildUserStoriesSuccessMessage(summary)
       } else {
-        successMessage.value = 'Projet créé avec succès.'
+        successMessage.value = tr('project_created_success', {}, settings.language)
       }
 
       resetForm(true)
-      await loadProjects(1)
+      await loadProjectLists(1, archivedPagination.current_page)
       return
     }
 
     resetForm(true)
-    await loadProjects(1)
+    await loadProjectLists(1, archivedPagination.current_page)
   } catch (error) {
-    createError.value =
-      error.data?.message || error.message || 'Impossible de créer le projet. Veuillez vérifier les informations saisies.'
+    createError.value = localizeError(error, 'project_create_failed', settings.language)
   } finally {
     creating.value = false
   }
@@ -291,7 +449,7 @@ async function analyzeSelectedUserStoriesFile() {
   try {
     importedStoriesAnalysis.value = await analyzeImportedUserStories(importedStoriesFile.value)
   } catch (error) {
-    createError.value = error.message || 'Impossible de lire le fichier de User Stories.'
+    createError.value = localizeError(error, 'user_story_file_read_failed', settings.language)
   } finally {
     importValidationLoading.value = false
   }
@@ -317,6 +475,7 @@ function clearUserStoriesFile() {
 
 function resetUserStoriesSection() {
   clearUserStoriesFile()
+  manualStories.value = []
 }
 
 function resetForm(closeForm = false) {
@@ -327,6 +486,8 @@ function resetForm(closeForm = false) {
   form.app_url = ''
   form.tester_ids = []
   resetUserStoriesSection()
+  projectNameError.value = ''
+  checkingProjectName.value = false
 
   if (closeForm) {
     showProjectForm.value = false
@@ -383,6 +544,7 @@ function getHostname(url) {
 function openCreateForm() {
   createError.value = ''
   successMessage.value = ''
+  projectNameError.value = ''
   resetForm(false)
   showProjectForm.value = true
 }
@@ -409,6 +571,7 @@ function openCreateFormFromQuery() {
 function editProject(project) {
   createError.value = ''
   successMessage.value = ''
+  projectNameError.value = ''
   resetUserStoriesSection()
   showProjectForm.value = true
   form.id = project.id
@@ -419,12 +582,22 @@ function editProject(project) {
   form.tester_ids = (project.testers || []).map((tester) => tester.id)
 }
 
+function toggleProjectMenu(projectId) {
+  openProjectMenuId.value = openProjectMenuId.value === projectId ? null : projectId
+}
+
+function closeProjectMenu() {
+  openProjectMenuId.value = null
+}
+
 function canManageProject(project) {
   return auth.isAdmin || project.created_by === auth.user?.id
 }
 
 async function deleteProject(projectId) {
-  if (!confirm(translateCurrentPhrase('Are you sure you want to delete this project?'))) {
+  closeProjectMenu()
+
+  if (!confirm(tr('confirm_archive_project', {}, settings.language))) {
     return
   }
 
@@ -432,16 +605,56 @@ async function deleteProject(projectId) {
 
   try {
     await apiRequest(`/projects/${projectId}`, { method: 'DELETE' }, auth.token)
-    successMessage.value = 'Le projet a été archivé avec succès.'
-    await loadProjects(1)
+    successMessage.value = tr('project_archived_success', {}, settings.language)
+    await loadProjectLists(1, 1)
   } catch (error) {
-    listError.value = error.data?.message || error.message
+    listError.value = localizeError(error, 'error_generic', settings.language)
+  }
+}
+
+async function restoreProject(project) {
+  closeProjectMenu()
+  listError.value = ''
+
+  try {
+    await apiRequest(`/projects/${project.id}/restore`, { method: 'POST' }, auth.token)
+    successMessage.value = tr('project_restored_success', {}, settings.language)
+    await loadProjectLists(1, archivedPagination.current_page)
+  } catch (error) {
+    listError.value = localizeError(error, 'error_generic', settings.language)
+  }
+}
+
+async function permanentlyDeleteProject(project) {
+  closeProjectMenu()
+
+  if (!confirm(tr('confirm_delete_project_permanent', { name: project.name }, settings.language))) {
+    return
+  }
+
+  listError.value = ''
+
+  try {
+    await apiRequest(`/projects/${project.id}/permanent`, { method: 'DELETE' }, auth.token)
+    successMessage.value = tr('project_deleted_success', {}, settings.language)
+    await loadProjectLists(pagination.current_page, archivedPagination.current_page)
+  } catch (error) {
+    listError.value = localizeError(error, 'error_generic', settings.language)
   }
 }
 
 onMounted(async () => {
-  await Promise.all([loadProjects(), loadProjectMetadata()])
+  window.addEventListener('click', closeProjectMenu)
+  await Promise.all([loadProjectLists(1, 1), loadProjectMetadata()])
   openCreateFormFromQuery()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('click', closeProjectMenu)
+  if (projectNameValidationTimer.value) {
+    clearTimeout(projectNameValidationTimer.value)
+    projectNameValidationTimer.value = null
+  }
 })
 
 watch(
@@ -450,6 +663,37 @@ watch(
     openCreateFormFromQuery()
   },
 )
+
+watch(
+  () => form.name,
+  (value) => {
+    if (projectNameValidationTimer.value) {
+      clearTimeout(projectNameValidationTimer.value)
+      projectNameValidationTimer.value = null
+    }
+
+    if (!showProjectForm.value || String(value || '').trim() === '') {
+      projectNameError.value = ''
+      checkingProjectName.value = false
+      return
+    }
+
+    checkingProjectName.value = true
+    projectNameValidationTimer.value = setTimeout(() => {
+      projectNameValidationTimer.value = null
+      validateProjectName()
+    }, 350)
+  },
+)
+
+watch(successMessage, (message) => {
+  if (!message) {
+    return
+  }
+
+  toast.success(message)
+  successMessage.value = ''
+})
 </script>
 
 <template>
@@ -462,12 +706,6 @@ watch(
           <span>{{ projectPageCopy.title }}</span>
         </h1>
         <p class="muted page-subtitle">{{ projectPageCopy.description }}</p>
-      </div>
-      <div class="dashboard-command-actions">
-        <button v-if="auth.canManageProjects" class="btn btn-primary create-project-btn" type="button" @click="openCreateForm">
-          <CirclePlus :size="16" />
-          <span>Créer un projet</span>
-        </button>
       </div>
     </div>
 
@@ -558,13 +796,20 @@ watch(
       </div>
 
       <p v-if="createError" class="error" data-testid="projects-msg-error">{{ createError }}</p>
-      <p v-if="successMessage" class="success" data-testid="projects-msg-success">{{ successMessage }}</p>
 
       <form class="stack" @submit.prevent="submitProject" data-testid="projects-form">
         <div class="form-grid-two">
           <div class="field">
             <label class="field-label-strong">Nom du projet</label>
-            <input v-model="form.name" required placeholder="ex. : Phase 1 de test API" data-testid="projects-input-name" />
+            <input
+              v-model="form.name"
+              required
+              placeholder="ex. : Phase 1 de test API"
+              data-testid="projects-input-name"
+              @blur="validateProjectName"
+            />
+            <p v-if="checkingProjectName" class="muted helper-text">Vérification du nom du projet...</p>
+            <p v-else-if="projectNameError" class="error">{{ projectNameError }}</p>
           </div>
           <div class="field">
             <label class="field-label-strong">URL de l’application</label>
@@ -610,6 +855,7 @@ watch(
                 </div>
               </label>
             </div>
+
           </div>
         </div>
 
@@ -622,14 +868,94 @@ watch(
           </div>
 
           <p class="muted helper-text">
-            Importez un fichier contenant les User Stories initiales du projet afin de définir le périmètre fonctionnel du backlog dès la création.
+            Préparez le backlog initial du projet en ajoutant des User Stories manuellement ou en important un fichier structuré dès la création.
           </p>
 
           <div class="story-source-summary">
+            <span class="mini-chip">{{ manualValidUserStoriesCount }} User Story{{ manualValidUserStoriesCount > 1 ? 'ies manuelles' : ' manuelle' }}</span>
             <span class="mini-chip">{{ importedValidUserStoriesCount }} User Story{{ importedValidUserStoriesCount > 1 ? 'ies' : 'y' }} importée{{ importedValidUserStoriesCount > 1 ? 's' : '' }}</span>
             <span v-if="importedInvalidUserStoriesCount > 0" class="mini-chip mini-chip-warn">
               {{ importedInvalidUserStoriesCount }} ligne(s) ignorée(s)
             </span>
+          </div>
+
+          <div class="card stack stack-gap-sm">
+            <div class="manual-story-card-head">
+              <div class="section-divider">
+                <h4 class="section-heading-with-icon-sm">
+                  <Pencil :size="16" :stroke-width="2.1" />
+                  <span>Saisie manuelle</span>
+                </h4>
+              </div>
+
+              <button type="button" class="btn btn-secondary btn-sm" @click="addManualStory">
+                <CirclePlus :size="14" />
+                <span>Ajouter une User Story</span>
+              </button>
+            </div>
+
+            <p class="muted helper-text">
+              Ajoutez manuellement des User Stories si vous ne souhaitez pas passer par un fichier. Le titre, la description et les critères d’acceptation sont requis.
+            </p>
+
+            <div v-if="manualStories.length === 0" class="muted empty-state-box">
+              Aucune User Story manuelle pour le moment.
+            </div>
+
+            <div v-else class="stack stack-gap-sm">
+              <article v-for="(story, index) in manualStories" :key="story.localId" class="manual-story-card stack stack-gap-sm">
+                <div class="manual-story-card-head">
+                  <div>
+                    <strong>User Story {{ index + 1 }}</strong>
+                    <p class="muted">Préparez un besoin métier prêt à être rattaché au projet dès sa création.</p>
+                  </div>
+
+                  <button type="button" class="btn btn-danger btn-sm" @click="removeManualStory(story.localId)">
+                    <Trash2 :size="14" />
+                    <span>Retirer</span>
+                  </button>
+                </div>
+
+                <div class="form-grid-two">
+                  <div class="field">
+                    <label class="field-label-strong">Titre</label>
+                    <input v-model="story.title" placeholder="ex. : Se connecter avec email et mot de passe" />
+                  </div>
+
+                  <div class="field">
+                    <label class="field-label-strong">Priorité</label>
+                    <select v-model="story.priority">
+                      <option value="critical">Critique</option>
+                      <option value="high">Haute</option>
+                      <option value="medium">Moyenne</option>
+                      <option value="low">Basse</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label class="field-label-strong">Description</label>
+                  <textarea v-model="story.description" rows="3" placeholder="Décrivez le besoin utilisateur, le contexte et le comportement attendu..." />
+                </div>
+
+                <div class="form-grid-two">
+                  <div class="field">
+                    <label class="field-label-strong">Critères d’acceptation</label>
+                    <textarea v-model="story.acceptance_criteria" rows="3" placeholder="Given / When / Then, règles de validation, cas attendus..." />
+                  </div>
+
+                  <div class="field">
+                    <label class="field-label-strong">Statut initial</label>
+                    <select v-model="story.status">
+                      <option value="backlog">Backlog</option>
+                      <option value="in_progress">En cours</option>
+                      <option value="ready_for_test">Prêt pour test</option>
+                      <option value="completed">Terminée</option>
+                    </select>
+                  </div>
+                </div>
+              </article>
+            </div>
           </div>
 
           <div class="card stack stack-gap-sm">
@@ -676,7 +1002,7 @@ watch(
         </div>
 
         <div class="form-actions-row">
-          <button class="btn btn-primary btn-min-wide" type="submit" :disabled="creating" data-testid="projects-btn-submit">
+          <button class="btn btn-primary btn-min-wide" type="submit" :disabled="creating || checkingProjectName || isProjectNameTaken" data-testid="projects-btn-submit">
             <LoaderCircle v-if="creating" :size="16" class="spin" />
             <Save v-else-if="form.id" :size="16" />
             <Sparkles v-else :size="16" />
@@ -699,7 +1025,7 @@ watch(
       </div>
 
       <p class="muted">
-        Ouvrez un projet pour accéder à son espace de suivi, consulter les versions d’exécution et lancer les tests sur les éléments exécutables.
+        Ouvrez un projet pour accéder à son espace de suivi et consulter ses user stories.
       </p>
 
       <p v-if="listError" class="error" data-testid="projects-msg-error-list">{{ listError }}</p>
@@ -708,11 +1034,33 @@ watch(
       <div v-if="!loadingProjects && filteredProjects.length > 0" class="projects-grid" data-testid="projects-table">
         <article v-for="project in filteredProjects" :key="project.id" class="project-card">
           <div class="project-card-head">
-            <div>
+            <div class="project-card-copy">
               <RouterLink :to="{ name: 'project-detail', params: { id: project.id } }" class="project-title-link">
                 {{ project.name }}
               </RouterLink>
-              <p class="muted meta-line">#{{ project.id }} • {{ project.creator?.name || 'Créateur inconnu' }}</p>
+              <p class="muted meta-line project-card-meta">
+                <span>#{{ project.id }}</span>
+                <span class="project-card-dot" aria-hidden="true"></span>
+                <span>{{ project.creator?.name || 'Chef de projet' }}</span>
+              </p>
+            </div>
+
+            <div v-if="canManageProject(project)" class="project-card-actions" @click.stop>
+              <button
+                type="button"
+                class="project-menu-trigger"
+                aria-label="Ouvrir les actions du projet"
+                @click.stop="toggleProjectMenu(project.id)"
+              >
+                <Ellipsis :size="18" />
+              </button>
+
+              <div v-if="openProjectMenuId === project.id" class="project-row-menu">
+                <button type="button" class="project-row-menu-item danger" @click="closeProjectMenu(); deleteProject(project.id)">
+                  <Archive :size="16" />
+                  <span>Archiver</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -722,7 +1070,6 @@ watch(
             <span class="mini-label">Backlog</span>
             <div class="chip-row">
               <span class="mini-chip">{{ project.user_stories_count || 0 }} User Story{{ (project.user_stories_count || 0) > 1 ? 'ies' : '' }}</span>
-              <span class="mini-chip">{{ project.versions_count || 0 }} version(s) d’exécution</span>
             </div>
           </div>
 
@@ -748,10 +1095,6 @@ watch(
             <span v-else class="muted app-url-text">Aucune URL renseignée</span>
 
             <div class="actions">
-              <button v-if="canManageProject(project)" class="btn btn-secondary btn-sm" @click="editProject(project)">
-                <Pencil :size="14" />
-                <span>Modifier</span>
-              </button>
               <button v-if="canManageProject(project)" class="btn btn-danger btn-sm" @click="deleteProject(project.id)">
                 <Trash2 :size="14" />
                 <span>Archiver</span>
@@ -772,6 +1115,107 @@ watch(
         </button>
         <span class="muted pagination-text">Page {{ pagination.current_page }} sur {{ pagination.last_page }}</span>
         <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="pagination.current_page >= pagination.last_page" @click="loadProjects(pagination.current_page + 1)" title="Aller à la page suivante">
+          <span>Suivant</span>
+          <ArrowRight :size="14" />
+        </button>
+      </div>
+    </div>
+
+    <div v-if="auth.canManageProjects" class="card stack section-space-xl">
+      <div class="section-divider">
+        <h2 class="section-heading-with-icon">
+          <Archive :size="20" :stroke-width="2.2" />
+          <span>Projets archivés</span>
+        </h2>
+      </div>
+
+      <p class="muted">
+        Les projets archivés sont masqués de la liste principale. Vous pouvez les restaurer ou les supprimer définitivement.
+      </p>
+
+      <p v-if="listError" class="error">{{ listError }}</p>
+      <p v-if="loadingArchivedProjects" class="muted">Chargement des projets archivés...</p>
+
+      <div v-if="!loadingArchivedProjects && archivedProjects.length > 0" class="projects-grid" data-testid="projects-table-archived">
+        <article v-for="project in archivedProjects" :key="`archived-${project.id}`" class="project-card archived-project-card">
+          <div class="project-card-head">
+            <div class="project-card-copy">
+              <h3 class="project-title-static">{{ project.name }}</h3>
+              <p class="muted meta-line project-card-meta">
+                <span>#{{ project.id }}</span>
+                <span class="project-card-dot" aria-hidden="true"></span>
+                <span>{{ project.creator?.name || 'Chef de projet' }}</span>
+              </p>
+            </div>
+
+            <div v-if="canManageProject(project)" class="project-card-actions" @click.stop>
+              <button
+                type="button"
+                class="project-menu-trigger"
+                aria-label="Ouvrir les actions du projet archivé"
+                @click.stop="toggleProjectMenu(`archived-${project.id}`)"
+              >
+                <Ellipsis :size="18" />
+              </button>
+
+              <div v-if="openProjectMenuId === `archived-${project.id}`" class="project-row-menu">
+                <button type="button" class="project-row-menu-item" @click="restoreProject(project)">
+                  <RotateCcw :size="16" />
+                  <span>Restaurer</span>
+                </button>
+                <button type="button" class="project-row-menu-item danger" @click="permanentlyDeleteProject(project)">
+                  <Trash2 :size="16" />
+                  <span>Supprimer définitivement</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <p class="muted description-fixed">{{ project.description || 'Aucun contexte projet renseigné.' }}</p>
+
+          <div class="project-meta-row">
+            <span class="mini-label">Backlog</span>
+            <div class="chip-row">
+              <span class="mini-chip">{{ project.user_stories_count || 0 }} User Story{{ (project.user_stories_count || 0) > 1 ? 'ies' : '' }}</span>
+            </div>
+          </div>
+
+          <div class="project-meta-row">
+            <span class="mini-label">Testeurs</span>
+            <div class="chip-row">
+              <span v-for="tester in project.testers || []" :key="tester.id" class="mini-chip tester-chip">{{ tester.name }}</span>
+              <span v-if="!project.testers || project.testers.length === 0" class="muted">Aucun testeur assigné</span>
+            </div>
+          </div>
+
+          <div class="project-card-footer">
+            <span class="muted app-url-text">Archivé</span>
+
+            <div class="actions">
+              <button v-if="canManageProject(project)" class="btn btn-secondary btn-sm" @click="restoreProject(project)">
+                <RotateCcw :size="14" />
+                <span>Restaurer</span>
+              </button>
+              <button v-if="canManageProject(project)" class="btn btn-danger btn-sm" @click="permanentlyDeleteProject(project)">
+                <Trash2 :size="14" />
+                <span>Supprimer</span>
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div v-if="!loadingArchivedProjects && archivedProjects.length === 0" class="card empty-dashed-card">
+        <p class="muted">Aucun projet archivé pour le moment.</p>
+      </div>
+
+      <div class="pagination pagination-centered">
+        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="archivedPagination.current_page <= 1" @click="loadArchivedProjects(archivedPagination.current_page - 1)" title="Aller à la page précédente">
+          <ArrowLeft :size="14" />
+          <span>Précédent</span>
+        </button>
+        <span class="muted pagination-text">Page {{ archivedPagination.current_page }} sur {{ archivedPagination.last_page }}</span>
+        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="archivedPagination.current_page >= archivedPagination.last_page" @click="loadArchivedProjects(archivedPagination.current_page + 1)" title="Aller à la page suivante">
           <span>Suivant</span>
           <ArrowRight :size="14" />
         </button>
@@ -836,6 +1280,169 @@ watch(
   margin: 0.25rem 0 0;
 }
 
+.projects-grid {
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1.5rem;
+}
+
+.project-card {
+  position: relative;
+  min-height: 236px;
+  padding: 1.55rem 1.45rem;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(219, 228, 239, 0.92);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(252, 253, 255, 0.96));
+  box-shadow: 0 22px 44px -34px rgba(15, 23, 42, 0.22);
+}
+
+.project-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 28px 48px -36px rgba(15, 23, 42, 0.24);
+}
+
+.project-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.project-card-copy {
+  min-width: 0;
+}
+
+.project-title-link,
+.project-title-static {
+  display: inline-block;
+  color: #0f172a;
+  font-size: 1.02rem;
+  font-weight: 800;
+  line-height: 1.5;
+  letter-spacing: -0.02em;
+  max-width: 14ch;
+}
+
+.project-title-static {
+  margin: 0;
+}
+
+.project-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+  font-size: 0.76rem;
+  color: #64748b;
+}
+
+.project-card-dot {
+  width: 0.32rem;
+  height: 0.32rem;
+  border-radius: 999px;
+  background: #2563eb;
+  flex: 0 0 auto;
+}
+
+.project-card-actions {
+  position: relative;
+  margin-left: auto;
+}
+
+.project-menu-trigger {
+  width: 2.45rem;
+  height: 2.45rem;
+  border: 0;
+  border-radius: 999px;
+  background: #f3f6fb;
+  color: #1e293b;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.7);
+}
+
+.project-menu-trigger:hover {
+  background: #eef3fb;
+}
+
+.project-row-menu {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  right: -0.15rem;
+  z-index: 20;
+  min-width: 12.5rem;
+  padding: 0.6rem;
+  border-radius: 1.15rem;
+  border: 1px solid rgba(224, 232, 241, 0.98);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 24px 44px -28px rgba(15, 23, 42, 0.24);
+}
+
+.project-row-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.85rem 0.95rem;
+  border: 0;
+  border-radius: 0.9rem;
+  background: transparent;
+  color: #334155;
+  text-align: left;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.project-row-menu-item:hover {
+  background: #f8fbff;
+}
+
+.project-row-menu-item.danger {
+  color: #dc2626;
+}
+
+.project-row-menu-item svg {
+  flex: 0 0 auto;
+}
+
+.project-card > .description-fixed,
+.project-card > .project-meta-row,
+.project-card > .project-card-footer {
+  display: none;
+}
+
+.dark .project-menu-trigger,
+.dark .project-row-menu {
+  background: rgba(15, 23, 42, 0.96);
+  color: #e2e8f0;
+  border-color: rgba(51, 65, 85, 0.9);
+}
+
+.dark .project-menu-trigger {
+  box-shadow: inset 0 0 0 1px rgba(51, 65, 85, 0.9);
+}
+
+.dark .project-menu-trigger:hover,
+.dark .project-row-menu-item:hover {
+  background: rgba(30, 41, 59, 0.9);
+}
+
+.dark .project-row-menu-item,
+.dark .project-title-link,
+.dark .project-title-static {
+  color: #f8fafc;
+}
+
+.dark .project-row-menu-item.danger {
+  color: #fca5a5;
+}
+
+.dark .project-card-meta {
+  color: #94a3b8;
+}
+
 .mini-chip-warn {
   background: #fff7ed;
   color: #9a3412;
@@ -869,3 +1476,4 @@ watch(
   }
 }
 </style>
+

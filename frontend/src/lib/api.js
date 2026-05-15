@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getCurrentLanguage, localizeMessage, tr } from '@/lib/localization'
 
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]'])
 
@@ -50,7 +51,7 @@ const apiClient = axios.create({
 })
 
 const APP_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '')
-const PUBLIC_AUTH_PATHS = new Set(['/login', '/forgot-password', '/reset-password', '/invitations/validate', '/invitations/accept'])
+const PUBLIC_AUTH_PATHS = new Set(['/login', '/forgot-password', '/reset-password', '/set-password', '/invitations/validate', '/invitations/accept'])
 
 let unauthorizedEventQueued = false
 
@@ -78,13 +79,11 @@ export async function ensureCsrfCookie() {
 }
 
 export async function apiRequest(path, options = {}, token = null) {
+  const currentLanguage = getCurrentLanguage()
+
   try {
     const savedToken = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
     const effectiveToken = token || savedToken
-    const currentLanguage =
-      typeof document !== 'undefined' && document.documentElement?.lang
-        ? document.documentElement.lang
-        : 'fr'
 
     const response = await apiClient.request({
       url: path,
@@ -109,11 +108,12 @@ export async function apiRequest(path, options = {}, token = null) {
 
     const backendMessage = axiosError.response?.data?.message
     const backendError = axiosError.response?.data?.error
+    const fallback = tr('request_failed', {}, currentLanguage)
     const composedMessage = backendError
-      ? `${backendMessage || 'Request failed'}: ${backendError}`
-      : backendMessage || axiosError.message || 'Request failed'
+      ? `${backendMessage || fallback}: ${backendError}`
+      : backendMessage || axiosError.message || fallback
 
-    const error = new Error(composedMessage)
+    const error = new Error(localizeMessage(composedMessage, currentLanguage))
     error.status = status
     error.data = axiosError.response?.data
     throw error

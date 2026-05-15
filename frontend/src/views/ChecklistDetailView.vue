@@ -1,19 +1,45 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useChecklistsStore } from '@/stores/checklists'
 import { useAuthStore } from '@/stores/auth'
-import { translateCurrentPhrase } from '@/lib/runtimeTranslations'
-import { AlertCircle, ArrowLeft, BookOpen, CheckCircle, CheckSquare, Clock, Edit, FileText, Grid3x3, PlayCircle, Square, Trash2, TriangleAlert } from 'lucide-vue-next'
+import { apiRequest } from '@/lib/api'
+import { localizeError, localizeMessage } from '@/lib/localization'
+import { useSettingsStore } from '@/stores/settings'
+import { useToastStore } from '@/stores/toast'
+import {
+  AlertCircle,
+  ArrowLeft,
+  BookOpen,
+  CheckCircle,
+  CheckSquare,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  FileText,
+  Grid3x3,
+  MessageSquare,
+  PlayCircle,
+  Square,
+  TriangleAlert,
+} from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
 const checklistsStore = useChecklistsStore()
 const auth = useAuthStore()
+const settings = useSettingsStore()
+const toast = useToastStore()
 
-const checklistId = route.params.id
+const checklistId = computed(() => route.params.id)
+const projectContextId = computed(() => route.query.projectId || null)
 const expandedItems = ref({})
 const showItemHistory = ref({})
+const historyLoadingByItemId = ref({})
+const commentEditorOpenByItemId = ref({})
+const commentDraftByItemId = ref({})
+const commentBusyByItemId = ref({})
+const technicalDetailsOpen = ref(false)
 const runModalOpen = ref(false)
 const runSubmitBusy = ref(false)
 const runModalError = ref('')
@@ -21,6 +47,19 @@ const runtimeStateByItemId = ref({})
 const pollingItemIds = ref([])
 const pollingTimer = ref(null)
 const CHECKLIST_RUN_BASE_URL_STORAGE_KEY = 'checklist_item_run_base_url'
+const executionContextLoading = ref(false)
+const projectContextName = ref('')
+const projectContextChecklists = ref([])
+
+const COMMENT_PLACEHOLDER = 'Ajouter une observation, un bug constate ou une information utile pour ce test...'
+const STATUS_OPTIONS = ['Not Tested', 'Passed', 'Failed', 'Blocked']
+const TECHNICAL_TEXT_PATTERNS = [
+  /generee?\s+par\s+l'?agent/i,
+  /generateur\s*:/i,
+  /fallback/i,
+  /decision\s+de\s+reutilisation/i,
+  /criteres?\s+d'?acceptation\s+complets?/i,
+]
 
 const runForm = reactive({
   itemId: null,
@@ -29,48 +68,85 @@ const runForm = reactive({
   notes: '',
   useAuth: true,
   watchMode: true,
+  providedInputs: {},
 })
 
 const statusIcons = {
-  'Not Tested': { icon: Square, color: 'text-gray-500', label: 'Non testé' },
-  'Passed': { icon: CheckCircle, color: 'text-green-600', label: 'Réussi' },
-  'Failed': { icon: TriangleAlert, color: 'text-red-600', label: 'Échoué' },
-  'Blocked': { icon: AlertCircle, color: 'text-orange-600', label: 'Bloqué' },
+  'Not Tested': { icon: Square, color: 'text-slate-500', label: 'Non teste' },
+  Passed: { icon: CheckCircle, color: 'text-emerald-600', label: 'Reussi' },
+  Failed: { icon: TriangleAlert, color: 'text-rose-600', label: 'Echoue' },
+  Blocked: { icon: AlertCircle, color: 'text-amber-600', label: 'Bloque' },
 }
 
 const criticalityColors = {
-  Low: 'bg-green-100 text-green-800',
-  Medium: 'bg-yellow-100 text-yellow-800',
+  Low: 'bg-emerald-100 text-emerald-800',
+  Medium: 'bg-amber-100 text-amber-800',
   High: 'bg-orange-100 text-orange-800',
-  Critical: 'bg-red-100 text-red-800',
+  Critical: 'bg-rose-100 text-rose-800',
   Major: 'bg-orange-100 text-orange-800',
-  Minor: 'bg-slate-100 text-slate-800',
+  Minor: 'bg-slate-100 text-slate-700',
 }
 
-const fallbackItemStatus = { icon: Square, color: 'text-gray-500', label: 'Non testé' }
+const fallbackItemStatus = { icon: Square, color: 'text-slate-500', label: 'Non teste' }
 
 const checklist = computed(() => checklistsStore.currentChecklist)
+const relatedChecklistOptions = computed(() => {
+  const unique = new Map()
+
+  for (const item of projectContextChecklists.value) {
+    if (item?.id) {
+      unique.set(String(item.id), item)
+    }
+  }
+
+  if (checklist.value?.id && !unique.has(String(checklist.value.id))) {
+    unique.set(String(checklist.value.id), checklist.value)
+  }
+
+  return Array.from(unique.values())
+})
 
 const scenariosStats = computed(() => {
   const items = Array.isArray(checklist.value?.items) ? checklist.value.items : []
-  if (!items.length) {
-    return { total: 0, passed: 0, failed: 0, blocked: 0, notTested: 0 }
-  }
-
   const stats = { total: items.length, passed: 0, failed: 0, blocked: 0, notTested: 0 }
+
   items.forEach((item) => {
     const status = displayStatus(item.status)
-    if (status === 'Passed') stats.passed++
-    else if (status === 'Failed') stats.failed++
-    else if (status === 'Blocked') stats.blocked++
-    else stats.notTested++
+    if (status === 'Passed') stats.passed += 1
+    else if (status === 'Failed') stats.failed += 1
+    else if (status === 'Blocked') stats.blocked += 1
+    else stats.notTested += 1
   })
+
   return stats
 })
 
 const nextRunnableItem = computed(() => {
   const items = Array.isArray(checklist.value?.items) ? checklist.value.items : []
   return items.find((item) => ['Not Tested', 'Failed', 'Blocked'].includes(displayStatus(item.status))) || items[0] || null
+})
+
+const currentRunProfile = computed(() => {
+  if (!runForm.itemId) return null
+  return runtimeStateByItemId.value[runForm.itemId]?.execution_profile || null
+})
+
+const publicChecklistDescription = computed(() => splitTechnicalText(checklist.value?.description || '').visible)
+const publicAcceptanceCriteria = computed(() => splitTechnicalText(checklist.value?.acceptance_criteria || '').visible)
+const technicalDetailsSections = computed(() => {
+  const sections = []
+  const description = splitTechnicalText(checklist.value?.description || '')
+  const acceptanceCriteria = splitTechnicalText(checklist.value?.acceptance_criteria || '')
+
+  if (description.technical) {
+    sections.push({ title: 'Description technique', content: description.technical })
+  }
+
+  if (acceptanceCriteria.technical) {
+    sections.push({ title: 'Criteres techniques', content: acceptanceCriteria.technical })
+  }
+
+  return sections
 })
 
 function displayStatus(status) {
@@ -82,61 +158,68 @@ function getItemStatusMeta(status) {
 }
 
 function getItemCriticalityClass(criticality) {
-  return criticalityColors[criticality] || 'bg-gray-100 text-gray-700'
+  return criticalityColors[criticality] || 'bg-slate-100 text-slate-700'
+}
+
+function getItemPriorityClass(priority) {
+  if (priority === 'High') return 'bg-rose-100 text-rose-700'
+  if (priority === 'Medium') return 'bg-amber-100 text-amber-700'
+  if (priority === 'Low') return 'bg-emerald-100 text-emerald-700'
+  return 'bg-slate-100 text-slate-700'
 }
 
 function formatChecklistPriority(priority) {
-  if (!priority) return 'Non définie'
+  if (!priority) return 'Non definie'
   const value = String(priority)
   return value.charAt(0).toUpperCase() + value.slice(1)
 }
 
 function formatChecklistStatus(status) {
-  if (!status) return 'Non défini'
+  if (!status) return 'Non defini'
   const labels = {
     backlog: 'Backlog',
     in_progress: 'En cours',
-    ready_for_test: 'Prêt pour test',
-    completed: 'Terminée',
+    ready_for_test: 'Pret pour test',
+    completed: 'Terminee',
     pending: 'En attente',
-    passed: 'Réussi',
-    failed: 'Échoué',
-    blocked: 'Bloqué',
+    passed: 'Reussi',
+    failed: 'Echoue',
+    blocked: 'Bloque',
     draft: 'Brouillon',
-    approved: 'Approuvée',
-    archived: 'Archivée',
+    approved: 'Approuvee',
+    archived: 'Archivee',
   }
   return labels[String(status)] || String(status).replaceAll('_', ' ')
 }
 
 function getChecklistPriorityTagClass(priority) {
-  if (priority === 'critical') return 'text-red-900 border-red-300 bg-red-100'
+  if (priority === 'critical') return 'text-rose-900 border-rose-300 bg-rose-100'
   if (priority === 'high') return 'text-orange-900 border-orange-300 bg-orange-100'
-  if (priority === 'medium') return 'text-yellow-900 border-yellow-300 bg-yellow-100'
-  if (priority === 'low') return 'text-green-900 border-green-300 bg-green-100'
-  return 'text-gray-900 border-gray-300 bg-gray-100'
+  if (priority === 'medium') return 'text-amber-900 border-amber-300 bg-amber-100'
+  if (priority === 'low') return 'text-emerald-900 border-emerald-300 bg-emerald-100'
+  return 'text-slate-900 border-slate-300 bg-slate-100'
 }
 
 function getScenarioStatusTagClass(status) {
   const display = displayStatus(status)
-  if (display === 'Passed') return 'text-green-900 border-green-300 bg-green-100'
-  if (display === 'Failed') return 'text-red-900 border-red-300 bg-red-100'
-  if (display === 'Blocked') return 'text-orange-900 border-orange-300 bg-orange-100'
-  return 'text-gray-900 border-gray-300 bg-gray-100'
+  if (display === 'Passed') return 'text-emerald-900 border-emerald-300 bg-emerald-100'
+  if (display === 'Failed') return 'text-rose-900 border-rose-300 bg-rose-100'
+  if (display === 'Blocked') return 'text-amber-900 border-amber-300 bg-amber-100'
+  return 'text-slate-900 border-slate-300 bg-slate-100'
 }
 
 function executionStateLabel(state) {
   switch (state) {
     case 'queued':
-      return 'En file d’attente'
+      return 'En file'
     case 'running':
-      return 'En cours'
+      return 'Execution en cours'
     case 'passed':
-      return 'Réussi'
+      return 'Execution reussie'
     case 'failed':
-      return 'Échoué'
+      return 'Execution echouee'
     case 'blocked':
-      return 'Bloqué'
+      return 'Execution bloquee'
     default:
       return 'En attente'
   }
@@ -146,15 +229,22 @@ function executionStateClass(state) {
   return `run-chip run-chip-${state}`
 }
 
-function stateForItem(item) {
-  return runtimeStateByItemId.value[item.id] || {
-    execution_state: mapStatusToExecutionState(displayStatus(item.status)),
+function createRuntimeState(status = 'Not Tested') {
+  return {
+    execution_state: mapStatusToExecutionState(displayStatus(status)),
     last_run_id: null,
     last_run_status: null,
     last_error_message: null,
     execution_trace: [],
     artifacts: { trace: [], screenshot: [], video: [] },
+    execution_profile: null,
+    generated_plan: null,
+    failure_source: null,
   }
+}
+
+function stateForItem(item) {
+  return runtimeStateByItemId.value[item.id] || createRuntimeState(item.status)
 }
 
 function mapStatusToExecutionState(status) {
@@ -178,8 +268,8 @@ function isRunInFlight(item) {
 function runButtonLabel(item) {
   const state = stateForItem(item).execution_state
   if (state === 'queued') return 'Mise en file...'
-  if (state === 'running') return 'Exécution...'
-  return 'Lancer le test'
+  if (state === 'running') return 'Execution en cours...'
+  return 'Lancer le test automatique'
 }
 
 function getArtifactUrl(item) {
@@ -223,14 +313,7 @@ function seedRuntimeStateFromChecklist() {
 
   for (const item of items) {
     if (!next[item.id]) {
-      next[item.id] = {
-        execution_state: mapStatusToExecutionState(displayStatus(item.status)),
-        last_run_id: null,
-        last_run_status: null,
-        last_error_message: null,
-        execution_trace: [],
-        artifacts: { trace: [], screenshot: [], video: [] },
-      }
+      next[item.id] = createRuntimeState(item.status)
     }
   }
 
@@ -239,10 +322,67 @@ function seedRuntimeStateFromChecklist() {
 
 async function loadChecklist() {
   try {
-    await checklistsStore.fetchChecklist(checklistId)
+    await checklistsStore.fetchChecklist(checklistId.value)
     seedRuntimeStateFromChecklist()
   } catch (error) {
     console.error('Failed to load checklist:', error)
+  }
+}
+
+async function loadExecutionContext() {
+  if (!projectContextId.value) {
+    projectContextName.value = ''
+    projectContextChecklists.value = []
+    return
+  }
+
+  try {
+    executionContextLoading.value = true
+    const [project, stories] = await Promise.all([
+      apiRequest(`/projects/${projectContextId.value}`),
+      apiRequest(`/projects/${projectContextId.value}/user-stories`),
+    ])
+
+    projectContextName.value = project?.name || ''
+
+    const unique = new Map()
+    for (const story of Array.isArray(stories) ? stories : []) {
+      for (const item of story.checklists || []) {
+        if (!unique.has(String(item.id))) {
+          unique.set(String(item.id), item)
+        }
+      }
+    }
+
+    projectContextChecklists.value = Array.from(unique.values())
+  } catch (error) {
+    projectContextName.value = ''
+    projectContextChecklists.value = []
+    console.error('Failed to load execution context:', error)
+  } finally {
+    executionContextLoading.value = false
+  }
+}
+
+async function reloadItemHistory(itemId) {
+  historyLoadingByItemId.value = {
+    ...historyLoadingByItemId.value,
+    [itemId]: true,
+  }
+
+  try {
+    const history = await checklistsStore.getItemHistory(checklistId.value, itemId)
+    const item = checklist.value?.items?.find((entry) => entry.id === itemId)
+    if (item) {
+      item.history = history
+    }
+  } catch (error) {
+    console.error('Failed to load history:', error)
+  } finally {
+    historyLoadingByItemId.value = {
+      ...historyLoadingByItemId.value,
+      [itemId]: false,
+    }
   }
 }
 
@@ -252,40 +392,41 @@ async function toggleItemHistory(itemId) {
     return
   }
 
-  try {
-    const history = await checklistsStore.getItemHistory(checklistId, itemId)
-    const item = checklist.value?.items?.find((entry) => entry.id === itemId)
-    if (item) {
-      item.history = history
-    }
-    showItemHistory.value[itemId] = true
-  } catch (error) {
-    console.error('Failed to load history:', error)
-  }
+  await reloadItemHistory(itemId)
+  showItemHistory.value[itemId] = true
 }
 
-async function updateItemStatus(itemId, newStatus) {
+async function updateItemStatus(item, newStatus) {
   try {
-    await checklistsStore.updateItemStatus(checklistId, itemId, newStatus)
-    const item = checklist.value?.items?.find((entry) => entry.id === itemId)
-    if (item) {
-      item.status = newStatus
-    }
+    await checklistsStore.updateItemStatus(
+      checklistId.value,
+      item.id,
+      newStatus,
+      item.qa_comment || null,
+    )
+
+    item.status = newStatus
+    item.tester = checklist.value?.items?.find((entry) => entry.id === item.id)?.tested_by || item.tester
     runtimeStateByItemId.value = {
       ...runtimeStateByItemId.value,
-      [itemId]: {
-        ...stateForItem({ id: itemId, status: newStatus }),
+      [item.id]: {
+        ...stateForItem({ id: item.id, status: newStatus }),
         execution_state: mapStatusToExecutionState(newStatus),
       },
     }
+
+    if (showItemHistory.value[item.id]) {
+      await reloadItemHistory(item.id)
+    }
   } catch (error) {
+    toast.error(localizeError(error, 'error_generic', settings.language))
     console.error('Failed to update status:', error)
   }
 }
 
 async function refreshExecutionState(itemId) {
   try {
-    const data = await checklistsStore.getItemExecution(checklistId, itemId)
+    const data = await checklistsStore.getItemExecution(checklistId.value, itemId)
     runtimeStateByItemId.value = {
       ...runtimeStateByItemId.value,
       [itemId]: {
@@ -299,16 +440,33 @@ async function refreshExecutionState(itemId) {
           screenshot: Array.isArray(data.artifacts?.screenshot) ? data.artifacts.screenshot : [],
           video: Array.isArray(data.artifacts?.video) ? data.artifacts.video : [],
         },
+        execution_profile: data.execution_profile || null,
+        generated_plan: data.generated_plan || null,
+        failure_source: data.failure_source || null,
       },
     }
 
     const item = checklist.value?.items?.find((entry) => entry.id === itemId)
-    if (item && data.status) {
-      item.status = data.status
+    if (item) {
+      if (data.status) {
+        item.status = data.status
+      }
+      if (typeof data.qa_comment === 'string') {
+        item.qa_comment = data.qa_comment
+      }
+      if (data.tested_at) {
+        item.tested_at = data.tested_at
+      }
+      if (data.tested_by) {
+        item.tester = data.tested_by
+      }
     }
 
     if (!['queued', 'running'].includes(data.execution_state)) {
       removePollingItem(itemId)
+      if (showItemHistory.value[itemId]) {
+        await reloadItemHistory(itemId)
+      }
     }
   } catch {
     // keep polling on transient errors
@@ -344,14 +502,25 @@ function removePollingItem(itemId) {
   stopPollingIfIdle()
 }
 
-function openRunModal(item) {
+function initializeProvidedInputs(profile) {
+  const next = {}
+  const inputs = Array.isArray(profile?.required_inputs) ? profile.required_inputs : []
+  for (const input of inputs) {
+    next[input.key] = typeof input.value === 'string' ? input.value : ''
+  }
+  runForm.providedInputs = next
+}
+
+async function openRunModal(item) {
   runForm.itemId = item.id
+  await refreshExecutionState(item.id)
   const persistedBaseUrl = readPersistedRunBaseUrl()
   runForm.baseUrl = persistedBaseUrl || 'http://localhost:5173'
   runForm.environmentName = ''
   runForm.notes = ''
   runForm.useAuth = true
   runForm.watchMode = true
+  initializeProvidedInputs(runtimeStateByItemId.value[item.id]?.execution_profile || null)
   runModalError.value = ''
   runSubmitBusy.value = false
   runModalOpen.value = true
@@ -372,13 +541,13 @@ async function submitRunModal() {
   runModalError.value = ''
 
   if (!runForm.itemId) {
-    runModalError.value = 'Aucun cas de test sélectionné.'
+    runModalError.value = localizeMessage('Aucun cas de test disponible.', settings.language)
     return
   }
 
   const normalizedBaseUrl = normalizeBaseUrl(runForm.baseUrl.trim())
   if (!isValidHttpUrl(normalizedBaseUrl)) {
-    runModalError.value = 'L’URL de base doit être une adresse http/https valide.'
+    runModalError.value = localizeMessage('Base URL must be a valid http/https URL.', settings.language)
     return
   }
 
@@ -386,65 +555,267 @@ async function submitRunModal() {
   persistRunBaseUrl(normalizedBaseUrl)
 
   try {
-    const response = await checklistsStore.runChecklistItem(checklistId, runForm.itemId, {
+    const response = await checklistsStore.runChecklistItem(checklistId.value, runForm.itemId, {
       base_url: normalizedBaseUrl,
       use_auth: !!runForm.useAuth,
       watch_mode: !!runForm.watchMode,
       environment_name: runForm.environmentName.trim() || null,
       notes: runForm.notes.trim() || null,
+      provided_inputs: { ...runForm.providedInputs },
     })
 
     runtimeStateByItemId.value = {
       ...runtimeStateByItemId.value,
       [runForm.itemId]: {
+        ...stateForItem({ id: runForm.itemId, status: 'Not Tested' }),
         execution_state: response.status === 'started' ? 'running' : 'queued',
         last_run_id: response.run_id || null,
         last_run_status: response.status || 'queued',
         last_error_message: null,
         execution_trace: [],
-        artifacts: { trace: [], screenshot: [], video: [] },
       },
     }
 
     addPollingItem(runForm.itemId)
+
+    if (showItemHistory.value[runForm.itemId]) {
+      await reloadItemHistory(runForm.itemId)
+    }
+
     runModalOpen.value = false
   } catch (error) {
-    runModalError.value = error.response?.data?.message || error.message || 'Impossible de lancer l’exécution.'
+    runModalError.value = localizeError(error, 'error_generic', settings.language)
   } finally {
     runSubmitBusy.value = false
   }
 }
 
-function editChecklist() {
-  router.push({
-    name: 'checklists',
-  })
-}
-
-async function deleteChecklist() {
-  if (!confirm(translateCurrentPhrase('Are you sure you want to delete this checklist? This action cannot be undone.'))) {
-    return
-  }
-
-  try {
-    await checklistsStore.deleteChecklist(checklistId)
-    router.push({ name: 'checklists' })
-  } catch (error) {
-    console.error('Failed to delete checklist:', error)
+function inputTypeForKind(kind) {
+  switch (kind) {
+    case 'email':
+      return 'email'
+    case 'password':
+      return 'password'
+    default:
+      return 'text'
   }
 }
 
 function goBack() {
+  if (projectContextId.value) {
+    router.push({ name: 'project-detail', params: { id: projectContextId.value } })
+    return
+  }
+
   router.back()
+}
+
+function selectChecklistForExecution(targetChecklistId) {
+  if (!targetChecklistId || String(targetChecklistId) === String(checklistId.value)) {
+    return
+  }
+
+  router.push({
+    name: 'checklist-detail',
+    params: { id: targetChecklistId },
+    query: projectContextId.value ? { projectId: projectContextId.value } : {},
+  })
 }
 
 function toggleItem(itemId) {
   expandedItems.value[itemId] = !expandedItems.value[itemId]
 }
 
+function openCommentEditor(item) {
+  commentDraftByItemId.value = {
+    ...commentDraftByItemId.value,
+    [item.id]: item.qa_comment || '',
+  }
+  commentEditorOpenByItemId.value = {
+    ...commentEditorOpenByItemId.value,
+    [item.id]: true,
+  }
+}
+
+function closeCommentEditor(itemId) {
+  commentEditorOpenByItemId.value = {
+    ...commentEditorOpenByItemId.value,
+    [itemId]: false,
+  }
+}
+
+async function saveItemComment(item) {
+  const nextComment = String(commentDraftByItemId.value[item.id] || '').trim()
+  if (!nextComment) {
+    toast.error('Le commentaire est obligatoire.')
+    return
+  }
+
+  commentBusyByItemId.value = {
+    ...commentBusyByItemId.value,
+    [item.id]: true,
+  }
+
+  try {
+    const response = await checklistsStore.updateItemComment(checklistId.value, item.id, nextComment)
+    item.qa_comment = response.comment
+    if (response.history) {
+      item.history = response.history
+    }
+    closeCommentEditor(item.id)
+    toast.success('Commentaire enregistre avec succes.')
+  } catch (error) {
+    toast.error(localizeError(error, 'error_generic', settings.language))
+  } finally {
+    commentBusyByItemId.value = {
+      ...commentBusyByItemId.value,
+      [item.id]: false,
+    }
+  }
+}
+
+function splitTechnicalText(text) {
+  const normalized = String(text || '').trim()
+  if (!normalized) {
+    return { visible: '', technical: '' }
+  }
+
+  const visibleLines = []
+  const technicalLines = []
+
+  normalized.split(/\r?\n/).forEach((line) => {
+    const trimmed = line.trim()
+    if (!trimmed) return
+
+    if (TECHNICAL_TEXT_PATTERNS.some((pattern) => pattern.test(trimmed))) {
+      technicalLines.push(trimmed)
+    } else {
+      visibleLines.push(trimmed)
+    }
+  })
+
+  return {
+    visible: visibleLines.join('\n'),
+    technical: technicalLines.join('\n'),
+  }
+}
+
+function parseItemDescription(description) {
+  const raw = String(description || '').trim()
+  if (!raw) {
+    return { summary: '', details: '', expected: '' }
+  }
+
+  const match = raw.match(/(?:Resultat attendu|Resultat attendu|Expected result)\s*:\s*([\s\S]+)/i)
+  const details = match ? raw.slice(0, match.index).trim() : raw
+  const expected = match ? match[1].trim() : ''
+  const summarySource = details || raw
+
+  return {
+    summary: truncateText(summarySource, 150),
+    details,
+    expected,
+  }
+}
+
+function truncateText(text, maxLength = 140) {
+  const normalized = String(text || '').replace(/\s+/g, ' ').trim()
+  if (normalized.length <= maxLength) return normalized
+  return `${normalized.slice(0, maxLength - 1)}...`
+}
+
+function itemReference(item) {
+  return `TC-${String((item.order ?? 0) + 1).padStart(2, '0')}`
+}
+
+function itemStatusLabel(status) {
+  return statusIcons[displayStatus(status)]?.label || displayStatus(status)
+}
+
+function formatTimestamp(value) {
+  if (!value) return ''
+  try {
+    return new Date(value).toLocaleString()
+  } catch {
+    return ''
+  }
+}
+
+function itemLastUpdate(item) {
+  const testerName = item.tester?.name || item.tested_by?.name
+  const testedAt = formatTimestamp(item.tested_at)
+
+  if (testerName && testedAt) return `${testerName} - ${testedAt}`
+  if (testerName) return testerName
+  if (testedAt) return testedAt
+  return 'Aucune execution recente'
+}
+
+function itemExpectedObservations(item) {
+  const profile = stateForItem(item).execution_profile
+  const expectedFromProfile = Array.isArray(profile?.expected_observations) ? profile.expected_observations : []
+  if (expectedFromProfile.length) {
+    return expectedFromProfile
+  }
+
+  const expectedText = parseItemDescription(item.description).expected
+  return expectedText ? [expectedText] : []
+}
+
+function historySummary(change) {
+  const actor = change.changed_by?.name || 'Utilisateur inconnu'
+  const oldStatus = itemStatusLabel(change.old_value)
+  const newStatus = itemStatusLabel(change.new_value)
+
+  switch (change.change_type) {
+    case 'status_changed':
+      return `${actor} a change le statut de ${oldStatus} a ${newStatus}.`
+    case 'comment_added':
+      return `${actor} a ajoute un commentaire.`
+    case 'comment_updated':
+      return `${actor} a modifie le commentaire.`
+    case 'automated_test_started':
+      return `${actor} a lance le test automatique.`
+    case 'automated_test_finished':
+      return `${actor} a termine le test automatique. Resultat : ${newStatus}.`
+    default:
+      if (change.old_value || change.new_value) {
+        return `${actor} a mis a jour ${change.field_name} de ${change.old_value || '-'} a ${change.new_value || '-'}.`
+      }
+      return `${actor} a mis a jour ${change.field_name}.`
+  }
+}
+
+function historyDetail(change) {
+  if (change.change_type === 'comment_added' || change.change_type === 'comment_updated') {
+    return change.new_value || ''
+  }
+
+  return change.notes || ''
+}
+
+function statusButtonClass(item, status) {
+  return displayStatus(item.status) === status ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'
+}
+
 onMounted(() => {
+  loadExecutionContext()
   loadChecklist()
 })
+
+watch(
+  () => route.params.id,
+  () => {
+    loadChecklist()
+  },
+)
+
+watch(
+  () => route.query.projectId,
+  () => {
+    loadExecutionContext()
+  },
+)
 
 onBeforeUnmount(() => {
   if (pollingTimer.value) {
@@ -463,10 +834,11 @@ onBeforeUnmount(() => {
             <ArrowLeft :size="20" />
           </button>
           <div>
-            <p class="project-execution-kicker">Espace checklist</p>
+            <p class="project-execution-kicker">Espace d'execution QA</p>
+            <p v-if="projectContextName" class="project-context-label">{{ projectContextName }}</p>
             <h1>{{ checklist?.name || 'Chargement...' }}</h1>
             <p class="project-execution-subtitle">
-              Exécutez chaque cas de test, suivez les résultats et mettez à jour le statut QA directement depuis la checklist.
+              Executez chaque test case, lancez l'agent automatique, ajustez le statut final et gardez une trace claire de chaque changement.
             </p>
           </div>
         </div>
@@ -474,21 +846,31 @@ onBeforeUnmount(() => {
 
       <div class="project-execution-side">
         <div class="project-execution-app-card">
-          <span class="project-execution-side-label">Exécution</span>
-          <p class="muted">Chaque item peut être exécuté automatiquement, puis marqué comme Réussi, Échoué, Bloqué ou Non testé.</p>
+          <span class="project-execution-side-label">Execution</span>
+          <p class="muted">Le runner, l'orchestrateur et le polling existants restent actifs. Cette vue se concentre uniquement sur le travail du testeur.</p>
         </div>
+
+        <label v-if="projectContextId" class="execution-checklist-selector">
+          <span class="project-execution-side-label">Selectionner la checklist a tester</span>
+          <select
+            :disabled="executionContextLoading || relatedChecklistOptions.length === 0"
+            :value="String(checklistId)"
+            @change="selectChecklistForExecution($event.target.value)"
+          >
+            <option
+              v-for="option in relatedChecklistOptions"
+              :key="option.id"
+              :value="String(option.id)"
+            >
+              {{ option.name || `Checklist #${option.id}` }}
+            </option>
+          </select>
+        </label>
+
         <div class="project-execution-hero-actions">
-          <button class="btn btn-primary" :disabled="!auth.canTest || !nextRunnableItem" @click="runNextSuggestedItem">
+          <button class="btn btn-secondary" :disabled="!auth.canTest || !nextRunnableItem" @click="runNextSuggestedItem">
             <PlayCircle :size="16" />
-            <span>Lancer le prochain test</span>
-          </button>
-          <button v-if="auth.canManageChecklists" @click="editChecklist" class="btn btn-secondary">
-            <Edit :size="16" />
-            <span>Modifier</span>
-          </button>
-          <button v-if="auth.canManageChecklists" @click="deleteChecklist" class="btn btn-danger">
-            <Trash2 :size="16" />
-            <span>Archiver</span>
+            <span>Tester le prochain scenario</span>
           </button>
         </div>
       </div>
@@ -501,32 +883,36 @@ onBeforeUnmount(() => {
     <div v-else-if="checklist" class="stack">
       <div class="story-detail-metrics">
         <article class="story-detail-metric">
-          <span>Checklist</span>
-          <strong>#{{ checklistId }}</strong>
-        </article>
-        <article class="story-detail-metric">
-          <span>Scénarios</span>
+          <span>Total</span>
           <strong>{{ scenariosStats.total }}</strong>
         </article>
         <article class="story-detail-metric">
-          <span>Réussis</span>
+          <span>Reussis</span>
           <strong>{{ scenariosStats.passed }}</strong>
         </article>
         <article class="story-detail-metric">
-          <span>Échoués + bloqués</span>
-          <strong>{{ scenariosStats.failed + scenariosStats.blocked }}</strong>
+          <span>Echoues</span>
+          <strong>{{ scenariosStats.failed }}</strong>
+        </article>
+        <article class="story-detail-metric">
+          <span>Bloques</span>
+          <strong>{{ scenariosStats.blocked }}</strong>
+        </article>
+        <article class="story-detail-metric">
+          <span>Non testes</span>
+          <strong>{{ scenariosStats.notTested }}</strong>
         </article>
       </div>
 
       <div class="card stack">
         <div class="flex items-center gap-3 pb-4 border-b border-gray-200 mb-4">
           <FileText :size="20" class="text-blue-600" />
-          <h2>Informations générales</h2>
+          <h2>Informations generales</h2>
         </div>
 
         <div class="grid grid-cols-[1fr_1fr_1fr] gap-4">
           <div>
-            <p class="muted mb-1">Priorité</p>
+            <p class="muted mb-1">Priorite</p>
             <span :class="['tag', getChecklistPriorityTagClass(checklist.priority)]">
               {{ formatChecklistPriority(checklist.priority) }}
             </span>
@@ -540,23 +926,37 @@ onBeforeUnmount(() => {
           </div>
 
           <div>
-            <p class="muted mb-1">Scénarios</p>
-            <span class="tag text-gray-900 border-gray-300 bg-gray-100">
+            <p class="muted mb-1">Scenarios</p>
+            <span class="tag text-slate-900 border-slate-300 bg-slate-100">
               {{ scenariosStats.total }} au total
             </span>
           </div>
         </div>
 
-        <div class="mt-4">
+        <div v-if="publicChecklistDescription" class="mt-4">
           <p class="muted mb-2">Description</p>
-          <p class="text-gray-700">{{ checklist.description }}</p>
+          <p class="text-gray-700 whitespace-pre-wrap">{{ publicChecklistDescription }}</p>
+        </div>
+
+        <div v-if="technicalDetailsSections.length" class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <button class="w-full flex items-center justify-between text-left" @click="technicalDetailsOpen = !technicalDetailsOpen">
+            <span class="font-semibold text-slate-900">Details techniques</span>
+            <component :is="technicalDetailsOpen ? ChevronUp : ChevronDown" :size="18" class="text-slate-500" />
+          </button>
+
+          <div v-if="technicalDetailsOpen" class="mt-4 space-y-3">
+            <div v-for="section in technicalDetailsSections" :key="section.title">
+              <p class="text-xs font-bold uppercase tracking-wider text-slate-600">{{ section.title }}</p>
+              <pre class="mt-2 whitespace-pre-wrap rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-700">{{ section.content }}</pre>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div v-if="checklist.as_a || checklist.i_want_that || checklist.so_that" class="card stack">
+      <div v-if="checklist.as_a || checklist.i_want_that || checklist.so_that || publicAcceptanceCriteria" class="card stack">
         <div class="flex items-center gap-3 pb-4 border-b border-gray-200 mb-4">
-          <BookOpen :size="20" class="text-green-600" />
-          <h2>User Story associée</h2>
+          <BookOpen :size="20" class="text-emerald-600" />
+          <h2>User story associee</h2>
         </div>
 
         <div class="space-y-3">
@@ -572,10 +972,10 @@ onBeforeUnmount(() => {
             <p class="muted mb-1">Afin de</p>
             <p class="text-gray-700 whitespace-pre-wrap">{{ checklist.so_that }}</p>
           </div>
-          <div v-if="checklist.acceptance_criteria" class="mt-4 pt-4 border-t border-gray-200">
-            <p class="muted mb-2">Critères d’acceptation</p>
-            <div class="bg-gray-50 border border-gray-200 p-3 rounded font-mono text-sm whitespace-pre-wrap text-gray-700">
-              {{ checklist.acceptance_criteria }}
+          <div v-if="publicAcceptanceCriteria" class="mt-4 pt-4 border-t border-gray-200">
+            <p class="muted mb-2">Criteres d'acceptation</p>
+            <div class="bg-gray-50 border border-gray-200 p-3 rounded whitespace-pre-wrap text-sm text-gray-700">
+              {{ publicAcceptanceCriteria }}
             </div>
           </div>
         </div>
@@ -583,8 +983,8 @@ onBeforeUnmount(() => {
 
       <div v-if="checklist.business_rules && checklist.business_rules.length > 0" class="card stack">
         <div class="flex items-center gap-3 pb-4 border-b border-gray-200 mb-4">
-          <Grid3x3 :size="20" class="text-purple-600" />
-          <h2>Règles métier</h2>
+          <Grid3x3 :size="20" class="text-violet-600" />
+          <h2>Regles metier</h2>
         </div>
 
         <ul class="space-y-2">
@@ -600,156 +1000,262 @@ onBeforeUnmount(() => {
           <div class="flex items-center justify-between gap-3 mb-4">
             <div class="flex items-center gap-3">
               <CheckSquare :size="20" class="text-orange-600" />
-              <h2>Scénarios de test exécutables</h2>
+              <h2>Test cases executables</h2>
               <span class="tag text-blue-900 border-blue-300 bg-blue-100">{{ scenariosStats.total }}</span>
             </div>
-            <p class="muted">L’action de test est disponible directement sur chaque item de checklist.</p>
+            <p class="muted">Chaque card garde l'execution automatique, le statut manuel, le commentaire QA et l'historique.</p>
           </div>
 
           <div class="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-3 text-sm">
             <div class="bg-white border border-gray-200 rounded p-2 text-center">
               <p class="muted text-xs mb-1">Total</p>
-              <p class="font-bold text-gray-900">{{ scenariosStats.total }}</p>
+              <p class="font-bold text-slate-900">{{ scenariosStats.total }}</p>
             </div>
-            <div class="bg-green-50 border border-green-200 rounded p-2 text-center">
-              <p class="text-green-700 text-xs font-medium mb-1">Réussis</p>
-              <p class="font-bold text-green-900">{{ scenariosStats.passed }}</p>
+            <div class="bg-emerald-50 border border-emerald-200 rounded p-2 text-center">
+              <p class="text-emerald-700 text-xs font-medium mb-1">Reussis</p>
+              <p class="font-bold text-emerald-900">{{ scenariosStats.passed }}</p>
             </div>
-            <div class="bg-red-50 border border-red-200 rounded p-2 text-center">
-              <p class="text-red-700 text-xs font-medium mb-1">Échoués</p>
-              <p class="font-bold text-red-900">{{ scenariosStats.failed }}</p>
+            <div class="bg-rose-50 border border-rose-200 rounded p-2 text-center">
+              <p class="text-rose-700 text-xs font-medium mb-1">Echoues</p>
+              <p class="font-bold text-rose-900">{{ scenariosStats.failed }}</p>
             </div>
-            <div class="bg-orange-50 border border-orange-200 rounded p-2 text-center">
-              <p class="text-orange-700 text-xs font-medium mb-1">Bloqués</p>
-              <p class="font-bold text-orange-900">{{ scenariosStats.blocked }}</p>
+            <div class="bg-amber-50 border border-amber-200 rounded p-2 text-center">
+              <p class="text-amber-700 text-xs font-medium mb-1">Bloques</p>
+              <p class="font-bold text-amber-900">{{ scenariosStats.blocked }}</p>
             </div>
-            <div class="bg-gray-50 border border-gray-200 rounded p-2 text-center">
-              <p class="muted text-xs mb-1">Non testés</p>
-              <p class="font-bold text-gray-900">{{ scenariosStats.notTested }}</p>
+            <div class="bg-slate-50 border border-slate-200 rounded p-2 text-center">
+              <p class="muted text-xs mb-1">Non testes</p>
+              <p class="font-bold text-slate-900">{{ scenariosStats.notTested }}</p>
             </div>
           </div>
         </div>
 
-        <div v-if="checklist.items && checklist.items.length > 0" class="space-y-3">
-          <div v-for="item in checklist.items" :key="item.id" class="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
-            <button
-              @click="toggleItem(item.id)"
-              class="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-100 transition"
-            >
-              <div class="flex items-center gap-3 flex-1 text-left">
-                <component :is="getItemStatusMeta(item.status).icon" :size="20" :class="getItemStatusMeta(item.status).color" />
-                <div>
-                  <div class="item-title-cell">
-                    <span class="item-case-badge">TC-{{ String((item.order ?? 0) + 1).padStart(2, '0') }}</span>
-                    <p class="font-semibold text-gray-900">{{ item.title }}</p>
+        <div v-if="checklist.items && checklist.items.length > 0" class="space-y-4">
+          <article
+            v-for="item in checklist.items"
+            :key="item.id"
+            class="rounded-2xl border border-slate-200 bg-slate-50/70 overflow-hidden"
+          >
+            <div class="p-5">
+              <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-2 mb-3">
+                    <span class="item-case-badge">{{ itemReference(item) }}</span>
+                    <span :class="['tag text-xs', getItemCriticalityClass(item.criticality)]">{{ item.criticality || 'N/A' }}</span>
+                    <span :class="['tag text-xs', getItemPriorityClass(item.priority)]">{{ item.priority || 'N/A' }}</span>
+                    <span :class="['tag text-xs', getScenarioStatusTagClass(item.status)]">{{ itemStatusLabel(item.status) }}</span>
+                    <span :class="executionStateClass(stateForItem(item).execution_state)">{{ executionStateLabel(stateForItem(item).execution_state) }}</span>
                   </div>
-                  <p v-if="item.description" class="text-sm text-gray-600">{{ item.description }}</p>
-                </div>
-              </div>
-              <div class="flex items-center gap-2 ml-4">
-                <span :class="['tag text-xs', getItemCriticalityClass(item.criticality)]">
-                  {{ item.criticality }}
-                </span>
-                <span :class="executionStateClass(stateForItem(item).execution_state)">
-                  {{ executionStateLabel(stateForItem(item).execution_state) }}
-                </span>
-                <span :class="['tag text-xs', getScenarioStatusTagClass(item.status)]">
-                  {{ displayStatus(item.status) }}
-                </span>
-              </div>
-            </button>
 
-            <div v-if="expandedItems[item.id]" class="bg-white border-t border-gray-200 px-4 py-4 space-y-4">
-              <div class="execution-toolbar checklist-item-toolbar">
-                <div class="execution-toolbar-main">
-                  <div class="execution-toolbar-copy">
-                    <span class="execution-toolbar-label">Exécution automatisée</span>
-                    <h4>{{ item.title }}</h4>
-                    <p class="muted">Exécutez cet item automatiquement, puis alignez le statut final sur le résultat obtenu.</p>
+                  <h3 class="text-lg font-semibold text-slate-950">{{ item.title }}</h3>
+                  <p v-if="parseItemDescription(item.description).summary" class="mt-2 text-sm text-slate-600">
+                    {{ parseItemDescription(item.description).summary }}
+                  </p>
+
+                  <div class="mt-4 grid gap-3 md:grid-cols-2">
+                    <div class="rounded-xl border border-white/80 bg-white p-3">
+                      <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Dernier commentaire</p>
+                      <p class="mt-1 text-sm text-slate-700">
+                        {{ item.qa_comment || 'Aucun commentaire pour le moment.' }}
+                      </p>
+                    </div>
+                    <div class="rounded-xl border border-white/80 bg-white p-3">
+                      <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Derniere mise a jour</p>
+                      <p class="mt-1 text-sm text-slate-700">{{ itemLastUpdate(item) }}</p>
+                    </div>
                   </div>
                 </div>
 
-                <div class="execution-toolbar-actions">
-                  <button class="btn btn-primary btn-sm run-test-inline-btn" :disabled="!auth.canTest || isRunInFlight(item)" @click="openRunModal(item)">
+                <div class="flex shrink-0 flex-wrap items-center gap-2">
+                  <button class="btn btn-primary btn-sm" :disabled="!auth.canTest || isRunInFlight(item)" @click="openRunModal(item)">
                     <PlayCircle :size="14" />
                     <span>{{ runButtonLabel(item) }}</span>
                   </button>
-                  <a
-                    v-if="getArtifactUrl(item)"
-                    :href="getArtifactUrl(item)"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="muted artifact-link"
-                  >
-                    Consulter les artefacts
-                  </a>
-                </div>
-              </div>
-
-              <span v-if="stateForItem(item).last_error_message" class="error run-error-inline">
-                {{ stateForItem(item).last_error_message }}
-              </span>
-
-              <details v-if="stateForItem(item).execution_trace?.length" class="trace-details">
-                <summary class="muted trace-summary">Trace d’exécution ({{ stateForItem(item).execution_trace.length }})</summary>
-                <ol class="trace-list">
-                  <li v-for="(line, index) in stateForItem(item).execution_trace" :key="`${item.id}-trace-${index}`" class="trace-item">
-                    {{ line }}
-                  </li>
-                </ol>
-              </details>
-
-              <div>
-                <p class="text-sm font-bold uppercase tracking-wider text-gray-700 mb-3">Mettre à jour le statut</p>
-                <div class="flex gap-2 flex-wrap">
-                  <button
-                    v-for="status in ['Not Tested', 'Passed', 'Failed', 'Blocked']"
-                    :key="status"
-                    @click="updateItemStatus(item.id, status)"
-                    :class="['btn btn-sm', displayStatus(item.status) === status ? 'btn-primary' : 'btn-secondary']"
-                  >
-                    {{ statusIcons[status]?.label || status }}
+                  <button class="btn btn-secondary btn-sm" @click="toggleItem(item.id)">
+                    <span>{{ expandedItems[item.id] ? 'Masquer les details' : 'Details' }}</span>
+                    <component :is="expandedItems[item.id] ? ChevronUp : ChevronDown" :size="14" />
                   </button>
-                </div>
-                <p v-if="item.tested_at" class="text-xs text-gray-600 mt-3">
-                  <Clock :size="14" class="inline mr-1" />
-                  Dernier test : {{ new Date(item.tested_at).toLocaleString() }}
-                </p>
-              </div>
-
-              <div class="border-t border-gray-200 pt-4">
-                <button
-                  @click="toggleItemHistory(item.id)"
-                  class="flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider"
-                >
-                  <Clock :size="16" />
-                  {{ showItemHistory[item.id] ? 'Masquer l’historique' : 'Afficher l’historique' }}
-                </button>
-
-                <div v-if="showItemHistory[item.id] && item.history" class="mt-3 space-y-2 max-h-80 overflow-y-auto">
-                  <div
-                    v-for="change in item.history"
-                    :key="change.id"
-                    class="bg-gray-50 border border-gray-200 p-3 rounded text-sm"
-                  >
-                    <div class="flex justify-between items-start mb-2">
-                      <p class="font-bold text-gray-900">{{ change.changed_by?.name || 'Unknown user' }}</p>
-                      <span class="text-xs text-gray-600">{{ new Date(change.created_at).toLocaleString() }}</span>
-                    </div>
-                    <p class="text-gray-700 text-sm">
-                      <strong class="text-blue-600">{{ change.field_name }}:</strong> {{ change.old_value }} → {{ change.new_value }}
-                    </p>
-                    <p v-if="change.notes" class="text-gray-600 text-xs mt-2 italic">{{ change.notes }}</p>
-                  </div>
                 </div>
               </div>
             </div>
-          </div>
+
+            <div v-if="expandedItems[item.id]" class="border-t border-slate-200 bg-white px-5 py-5 space-y-5">
+              <div class="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+                <div class="space-y-4">
+                  <section class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Description complete</p>
+                    <p class="mt-2 whitespace-pre-wrap text-sm text-slate-700">
+                      {{ parseItemDescription(item.description).details || item.description || 'Aucune description detaillee.' }}
+                    </p>
+                  </section>
+
+                  <section v-if="itemExpectedObservations(item).length" class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                    <p class="text-xs font-bold uppercase tracking-wider text-emerald-700">Resultat attendu</p>
+                    <ul class="mt-2 space-y-2 text-sm text-emerald-900">
+                      <li v-for="(observation, index) in itemExpectedObservations(item)" :key="`${item.id}-expected-${index}`">
+                        {{ observation }}
+                      </li>
+                    </ul>
+                  </section>
+
+                  <section class="rounded-2xl border border-slate-200 bg-white p-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Execution automatique</p>
+                        <p class="mt-1 text-sm text-slate-600">Le testeur peut toujours corriger manuellement le statut apres le retour de l'agent.</p>
+                      </div>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <button class="btn btn-primary btn-sm" :disabled="!auth.canTest || isRunInFlight(item)" @click="openRunModal(item)">
+                          <PlayCircle :size="14" />
+                          <span>{{ runButtonLabel(item) }}</span>
+                        </button>
+                        <a
+                          v-if="getArtifactUrl(item)"
+                          :href="getArtifactUrl(item)"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="btn btn-secondary btn-sm"
+                        >
+                          Consulter les artefacts
+                        </a>
+                      </div>
+                    </div>
+
+                    <div class="mt-4 grid gap-3 md:grid-cols-2">
+                      <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Etat agent</p>
+                        <div class="mt-2 flex flex-wrap items-center gap-2">
+                          <span :class="executionStateClass(stateForItem(item).execution_state)">{{ executionStateLabel(stateForItem(item).execution_state) }}</span>
+                          <span v-if="stateForItem(item).last_run_id" class="text-xs text-slate-500">Run {{ stateForItem(item).last_run_id }}</span>
+                        </div>
+                      </div>
+                      <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Statut final actuel</p>
+                        <p class="mt-2 text-sm font-semibold text-slate-900">{{ itemStatusLabel(item.status) }}</p>
+                      </div>
+                    </div>
+
+                    <p v-if="stateForItem(item).last_error_message" class="error mt-4">
+                      {{ stateForItem(item).last_error_message }}
+                    </p>
+
+                    <details v-if="stateForItem(item).execution_trace?.length" class="trace-details mt-4">
+                      <summary class="muted trace-summary">Trace d'execution ({{ stateForItem(item).execution_trace.length }})</summary>
+                      <ol class="trace-list">
+                        <li v-for="(line, index) in stateForItem(item).execution_trace" :key="`${item.id}-trace-${index}`" class="trace-item">
+                          {{ line }}
+                        </li>
+                      </ol>
+                    </details>
+
+                    <div v-if="stateForItem(item).failure_source" class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                      <strong>Failure source:</strong> {{ stateForItem(item).failure_source.phase }} / {{ stateForItem(item).failure_source.reference }}<br />
+                      {{ stateForItem(item).failure_source.message }}
+                    </div>
+                  </section>
+                </div>
+
+                <div class="space-y-4">
+                  <section class="rounded-2xl border border-slate-200 bg-white p-4">
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Mettre a jour le statut</p>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                      <button
+                        v-for="status in STATUS_OPTIONS"
+                        :key="status"
+                        :class="statusButtonClass(item, status)"
+                        :disabled="!auth.canTest"
+                        @click="updateItemStatus(item, status)"
+                      >
+                        {{ statusIcons[status]?.label || status }}
+                      </button>
+                    </div>
+
+                    <p v-if="item.tested_at" class="mt-3 text-xs text-slate-500">
+                      <Clock :size="14" class="inline mr-1" />
+                      Dernier test : {{ formatTimestamp(item.tested_at) }}
+                    </p>
+                  </section>
+
+                  <section class="rounded-2xl border border-slate-200 bg-white p-4">
+                    <div class="flex items-center justify-between gap-3">
+                      <div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Commentaire QA</p>
+                        <p class="mt-1 text-sm text-slate-600">Ajoutez une observation utile sans bloquer l'execution automatique.</p>
+                      </div>
+                      <button class="btn btn-secondary btn-sm" :disabled="!auth.canTest" @click="openCommentEditor(item)">
+                        <MessageSquare :size="14" />
+                        <span>{{ item.qa_comment ? 'Modifier le commentaire' : 'Ajouter un commentaire' }}</span>
+                      </button>
+                    </div>
+
+                    <div v-if="commentEditorOpenByItemId[item.id]" class="mt-4 space-y-3">
+                      <textarea
+                        v-model="commentDraftByItemId[item.id]"
+                        rows="4"
+                        class="w-full"
+                        :placeholder="COMMENT_PLACEHOLDER"
+                        :disabled="commentBusyByItemId[item.id]"
+                      />
+                      <div class="flex flex-wrap gap-2">
+                        <button class="btn btn-primary btn-sm" :disabled="commentBusyByItemId[item.id]" @click="saveItemComment(item)">
+                          {{ commentBusyByItemId[item.id] ? 'Enregistrement...' : 'Enregistrer' }}
+                        </button>
+                        <button class="btn btn-secondary btn-sm" :disabled="commentBusyByItemId[item.id]" @click="closeCommentEditor(item.id)">
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+
+                    <div v-else class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                      {{ item.qa_comment || 'Aucun commentaire enregistre pour ce test case.' }}
+                    </div>
+                  </section>
+                </div>
+              </div>
+
+              <section class="rounded-2xl border border-slate-200 bg-white p-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <div class="flex items-center gap-2">
+                    <Clock :size="16" class="text-blue-600" />
+                    <div>
+                      <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Historique</p>
+                      <p class="text-sm text-slate-600">Statut, commentaire et execution automatique par test case.</p>
+                    </div>
+                  </div>
+
+                  <button class="btn btn-secondary btn-sm" @click="toggleItemHistory(item.id)">
+                    {{ showItemHistory[item.id] ? 'Masquer l historique' : 'Afficher l historique' }}
+                  </button>
+                </div>
+
+                <div v-if="historyLoadingByItemId[item.id]" class="mt-4 text-sm text-slate-500">
+                  Chargement de l'historique...
+                </div>
+
+                <div v-else-if="showItemHistory[item.id]" class="mt-4 space-y-3">
+                  <div v-if="item.history?.length" class="space-y-3">
+                    <div
+                      v-for="change in item.history"
+                      :key="change.id"
+                      class="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                    >
+                      <div class="flex flex-wrap items-start justify-between gap-2">
+                        <p class="text-sm font-semibold text-slate-900">{{ historySummary(change) }}</p>
+                        <span class="text-xs text-slate-500">{{ formatTimestamp(change.created_at) }}</span>
+                      </div>
+                      <p v-if="historyDetail(change)" class="mt-2 text-sm text-slate-600 whitespace-pre-wrap">{{ historyDetail(change) }}</p>
+                    </div>
+                  </div>
+                  <p v-else class="text-sm text-slate-500">Aucun historique disponible pour ce test case.</p>
+                </div>
+              </section>
+            </div>
+          </article>
         </div>
 
         <div v-else class="text-center py-12">
-          <AlertCircle :size="32" class="mx-auto text-gray-400 mb-3" />
-          <p class="text-gray-600 muted">Aucun scénario n’a encore été ajouté.</p>
+          <AlertCircle :size="32" class="mx-auto text-slate-400 mb-3" />
+          <p class="text-slate-600 muted">Aucun scenario n'a encore ete ajoute.</p>
         </div>
       </div>
     </div>
@@ -764,7 +1270,7 @@ onBeforeUnmount(() => {
           <h3>Lancer un item de checklist</h3>
         </div>
 
-        <p class="muted modal-intro">Renseignez les informations de l’environnement cible pour cette exécution.</p>
+        <p class="muted modal-intro">Renseignez les informations de l'environnement cible pour cette execution.</p>
         <p v-if="runModalError" class="error">{{ runModalError }}</p>
 
         <form class="stack" @submit.prevent="submitRunModal">
@@ -773,24 +1279,60 @@ onBeforeUnmount(() => {
             <input v-model="runForm.baseUrl" placeholder="https://example.com" :disabled="runSubmitBusy" required />
           </div>
 
+          <div v-if="currentRunProfile" class="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-4">
+            <div>
+              <p class="text-sm font-bold uppercase tracking-wider text-slate-700">Plan generated by the agent</p>
+              <p class="text-sm text-slate-700">{{ currentRunProfile.intent_summary }}</p>
+            </div>
+
+            <div v-if="currentRunProfile.preconditions?.length">
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-600">Preconditions</p>
+              <ul class="mt-2 space-y-1 text-sm text-slate-700">
+                <li v-for="precondition in currentRunProfile.preconditions" :key="precondition">- {{ precondition }}</li>
+              </ul>
+            </div>
+
+            <div v-if="currentRunProfile.required_inputs?.length" class="space-y-3">
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-600">Required inputs</p>
+              <div v-for="input in currentRunProfile.required_inputs" :key="input.key" class="field">
+                <label>{{ input.label }}<span v-if="input.required"> *</span></label>
+                <textarea
+                  v-if="input.kind === 'textarea'"
+                  v-model="runForm.providedInputs[input.key]"
+                  rows="3"
+                  :disabled="runSubmitBusy"
+                  :placeholder="input.description || input.label"
+                />
+                <input
+                  v-else
+                  v-model="runForm.providedInputs[input.key]"
+                  :type="inputTypeForKind(input.kind)"
+                  :disabled="runSubmitBusy"
+                  :placeholder="input.kind === 'file' ? 'C:\\path\\to\\file.ext' : (input.description || input.label)"
+                />
+                <p v-if="input.description" class="muted text-xs mt-1">{{ input.description }}</p>
+              </div>
+            </div>
+          </div>
+
           <div class="grid">
             <div class="field">
-              <label>Nom de l’environnement</label>
+              <label>Nom de l'environnement</label>
               <input v-model="runForm.environmentName" placeholder="staging" :disabled="runSubmitBusy" />
             </div>
 
             <div class="field field-end-controls">
               <label class="checkbox-label">
                 <input type="checkbox" v-model="runForm.useAuth" :disabled="runSubmitBusy" />
-                <span>Utiliser un parcours authentifié</span>
+                <span>Utiliser un parcours authentifie</span>
               </label>
-              <p class="muted checkbox-help">Décochez cette option pour exécuter le test sans authentification.</p>
+              <p class="muted checkbox-help">Decochez cette option pour executer le test sans authentification.</p>
 
               <label class="checkbox-label checkbox-label-spaced">
                 <input type="checkbox" v-model="runForm.watchMode" :disabled="runSubmitBusy" />
-                <span>Mode observé</span>
+                <span>Mode observe</span>
               </label>
-              <p class="muted checkbox-help">Laissez activé pour suivre l’exécution dans un navigateur externe.</p>
+              <p class="muted checkbox-help">Laissez active pour suivre l'execution dans un navigateur externe.</p>
             </div>
           </div>
 
@@ -812,3 +1354,27 @@ onBeforeUnmount(() => {
     </div>
   </section>
 </template>
+
+<style>
+.project-context-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.execution-checklist-selector {
+  display: grid;
+  gap: 0.45rem;
+  margin-bottom: 0.9rem;
+}
+
+.execution-checklist-selector select {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 0.85rem;
+  background: #ffffff;
+  color: #0f172a;
+  padding: 0.7rem 0.85rem;
+}
+</style>

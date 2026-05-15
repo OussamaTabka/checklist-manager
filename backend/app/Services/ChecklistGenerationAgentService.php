@@ -30,15 +30,17 @@ class ChecklistGenerationAgentService
         private StoryContextExtractor $storyContextExtractor,
         private CoverageGapAnalyzer $coverageGapAnalyzer,
         private RiskProfileAnalyzer $riskProfileAnalyzer,
+        private ChecklistGenerationTextService $generationText,
     ) {
     }
 
-    public function generateDraftForUserStory(UserStory $userStory): array
+    public function generateDraftForUserStory(UserStory $userStory, string $language = 'fr'): array
     {
+        $language = $this->generationText->normalizeLanguage($language);
         $storyContext = $this->storyContextExtractor->extract($userStory);
         $riskProfile = $this->riskProfileAnalyzer->analyze($storyContext);
         $recommendations = $this->recommendations->suggestForUserStory($userStory, 3);
-        $reusableItems = $this->collectReusableItems($storyContext, $recommendations);
+        $reusableItems = $this->collectReusableItems($storyContext, $recommendations, $language);
         $preGenerationCoverage = $this->coverageGapAnalyzer->analyze($storyContext, $reusableItems, []);
         $generationWarnings = [];
         $generation = null;
@@ -46,27 +48,28 @@ class ChecklistGenerationAgentService
         try {
             $generation = $this->testCaseGenerator->generateTestCasesForUserStory(
                 $userStory,
-                $this->buildGenerationContext($storyContext, $reusableItems, $preGenerationCoverage, $recommendations, $riskProfile)
+                $this->buildGenerationContext($storyContext, $reusableItems, $preGenerationCoverage, $recommendations, $riskProfile, $language)
             );
         } catch (\Exception $exception) {
             $generationWarnings[] = $exception->getMessage();
         }
 
-        return DB::transaction(function () use ($userStory, $storyContext, $riskProfile, $recommendations, $reusableItems, $generation, $generationWarnings, $preGenerationCoverage) {
-            $generatedItems = $this->normalizeGeneratedCases($generation['test_cases'] ?? []);
+        return DB::transaction(function () use ($userStory, $storyContext, $riskProfile, $recommendations, $reusableItems, $generation, $generationWarnings, $preGenerationCoverage, $language) {
+            $generatedItems = $this->normalizeGeneratedCases($generation['test_cases'] ?? [], $language);
             $coverage = $this->coverageGapAnalyzer->analyze($storyContext, $reusableItems, $generatedItems);
             $mergedItems = $this->mergeItems($reusableItems, $generatedItems);
 
             if ($mergedItems === []) {
-                throw new \RuntimeException('L agent de checklist n a pas pu construire d items a partir des checklists reutilisables ou des cas generes.');
+                throw new \RuntimeException($this->generationText->text($language, 'agent_error_empty'));
             }
 
             $checklist = Checklist::create([
-                'name' => $this->buildChecklistName($userStory, count($reusableItems) > 0),
+                'name' => $this->buildChecklistName($userStory, count($reusableItems) > 0, $language),
                 'description' => $this->buildChecklistDescription(
                     $userStory,
-                    $generation['generator_name'] ?? 'Brouillon base sur la reutilisation',
-                    $recommendations
+                    $generation['generator_name'] ?? $this->generationText->text($language, 'draft_base_reuse'),
+                    $recommendations,
+                    $language
                 ),
                 'project_id' => $userStory->project_id,
                 'category' => 'agent-generated',
@@ -86,12 +89,15 @@ class ChecklistGenerationAgentService
                     'priority' => $item['priority'],
                     'criticality' => $item['criticality'],
                     'order' => $index + 1,
+                    'source_type' => $item['source'] ?? null,
+                    'source_checklist_id' => $item['source_checklist_id'],
+                    'source_checklist_name' => $item['source_checklist_name'],
                 ]);
             }
 
             return [
-                'message' => 'Le brouillon de checklist a ete genere par l agent et attend la validation du testeur.',
-                'decision' => $this->buildDecision($storyContext, $riskProfile, $recommendations, $reusableItems, $generatedItems, $coverage),
+                'message' => $this->generationText->text($language, 'draft_message'),
+                'decision' => $this->buildDecision($storyContext, $riskProfile, $recommendations, $reusableItems, $generatedItems, $coverage, $language),
                 'reuse_summary' => [
                     'reused_items' => count($reusableItems),
                     'generated_items' => count($generatedItems),
@@ -107,7 +113,7 @@ class ChecklistGenerationAgentService
                 'checklist' => $checklist->load('items'),
                 'pending_validation' => true,
                 'suggestions' => $recommendations,
-                'generation_provider' => $generation['generator_name'] ?? 'reutilisation-seule',
+                'generation_provider' => $generation['generator_name'] ?? $this->generationText->text($language, 'generated_only'),
                 'generation_warnings' => array_values(array_filter([
                     ...($generation['fallback_errors'] ?? []),
                     ...$generationWarnings,
@@ -119,13 +125,14 @@ class ChecklistGenerationAgentService
                     'risk_profile' => $riskProfile,
                     'pre_generation_coverage' => $preGenerationCoverage,
                     'generation_focus' => $preGenerationCoverage['generation_focus'] ?? [],
+                    'language' => $language,
                 ],
                 'available_generators' => $this->testCaseGenerator->getAvailableGenerators(),
             ];
         });
     }
 
-    private function collectReusableItems(array $storyContext, array $recommendations): array
+    private function collectReusableItems(array $storyContext, array $recommendations, string $language): array
     {
         $storyTokens = $storyContext['tokens'] ?? [];
         $projectId = (int) ($storyContext['project_id'] ?? 0);
@@ -158,11 +165,11 @@ class ChecklistGenerationAgentService
             ->where('lifecycle_status', 'approved')
             ->get()
             ->sortByDesc(fn (Checklist $checklist) => (int) $checklist->project_id === $projectId)
-            ->flatMap(function (Checklist $checklist) use ($storyTokens, $suggestionMap, $projectId) {
+            ->flatMap(function (Checklist $checklist) use ($storyTokens, $suggestionMap, $projectId, $language) {
                 $suggestion = $suggestionMap->get($checklist->id, []);
 
                 return $checklist->items
-                    ->map(function (ChecklistItem $item) use ($checklist, $storyTokens, $suggestion, $projectId) {
+                    ->map(function (ChecklistItem $item) use ($checklist, $storyTokens, $suggestion, $projectId, $language) {
                         $itemScore = $this->scoreReusableItem(
                             $item,
                             $checklist,
@@ -176,8 +183,8 @@ class ChecklistGenerationAgentService
                         }
 
                         return [
-                            'title' => $item->title,
-                            'description' => $item->description ?? '',
+                            'title' => $this->generationText->localizeCaseName($item->title, $language),
+                            'description' => $this->generationText->localizeChecklistText($item->description ?? '', $language),
                             'priority' => $this->normalizePriority($item->priority),
                             'criticality' => $this->normalizeCriticality($item->criticality),
                             'source' => 'reused',
@@ -194,20 +201,27 @@ class ChecklistGenerationAgentService
             ->all();
     }
 
-    private function normalizeGeneratedCases(array $testCases): array
+    private function normalizeGeneratedCases(array $testCases, string $language): array
     {
         return collect($testCases)
-            ->map(fn (array $testCase, int $index) => [
-                'title' => trim((string) ($testCase['name'] ?? 'Test Case ' . ($index + 1))),
-                'description' => $this->buildGeneratedItemDescription($testCase),
-                'priority' => $this->severityToPriority($testCase['severity'] ?? 'medium'),
-                'criticality' => $this->severityToCriticality($testCase['severity'] ?? 'medium'),
-                'source' => 'generated',
-                'source_checklist_id' => null,
-                'source_checklist_name' => null,
-                'generation_category' => trim((string) ($testCase['category'] ?? '')),
-                'covers' => array_values(array_filter(array_map('strval', $testCase['covers'] ?? []))),
-            ])
+            ->map(function (array $testCase, int $index) use ($language) {
+                $localized = $this->generationText->localizeCase([
+                    ...$testCase,
+                    'language' => $language,
+                ], $language);
+
+                return [
+                    'title' => trim((string) ($localized['name'] ?? 'Test Case ' . ($index + 1))),
+                    'description' => $this->buildGeneratedItemDescription($localized, $language),
+                    'priority' => $this->severityToPriority($localized['severity'] ?? 'medium'),
+                    'criticality' => $this->severityToCriticality($localized['severity'] ?? 'medium'),
+                    'source' => 'generated',
+                    'source_checklist_id' => null,
+                    'source_checklist_name' => null,
+                    'generation_category' => trim((string) ($localized['category'] ?? '')),
+                    'covers' => array_values(array_filter(array_map('strval', $localized['covers'] ?? []))),
+                ];
+            })
             ->filter(fn (array $item) => $item['title'] !== '')
             ->values()
             ->all();
@@ -222,7 +236,7 @@ class ChecklistGenerationAgentService
             ->all();
     }
 
-    private function buildDecision(array $storyContext, array $riskProfile, array $recommendations, array $reusableItems, array $generatedItems, array $coverage): array
+    private function buildDecision(array $storyContext, array $riskProfile, array $recommendations, array $reusableItems, array $generatedItems, array $coverage, string $language): array
     {
         $recommendedAction = $recommendations['summary']['recommended_action'] ?? 'create_new_draft';
         $coverageRatio = (int) ($coverage['coverage_ratio'] ?? 0);
@@ -250,40 +264,42 @@ class ChecklistGenerationAgentService
             'covered' => array_slice($covered, 0, 8),
             'missing' => array_slice($missing, 0, 8),
             'reason' => count($reusableItems) > 0
-                ? 'Des items approuves ont ete reutilises avant l ajout des cas generes.'
-                : 'Aucune checklist approuvee n etait assez proche ; le brouillon a donc ete genere a partir de la story.',
+                ? $this->generationText->text($language, 'decision_reason_reused')
+                : $this->generationText->text($language, 'decision_reason_generated'),
             'generated_cases' => count($generatedItems),
             'confidence' => $this->confidenceLevel($coverageRatio, count($reusableItems), count($generatedItems)),
             'explanation' => $recommendations['summary']['explanation']
-                ?? 'The agent selected the best available strategy after analyzing project context, coverage, and missing risk areas.',
+                ?? $this->generationText->text($language, 'decision_explanation_default'),
         ];
     }
 
-    private function buildChecklistDescription(UserStory $userStory, string $generatorName, array $recommendations): string
+    private function buildChecklistDescription(UserStory $userStory, string $generatorName, array $recommendations, string $language): string
     {
         $action = $recommendations['summary']['recommended_action'] ?? 'GENERATE_NEW';
         $score = $recommendations['summary']['best_score'] ?? 0;
 
         return <<<DESC
-Generee par l agent de checklist depuis la User Story : {$userStory->title}
-Generateur : {$generatorName}
-Decision de reutilisation : {$action}
-Meilleur score de reutilisation : {$score}
-Generee le : {$this->getCurrentTimestamp()}
+{$this->generationText->text($language, 'description_generated_from', ['title' => $userStory->title])}
+{$this->generationText->text($language, 'description_generator', ['generator' => $generatorName])}
+{$this->generationText->text($language, 'description_reuse_decision', ['action' => $action])}
+{$this->generationText->text($language, 'description_reuse_score', ['score' => $score])}
+{$this->generationText->text($language, 'description_generated_at', ['timestamp' => $this->getCurrentTimestamp()])}
 
-Description:
+{$this->generationText->text($language, 'description_label')}
 {$userStory->description}
 
-Critères d'acceptation:
+{$this->generationText->text($language, 'acceptance_criteria_label')}
 {$userStory->acceptance_criteria}
 DESC;
     }
 
-    private function buildChecklistName(UserStory $userStory, bool $includesReusableItems): string
+    private function buildChecklistName(UserStory $userStory, bool $includesReusableItems, string $language): string
     {
         $projectName = trim((string) optional($userStory->project)->name);
         $storyTitle = trim((string) $userStory->title);
-        $prefix = $includesReusableItems ? 'Checklist QA adaptee' : 'Checklist QA generee';
+        $prefix = $includesReusableItems
+            ? $this->generationText->text($language, 'name_adapted')
+            : $this->generationText->text($language, 'name_generated');
         $storyContext = trim((string) $userStory->title . ' ' . (string) $userStory->description);
 
         if ($projectName !== '') {
@@ -299,26 +315,27 @@ DESC;
         return "{$prefix} - {$storyTitle}";
     }
 
-    private function buildGeneratedItemDescription(array $testCase): string
+    private function buildGeneratedItemDescription(array $testCase, string $language): string
     {
         $description = trim((string) ($testCase['description'] ?? ''));
         $expected = trim((string) ($testCase['expected_result'] ?? ''));
         $covers = array_values(array_filter(array_map('strval', $testCase['covers'] ?? [])));
 
         if ($covers !== []) {
-            $description = trim($description . "\n\nCouvre : " . implode(', ', $covers));
+            $description = trim($description . "\n\n" . $this->generationText->text($language, 'covers_label') . ' ' . implode(', ', $covers));
         }
 
         if ($expected === '') {
             return $description;
         }
 
-        return trim($description . "\n\nResultat attendu : " . $expected);
+        return trim($description . "\n\n" . $this->generationText->text($language, 'expected_result_label') . ' ' . $expected);
     }
 
     private function fingerprint(string $value): string
     {
         $normalized = strtolower($value);
+
         return preg_replace('/[^a-z0-9]+/', '', $normalized) ?: $normalized;
     }
 
@@ -438,7 +455,7 @@ DESC;
         return now()->format('Y-m-d H:i:s');
     }
 
-    private function buildGenerationContext(array $storyContext, array $reusableItems, array $coverage, array $recommendations, array $riskProfile): array
+    private function buildGenerationContext(array $storyContext, array $reusableItems, array $coverage, array $recommendations, array $riskProfile, string $language): array
     {
         return [
             'story_context' => $storyContext,
@@ -447,6 +464,7 @@ DESC;
             'gap_summary' => $coverage['gap_summary'] ?? [],
             'recommendation_summary' => $recommendations['summary'] ?? [],
             'risk_profile' => $riskProfile,
+            'language' => $language,
         ];
     }
 }

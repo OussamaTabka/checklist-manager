@@ -1,0 +1,179 @@
+@startuml
+title Sequence Diagram - Create Project
+
+autonumber 1
+hide footbox
+skinparam responseMessageBelowArrow true
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 140
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+actor Utilisateur
+
+box "Frontend" #D9E8FF
+participant "<<view>>\nProjectsView.vue" as ProjectsView
+participant "<<service>>\napi.js / apiRequest()" as ApiRequest
+participant "<<helper>>\nprojectUserStories.js" as StoryHelper
+end box
+
+box "Backend" #DFF2DF
+participant "<<middleware>>\nauth:sanctum" as AuthMw
+participant "<<middleware>>\nrole:chef" as RoleMw
+participant "<<controller>>\nApi\\ProjectController" as ProjectController
+participant "<<service>>\nProjectUserStoryImportService" as ImportService
+participant "<<service>>\nNotificationService" as NotificationService
+participant "<<model>>\nUser" as UserModel
+participant "<<model>>\nProject" as ProjectModel
+participant "<<model>>\nUserStory" as UserStoryModel
+end box
+
+database "Database\n<<tables>>\nprojects\nproject_testers\nuser_stories\nusers\nnotifications" as DB
+
+alt [auth.canManageProjects == true]
+  Utilisateur -> ProjectsView : click "Creer un projet"
+  ProjectsView -> ProjectsView : openCreateForm()
+  ProjectsView -> ProjectsView : resetForm(false)
+  ProjectsView -> ProjectsView : showProjectForm = true
+else [auth.canManageProjects == false]
+  ProjectsView --> Utilisateur : form is not displayed
+end
+
+Utilisateur -> ProjectsView : submit already-filled form
+ProjectsView -> ProjectsView : submitProject()
+ProjectsView -> ProjectsView : creating.value = true
+ProjectsView -> ProjectsView : validateProjectName()
+ProjectsView -> ApiRequest : apiRequest(withQuery('/projects/validate-name',\n{ name, ignore_id }), {}, auth.token)
+ApiRequest -> AuthMw : GET /api/projects/validate-name
+AuthMw -> RoleMw : authenticated request
+RoleMw -> ProjectController : ProjectController::validateName(Request $request)
+ProjectController -> DB : exists() on unique active project name
+DB --> ProjectController : exists boolean
+ProjectController --> ApiRequest : response()->json({ exists, message })
+ApiRequest --> ProjectsView : name validation result
+
+alt [project name already exists]
+  ProjectsView -> ProjectsView : createError = tr('project_choose_another_name', ...)
+  ProjectsView -> ProjectsView : creating.value = false
+else [project name valid]
+  alt [importedStoriesFile present && no analysis yet]
+    ProjectsView -> ProjectsView : analyzeSelectedUserStoriesFile()
+    ProjectsView -> StoryHelper : analyzeImportedUserStories(importedStoriesFile)
+    StoryHelper --> ProjectsView : importedStoriesAnalysis
+  else [no file analysis needed]
+    ProjectsView -> ProjectsView : skip file analysis
+  end
+
+  ProjectsView -> ProjectsView : buildManualStoriesPayload()
+
+  alt [no imported stories && no valid manual stories]
+    ProjectsView -> ProjectsView : createError = tr('user_story_required', ...)
+    ProjectsView -> ProjectsView : creating.value = false
+  else [at least one valid user story]
+    ProjectsView -> ProjectsView : build FormData payload
+    ProjectsView -> ApiRequest : apiRequest('/projects',\n{ method: 'POST', body: payload }, auth.token)
+    ApiRequest -> AuthMw : POST /api/projects
+    AuthMw -> RoleMw : authenticated request
+    RoleMw -> ProjectController : ProjectController::store(Request $request)
+    ProjectController -> ProjectController : authorize('create', Project::class)
+    ProjectController -> ProjectController : $request->validate([...])
+    ProjectController -> UserModel : User::whereIn('id', tester_ids)\n->where('account_status', 'active')\n->whereHas('roles', role='testeur')->get()
+    UserModel -> DB : select valid testers
+    DB --> UserModel : testers collection
+    UserModel --> ProjectController : testers
+
+    alt [invalid tester ids]
+      ProjectController --> ApiRequest : 422 one or more testers invalid
+      ApiRequest --> ProjectsView : throw Error(localized message)
+      ProjectsView -> ProjectsView : createError = localizeError(...)
+      ProjectsView -> ProjectsView : creating.value = false
+    else [testers valid]
+      ProjectController -> ImportService : prepareManualStories($request->input('manual_user_stories', []))
+      ImportService --> ProjectController : manualStories result
+      ProjectController -> ImportService : prepareImportedStories($request->file('user_stories_file'))
+      ImportService --> ProjectController : importedStories result
+      ProjectController -> ProjectController : build user_stories_summary
+
+      alt [import service throws RuntimeException]
+        ProjectController --> ApiRequest : 422 import/validation message
+        ApiRequest --> ProjectsView : throw Error(localized message)
+        ProjectsView -> ProjectsView : createError = localizeError(...)
+        ProjectsView -> ProjectsView : creating.value = false
+      else [story preparation succeeded]
+        alt [total_created < 1]
+          ProjectController --> ApiRequest : 422 no valid user story
+          ApiRequest --> ProjectsView : throw Error(localized message)
+          ProjectsView -> ProjectsView : createError = localizeError(...)
+          ProjectsView -> ProjectsView : creating.value = false
+        else [at least one valid story]
+          ProjectController -> ProjectController : DB::beginTransaction()
+          ProjectController -> ProjectModel : Project::create([...])
+          ProjectModel -> DB : insert into projects
+          DB --> ProjectModel : created project row
+          ProjectModel --> ProjectController : Project instance
+
+          ProjectController -> ProjectModel : $project->testers()->attach($testerIds)
+          ProjectModel -> DB : insert into project_testers
+          DB --> ProjectModel : attached testers
+
+          ProjectController -> ProjectController : notifyNewAssignedTesters($project, $testerIds)
+          ProjectController -> NotificationService : notifyProjectAssigned($project, $testers, Auth::user())
+          NotificationService -> DB : insert assignment notifications
+          DB --> NotificationService : notifications stored
+          NotificationService --> ProjectController : done
+
+          loop [foreach valid story]
+            ProjectController -> UserStoryModel : UserStory::create([...])
+            UserStoryModel -> DB : insert into user_stories
+            DB --> UserStoryModel : created user_story row
+            UserStoryModel --> ProjectController : UserStory instance
+          end
+
+          ProjectController -> NotificationService : notifyProjectCreated($project, Auth::user())
+          NotificationService -> DB : insert project created notifications
+          DB --> NotificationService : notifications stored
+          NotificationService --> ProjectController : done
+
+          alt [success]
+            ProjectController -> ProjectController : DB::commit()
+            ProjectController -> ProjectModel : $project->load(['creator:id,name,email', 'testers:id,name,email'])
+            ProjectModel -> DB : select project + creator + testers
+            DB --> ProjectModel : hydrated project
+            ProjectModel --> ProjectController : project JSON-ready
+            ProjectController --> ApiRequest : response()->json({ project, user_stories_summary }, 201)
+            ApiRequest --> ProjectsView : created project payload
+            ProjectsView -> ProjectsView : successMessage = buildUserStoriesSuccessMessage(summary)
+            ProjectsView -> ProjectsView : resetForm(true)
+            ProjectsView -> ProjectsView : loadProjectLists(1, archivedPagination.current_page)
+            ProjectsView -> ApiRequest : apiRequest(withQuery('/projects', { page: 1, status: 'active' }), {}, auth.token)
+            ApiRequest -> AuthMw : GET /api/projects
+            AuthMw -> RoleMw : authenticated request
+            RoleMw -> ProjectController : ProjectController::index(Request $request)
+            ProjectController -> DB : paginate(10)->withQueryString()
+            DB --> ProjectController : paginated active projects JSON
+            ProjectController --> ApiRequest : response()->json(...)
+            ApiRequest --> ProjectsView : active projects
+            ProjectsView -> ProjectsView : creating.value = false
+            ProjectsView --> Utilisateur : updated project list + success feedback
+          else [exception during transaction]
+            ProjectController -> ProjectController : DB::rollBack()
+            ProjectController --> ApiRequest : response()->json(['message' => 'Error creating project'], 500)
+            ApiRequest --> ProjectsView : throw Error(localized message)
+            ProjectsView -> ProjectsView : createError = localizeError(...)
+            ProjectsView -> ProjectsView : creating.value = false
+          end
+        end
+      end
+    end
+  end
+end
+
+note over ProjectController,DB
+Project creation flow:
+- route is POST /api/projects
+- security uses auth:sanctum then role:chef
+- manual and imported user stories are both supported
+- persistence spans projects, project_testers, user_stories, notifications
+end note
+
+@enduml

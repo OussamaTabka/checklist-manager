@@ -19,6 +19,7 @@ export const useAuthStore = defineStore('auth', () => {
   const canCurateStoryChecklists = computed(() => roles.value.includes('testeur'))
   const canManageUsers = computed(() => roles.value.includes('admin'))
   const canTest = computed(() => roles.value.includes('testeur'))
+  const canReceiveNotifications = computed(() => roles.value.includes('chef') || roles.value.includes('testeur'))
 
   const isAdmin = computed(() => isSystemAdmin.value)
   const primaryRole = computed(() => {
@@ -112,12 +113,16 @@ export const useAuthStore = defineStore('auth', () => {
     })
   }
 
-  async function resetPassword(payload) {
+  async function setPassword(payload) {
     await ensureCsrfCookie()
-    return await apiRequest('/reset-password', {
+    return await apiRequest('/set-password', {
       method: 'POST',
       body: payload,
     })
+  }
+
+  async function resetPassword(payload) {
+    return await setPassword(payload)
   }
 
   async function fetchMe() {
@@ -169,10 +174,12 @@ export const useAuthStore = defineStore('auth', () => {
     canCurateStoryChecklists,
     canManageUsers,
     canTest,
+    canReceiveNotifications,
     hydrate,
     clear,
     login,
     requestPasswordReset,
+    setPassword,
     resetPassword,
     fetchMe,
     updateProfile,

@@ -2,16 +2,20 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { apiRequest, ensureCsrfCookie, withQuery } from '@/lib/api'
+import { localizeError, tr } from '@/lib/localization'
+import { useSettingsStore } from '@/stores/settings'
+import { useToastStore } from '@/stores/toast'
 
 const route = useRoute()
 const router = useRouter()
+const settings = useSettingsStore()
+const toast = useToastStore()
 
 const selector = ref(typeof route.query.selector === 'string' ? route.query.selector : '')
 const token = ref(typeof route.query.token === 'string' ? route.query.token : '')
 
 const validating = ref(true)
 const isSubmitting = ref(false)
-const successMessage = ref('')
 const errorMessage = ref('')
 const invitationInfo = ref(null)
 
@@ -26,7 +30,7 @@ async function validateInvitationLink() {
 
   if (!selector.value || !token.value) {
     validating.value = false
-    errorMessage.value = 'Invalid invitation link.'
+    errorMessage.value = localizeError({ message: 'Invalid invitation link.' }, 'error_generic', settings.language)
     return
   }
 
@@ -38,7 +42,7 @@ async function validateInvitationLink() {
 
     invitationInfo.value = data?.user || null
   } catch (error) {
-    errorMessage.value = error.data?.message || error.message
+    errorMessage.value = localizeError(error, 'error_generic', settings.language)
   } finally {
     validating.value = false
   }
@@ -46,7 +50,6 @@ async function validateInvitationLink() {
 
 async function onSubmit() {
   errorMessage.value = ''
-  successMessage.value = ''
   isSubmitting.value = true
 
   try {
@@ -62,13 +65,13 @@ async function onSubmit() {
       },
     })
 
-    successMessage.value = data?.message || 'Account activated successfully.'
+    toast.success(data?.message || tr('account_activated_success', {}, settings.language))
 
     setTimeout(() => {
       router.push({ name: 'login' })
     }, 1200)
   } catch (error) {
-    errorMessage.value = error.data?.message || error.message
+    errorMessage.value = localizeError(error, 'error_generic', settings.language)
   } finally {
     isSubmitting.value = false
   }
@@ -87,7 +90,6 @@ onMounted(async () => {
         <p class="muted">Choose your password to activate your account.</p>
       </div>
 
-      <p v-if="successMessage" class="success">{{ successMessage }}</p>
       <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
 
       <p v-if="validating" class="muted">Validating invitation link...</p>

@@ -14,7 +14,6 @@ class AdvancedQaExamplesSeeder extends Seeder
     public function run(): void
     {
         $chef = User::where('email', 'chef@test.com')->first() ?? User::first();
-        $contentAdmin = User::where('email', 'admin_contenus@test.com')->first() ?? $chef;
         $tester = User::where('email', 'testeur@test.com')->first();
 
         if (!$chef) {
@@ -100,7 +99,7 @@ class AdvancedQaExamplesSeeder extends Seeder
                     'name' => "{$storyId} | CL-02 | Validation",
                     'description' => 'Tester erreurs',
                     'category' => 'Validation',
-                    'creator_id' => $contentAdmin->id,
+                    'creator_id' => $chef->id,
                     'relevance_score' => 96,
                 ],
             ];

@@ -6,7 +6,7 @@
       :class="['btn', isLoading ? 'btn-secondary' : 'btn-primary']"
     >
       <span v-if="isLoading" class="spinner-border spinner-border-sm me-2"></span>
-      {{ isLoading ? 'Exécution des tests...' : 'Lancer les tests' }}
+      {{ isLoading ? 'Execution des tests...' : 'Lancer les tests' }}
     </button>
 
     <div v-if="isLoading" class="progress mt-3" style="height: 25px">
@@ -22,16 +22,16 @@
       </div>
     </div>
 
-    <div v-if="showResults && !error && results" class="alert alert-success mt-3" role="alert">
-      <h5 class="alert-heading">Tests exécutés avec succès</h5>
+    <div v-if="showResults && !error && results" class="run-tests-summary mt-3" role="status">
+      <h5 class="run-tests-summary-heading">Resultats d execution</h5>
       <hr />
-      <p><strong>Réussis :</strong> {{ results.passed }}</p>
-      <p><strong>Échoués :</strong> {{ results.failed }}</p>
+      <p><strong>Reussis :</strong> {{ results.passed }}</p>
+      <p><strong>Echoues :</strong> {{ results.failed }}</p>
       <p v-if="results.total" class="mb-0"><strong>Total :</strong> {{ results.total }}</p>
     </div>
 
     <div v-if="error" class="alert alert-danger mt-3" role="alert">
-      <h5 class="alert-heading">Erreur d’exécution</h5>
+      <h5 class="alert-heading">Erreur d execution</h5>
       <p class="mb-0">{{ error }}</p>
       <button
         @click="clearError"
@@ -43,7 +43,7 @@
 
     <div v-if="showHealthWarning" class="alert alert-warning mt-3" role="alert">
       <small>
-        Le service d’exécution ne répond pas. Vérifiez qu’il est bien démarré sur
+        Le service d execution ne repond pas. Verifiez qu il est bien demarre sur
         {{ testAgentUrl }}
       </small>
     </div>
@@ -51,9 +51,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { submitTests, getJobStatus, checkHealth } from '@/lib/testAgentService'
+import { computed, onMounted, ref } from 'vue'
 import { apiRequest } from '@/lib/api'
+import { submitTests, getJobStatus, checkHealth } from '@/lib/testAgentService'
+import { localizeError, localizeMessage } from '@/lib/localization'
+import { useSettingsStore } from '@/stores/settings'
+import { useToastStore } from '@/stores/toast'
 
 const props = defineProps({
   testCases: {
@@ -68,6 +71,8 @@ const props = defineProps({
 
 const emit = defineEmits(['tests-complete', 'tests-failed'])
 
+const toast = useToastStore()
+const settings = useSettingsStore()
 const isLoading = ref(false)
 const progress = ref(0)
 const error = ref('')
@@ -77,9 +82,7 @@ const showHealthWarning = ref(false)
 const jobId = ref(null)
 const testAgentUrl = import.meta.env.VITE_TEST_AGENT_URL || 'http://localhost:8000'
 
-const hasTests = computed(() => {
-  return props.testCases && props.testCases.length > 0
-})
+const hasTests = computed(() => props.testCases && props.testCases.length > 0)
 
 onMounted(async () => {
   const isHealthy = await checkHealth()
@@ -88,7 +91,7 @@ onMounted(async () => {
 
 async function handleRunTests() {
   if (!hasTests.value) {
-    error.value = 'Aucun cas de test disponible.'
+    error.value = localizeMessage('Aucun cas de test disponible.', settings.language)
     return
   }
 
@@ -117,12 +120,13 @@ async function handleRunTests() {
     results.value = testResults
     progress.value = 100
     showResults.value = true
+    toast.success(localizeMessage('Tests executes avec succes.', settings.language))
 
     await saveResultsToBackend(testResults)
 
     emit('tests-complete', testResults)
   } catch (err) {
-    error.value = err.message || 'Impossible d’exécuter les tests.'
+    error.value = localizeError(err, 'error_generic', settings.language)
     emit('tests-failed', error.value)
   } finally {
     isLoading.value = false
@@ -141,7 +145,7 @@ async function pollUntilComplete(id) {
     const elapsedTime = Date.now() - startTime
 
     if (elapsedTime > maxWait) {
-      throw new Error('L’exécution des tests a dépassé 10 minutes.')
+      throw new Error(localizeMessage('L execution des tests a depasse 10 minutes.', settings.language))
     }
 
     try {
@@ -154,7 +158,7 @@ async function pollUntilComplete(id) {
       }
 
       if (jobStatus.status === 'failed' || jobStatus.error) {
-        throw new Error(jobStatus.error || 'L’exécution a échoué.')
+        throw new Error(jobStatus.error || localizeMessage('L execution a echoue.', settings.language))
       }
 
       await new Promise((resolve) => setTimeout(resolve, pollInterval))
@@ -213,5 +217,20 @@ button:disabled {
 .alert {
   margin-top: 1rem;
   border-radius: 0.25rem;
+}
+
+.run-tests-summary {
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
+  color: #0f172a;
+}
+
+.run-tests-summary-heading {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
 }
 </style>

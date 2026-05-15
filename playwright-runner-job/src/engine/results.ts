@@ -5,6 +5,10 @@ export type ResultErrorType =
   | 'selector_not_found'
   | 'navigation_timeout'
   | 'assertion_failed'
+  | 'precondition_failed'
+  | 'unsupported_test_case'
+  | 'input_data_missing'
+  | 'ambiguous_target'
   | 'unexpected_error'
 
 export interface CaseArtifacts {
@@ -21,6 +25,12 @@ export interface CaseResultV1 {
   error_type: ResultErrorType | null
   error_message: string | null
   artifacts: CaseArtifacts
+  generated_plan?: Record<string, unknown> | null
+  failure_source?: {
+    phase: 'planning' | 'preflight' | 'step' | 'assert' | 'runtime'
+    reference: string
+    message: string
+  } | null
   execution_trace?: string[]
 }
 
@@ -58,6 +68,34 @@ export class AssertionFailureError extends Error {
   }
 }
 
+export class PreconditionFailureError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'PreconditionFailureError'
+  }
+}
+
+export class UnsupportedTestCaseError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'UnsupportedTestCaseError'
+  }
+}
+
+export class InputDataMissingError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'InputDataMissingError'
+  }
+}
+
+export class AmbiguousTargetError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'AmbiguousTargetError'
+  }
+}
+
 export interface NormalizedError {
   error_type: ResultErrorType
   error_message: string
@@ -74,6 +112,34 @@ export function normalizeError(error: unknown): NormalizedError {
   if (error instanceof AssertionFailureError) {
     return {
       error_type: 'assertion_failed',
+      error_message: error.message,
+    }
+  }
+
+  if (error instanceof PreconditionFailureError) {
+    return {
+      error_type: 'precondition_failed',
+      error_message: error.message,
+    }
+  }
+
+  if (error instanceof UnsupportedTestCaseError) {
+    return {
+      error_type: 'unsupported_test_case',
+      error_message: error.message,
+    }
+  }
+
+  if (error instanceof InputDataMissingError) {
+    return {
+      error_type: 'input_data_missing',
+      error_message: error.message,
+    }
+  }
+
+  if (error instanceof AmbiguousTargetError) {
+    return {
+      error_type: 'ambiguous_target',
       error_message: error.message,
     }
   }

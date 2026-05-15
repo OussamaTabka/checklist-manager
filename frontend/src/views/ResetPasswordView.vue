@@ -1,9 +1,14 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { localizeError, tr } from '@/lib/localization'
 import { useAuthStore } from '@/stores/auth'
+import { useSettingsStore } from '@/stores/settings'
+import { useToastStore } from '@/stores/toast'
 
 const auth = useAuthStore()
+const settings = useSettingsStore()
+const toast = useToastStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -15,23 +20,21 @@ const form = reactive({
 })
 
 const isSubmitting = ref(false)
-const successMessage = ref('')
 const errorMessage = ref('')
 
 async function onSubmit() {
   errorMessage.value = ''
-  successMessage.value = ''
   isSubmitting.value = true
 
   try {
     const response = await auth.resetPassword({ ...form })
-    successMessage.value = response?.message || 'Your password has been reset successfully.'
+    toast.success(response?.message || tr('password_reset_success', {}, settings.language))
 
     setTimeout(() => {
       router.push({ name: 'login' })
     }, 1000)
   } catch (error) {
-    errorMessage.value = error.data?.message || error.message
+    errorMessage.value = localizeError(error, 'error_generic', settings.language)
   } finally {
     isSubmitting.value = false
   }
@@ -46,7 +49,6 @@ async function onSubmit() {
         <p class="muted">Enter your account email and choose a new password.</p>
       </div>
 
-      <p v-if="successMessage" class="success">{{ successMessage }}</p>
       <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
 
       <form class="stack" @submit.prevent="onSubmit">

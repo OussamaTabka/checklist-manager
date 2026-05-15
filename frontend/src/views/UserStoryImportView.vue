@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { Upload } from 'lucide-vue-next'
 import { analyzeImportedUserStories } from '@/lib/projectUserStories'
+import { localizeError, localizeMessage } from '@/lib/localization'
 
 const STORAGE_KEY = 'user_stories_v1'
 
@@ -73,7 +74,7 @@ async function validateFile() {
       })),
     ].sort((left, right) => left.rowNumber - right.rowNumber)
   } catch (error) {
-    pageError.value = error.message || 'Erreur de lecture du fichier.'
+    pageError.value = localizeError(error, 'user_story_file_read_failed')
   } finally {
     loading.value = false
   }
@@ -81,7 +82,7 @@ async function validateFile() {
 
 function runImport() {
   if (!validationRows.value.length) {
-    pageError.value = 'Validez le fichier avant import.'
+    pageError.value = localizeMessage('Validez le fichier avant import.')
     return
   }
 

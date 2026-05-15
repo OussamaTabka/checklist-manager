@@ -7,6 +7,7 @@ use App\Jobs\ExecuteSingleTestCaseRun;
 use App\Models\TestResult;
 use App\Models\TestRun;
 use App\Models\VersionItem;
+use App\Services\ExecutionProfileService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -14,9 +15,14 @@ use Illuminate\Support\Str;
 
 class TestCaseRunController extends Controller
 {
+    public function __construct(
+        private readonly ExecutionProfileService $executionProfileService,
+    ) {
+    }
+
     public function show(int $id)
     {
-        $item = VersionItem::findOrFail($id);
+        $item = VersionItem::with(['version.project'])->findOrFail($id);
 
         $latestResult = TestResult::with('testRun')
             ->where('version_item_id', $item->id)
@@ -47,6 +53,7 @@ class TestCaseRunController extends Controller
         $effectiveResult = $latestRunResult ?: $latestResult;
 
         $executionState = $this->resolveExecutionState($item, $latestRun, $effectiveResult);
+        $executionProfile = $this->resolveExecutionProfile($item, $latestRun);
 
         $artifactPayload = $effectiveResult?->artifacts;
         if (!is_array($artifactPayload)) {
@@ -84,12 +91,21 @@ class TestCaseRunController extends Controller
                 : null;
         }
 
+        $resultPayload = is_array($effectiveResult?->result_payload) ? $effectiveResult->result_payload : [];
+        $generatedPlan = is_array($resultPayload['generated_plan'] ?? null)
+            ? $resultPayload['generated_plan']
+            : (is_array($executionProfile['last_generated_plan'] ?? null) ? $executionProfile['last_generated_plan'] : null);
+        $failureSource = is_array($resultPayload['failure_source'] ?? null) ? $resultPayload['failure_source'] : null;
+
         return response()->json([
             'id' => $item->id,
             'title' => $item->title,
             'description' => $item->description,
             'status' => $item->status,
             'execution_state' => $executionState,
+            'execution_profile' => $executionProfile,
+            'generated_plan' => $generatedPlan,
+            'failure_source' => $failureSource,
             'last_run_id' => $latestRun?->run_id,
             'last_run_status' => $latestRun ? $this->mapRunStatus($latestRun->status) : null,
             'last_run_started_at' => optional($latestRun?->started_at)->toISOString(),
@@ -114,6 +130,8 @@ class TestCaseRunController extends Controller
             'watch_mode' => ['sometimes', 'boolean'],
             'environment_name' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'provided_inputs' => ['nullable', 'array'],
+            'provided_inputs.*' => ['nullable', 'string', 'max:4000'],
         ]);
 
         $baseUrl = $this->normalizeBaseUrl($data['base_url']);
@@ -142,6 +160,7 @@ class TestCaseRunController extends Controller
                 'watch_mode' => $watchMode,
                 'environment_name' => (string) ($data['environment_name'] ?? ''),
                 'notes' => (string) ($data['notes'] ?? ''),
+                'provided_inputs' => is_array($data['provided_inputs'] ?? null) ? $data['provided_inputs'] : [],
                 'priority' => (string) ($item->priority ?? ''),
                 'criticality' => (string) ($item->criticality ?? ''),
                 'current_status' => (string) ($item->status ?? ''),
@@ -271,5 +290,36 @@ class TestCaseRunController extends Controller
         }
 
         return [];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function resolveExecutionProfile(VersionItem $item, ?TestRun $latestRun): array
+    {
+        $profile = is_array($item->execution_profile) ? $item->execution_profile : [];
+        if ($profile !== []) {
+            return $profile;
+        }
+
+        $baseUrl = $latestRun?->base_url ?: $item->version?->project?->app_url;
+        if (!is_string($baseUrl) || trim($baseUrl) === '') {
+            return [];
+        }
+
+        try {
+            $generated = $this->executionProfileService->generateForVersionItem($item, $baseUrl, [
+                'run_id' => 'profile-item-' . $item->id,
+                'use_auth' => true,
+            ]);
+
+            $item->update([
+                'execution_profile' => $generated['execution_profile'],
+            ]);
+
+            return $generated['execution_profile'];
+        } catch (\Throwable) {
+            return [];
+        }
     }
 }

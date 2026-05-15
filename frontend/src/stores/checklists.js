@@ -1,9 +1,16 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import axios from 'axios'
+import { API_BASE_URL, ensureCsrfCookie } from '@/lib/api'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
+  baseURL: API_BASE_URL,
+  withCredentials: true,
+  withXSRFToken: true,
+  headers: {
+    Accept: 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+  },
 })
 
 export const useChecklistsStore = defineStore('checklists', () => {
@@ -13,14 +20,21 @@ export const useChecklistsStore = defineStore('checklists', () => {
   const errors = ref({})
   const selectedChecklistId = ref(null)
 
+  function authHeaders(extra = {}) {
+    const token = localStorage.getItem('auth_token')
+
+    return {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...extra,
+    }
+  }
+
   // Get all checklists
   async function fetchChecklists() {
     loading.value = true
     try {
       const response = await api.get('/checklists', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
-        },
+        headers: authHeaders(),
       })
       checklists.value = response.data.data || response.data
       return checklists.value
@@ -37,9 +51,7 @@ export const useChecklistsStore = defineStore('checklists', () => {
     loading.value = true
     try {
       const response = await api.get(`/checklists/${checklistId}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
-        },
+        headers: authHeaders(),
       })
       currentChecklist.value = response.data
       return response.data
@@ -55,11 +67,11 @@ export const useChecklistsStore = defineStore('checklists', () => {
   async function createChecklist(payload) {
     loading.value = true
     try {
+      await ensureCsrfCookie()
       const response = await api.post('/checklists', payload, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        headers: authHeaders({
           'Content-Type': 'application/json',
-        },
+        }),
       })
       checklists.value.unshift(response.data)
       currentChecklist.value = response.data
@@ -80,11 +92,11 @@ export const useChecklistsStore = defineStore('checklists', () => {
   async function updateChecklist(checklistId, payload) {
     loading.value = true
     try {
+      await ensureCsrfCookie()
       const response = await api.put(`/checklists/${checklistId}`, payload, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        headers: authHeaders({
           'Content-Type': 'application/json',
-        },
+        }),
       })
       const index = checklists.value.findIndex((c) => c.id === checklistId)
       if (index !== -1) {
@@ -107,10 +119,9 @@ export const useChecklistsStore = defineStore('checklists', () => {
   // Delete checklist
   async function deleteChecklist(checklistId) {
     try {
+      await ensureCsrfCookie()
       await api.delete(`/checklists/${checklistId}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
-        },
+        headers: authHeaders(),
       })
       checklists.value = checklists.value.filter((c) => c.id !== checklistId)
       if (currentChecklist.value?.id === checklistId) {
@@ -125,14 +136,14 @@ export const useChecklistsStore = defineStore('checklists', () => {
   // Update item status with history logging
   async function updateItemStatus(checklistId, itemId, status, notes = null) {
     try {
+      await ensureCsrfCookie()
       const response = await api.patch(
         `/checklists/${checklistId}/items/${itemId}/status`,
         { status, notes },
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+          headers: authHeaders({
             'Content-Type': 'application/json',
-          },
+          }),
         }
       )
       // Update the item in current checklist
@@ -140,6 +151,7 @@ export const useChecklistsStore = defineStore('checklists', () => {
         const item = currentChecklist.value.items.find((i) => i.id === itemId)
         if (item) {
           item.status = status
+          item.qa_comment = response.data.qa_comment ?? item.qa_comment
           item.tested_by = response.data.tested_by
           item.tested_at = response.data.tested_at
           if (response.data.history) {
@@ -160,9 +172,7 @@ export const useChecklistsStore = defineStore('checklists', () => {
       const response = await api.get(
         `/checklists/${checklistId}/items/${itemId}/history`,
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
-          },
+          headers: authHeaders(),
         }
       )
       return response.data
@@ -177,9 +187,7 @@ export const useChecklistsStore = defineStore('checklists', () => {
       const response = await api.get(
         `/checklists/${checklistId}/items/${itemId}/execution`,
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
-          },
+          headers: authHeaders(),
         }
       )
       return response.data
@@ -191,19 +199,64 @@ export const useChecklistsStore = defineStore('checklists', () => {
 
   async function runChecklistItem(checklistId, itemId, payload) {
     try {
+      await ensureCsrfCookie()
       const response = await api.post(
         `/checklists/${checklistId}/items/${itemId}/runs`,
         payload,
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+          headers: authHeaders({
             'Content-Type': 'application/json',
-          },
+          }),
         }
       )
       return response.data
     } catch (error) {
       errors.value.run = error.message
+      throw error
+    }
+  }
+
+  async function getItemComment(checklistId, itemId) {
+    try {
+      const response = await api.get(
+        `/checklists/${checklistId}/items/${itemId}/comment`,
+        {
+          headers: authHeaders(),
+        }
+      )
+      return response.data
+    } catch (error) {
+      errors.value.comment = error.message
+      throw error
+    }
+  }
+
+  async function updateItemComment(checklistId, itemId, comment) {
+    try {
+      await ensureCsrfCookie()
+      const response = await api.patch(
+        `/checklists/${checklistId}/items/${itemId}/comment`,
+        { comment },
+        {
+          headers: authHeaders({
+            'Content-Type': 'application/json',
+          }),
+        }
+      )
+
+      if (currentChecklist.value) {
+        const item = currentChecklist.value.items.find((entry) => entry.id === itemId)
+        if (item) {
+          item.qa_comment = response.data.comment
+          if (response.data.history) {
+            item.history = response.data.history
+          }
+        }
+      }
+
+      return response.data
+    } catch (error) {
+      errors.value.comment = error.message
       throw error
     }
   }
@@ -228,6 +281,8 @@ export const useChecklistsStore = defineStore('checklists', () => {
     getItemHistory,
     getItemExecution,
     runChecklistItem,
+    getItemComment,
+    updateItemComment,
     clearErrors,
   }
 })

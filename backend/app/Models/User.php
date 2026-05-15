@@ -29,9 +29,11 @@ class User extends Authenticatable
         'profile_photo_path',
         'password',
         'account_status',
+        'archived_previous_status',
         'invited_by',
         'invited_at',
         'activated_at',
+        'archived_at',
     ];
 
     /**
@@ -60,6 +62,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'invited_at' => 'datetime',
             'activated_at' => 'datetime',
+            'archived_at' => 'datetime',
         ];
     }
 
@@ -76,6 +79,11 @@ class User extends Authenticatable
     public function accountEvents(): HasMany
     {
         return $this->hasMany(UserAccountEvent::class);
+    }
+
+    public function roleNotifications(): HasMany
+    {
+        return $this->hasMany(Notification::class)->latest();
     }
 
     public function inviter(): BelongsTo

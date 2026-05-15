@@ -30,10 +30,14 @@ import {
   type ArtifactsConfig,
 } from './artifacts'
 import {
+  AmbiguousTargetError,
   AssertionFailureError,
+  InputDataMissingError,
   MissingEnvVarError,
   normalizeError,
+  PreconditionFailureError,
   summarizeResults,
+  UnsupportedTestCaseError,
   type CaseArtifacts,
   type CaseResultV1,
   type CaseStatus,
@@ -259,6 +263,8 @@ function describeStep(step: StepDsl): string {
       return `wait_for_selector ${selectorDebugText(step.selector)} state=${step.state}`
     case 'screenshot':
       return `screenshot ${step.name}`
+    case 'set_file':
+      return `set_file ${selectorDebugText(step.selector)}`
     default: {
       const unreachable: never = step
       return JSON.stringify(unreachable)
@@ -283,6 +289,43 @@ function describeAssert(assertItem: AssertDsl): string {
       return JSON.stringify(unreachable)
     }
   }
+}
+
+function cloneGeneratedPlan(runCase: RunCaseDsl): Record<string, unknown> | null {
+  if (runCase.generated_plan) {
+    return JSON.parse(JSON.stringify(runCase.generated_plan)) as Record<string, unknown>
+  }
+
+  if (!runCase.execution_profile) {
+    return null
+  }
+
+  return {
+    title: runCase.title,
+    intent_summary: runCase.execution_profile.intent_summary,
+    coverage_type: runCase.execution_profile.coverage_type,
+    preflight_checks: runCase.preflight_checks ?? [],
+    steps: runCase.steps,
+    asserts: runCase.asserts,
+    expected_observations: runCase.execution_profile.expected_observations,
+    diagnostics: runCase.execution_profile.diagnostics,
+  }
+}
+
+function resolveRequiredInputValue(runCase: RunCaseDsl, inputKey: string): string {
+  const requiredInputs = runCase.execution_profile?.required_inputs ?? []
+  const matched = requiredInputs.find((entry) => entry.key === inputKey)
+
+  if (!matched) {
+    throw new InputDataMissingError(`Required input '${inputKey}' is not defined in the generated execution profile.`)
+  }
+
+  const value = matched.value
+  if (matched.required && (value === undefined || value === null || String(value).trim() === '')) {
+    throw new InputDataMissingError(`Required input '${matched.label}' (${matched.key}) is missing a value.`)
+  }
+
+  return typeof value === 'string' ? value : ''
 }
 
 function isStrictModeViolation(error: unknown): boolean {
@@ -385,6 +428,7 @@ async function textContentWithStrictFallback(page: Page, selector: SelectorDsl, 
 
 async function executeStep(
   page: Page,
+  runCase: RunCaseDsl,
   step: StepDsl,
   baseUrl: string,
   timeoutMs: number,
@@ -403,7 +447,10 @@ async function executeStep(
     }
 
     case 'fill': {
-      await fillWithStrictFallback(page, step.selector, resolveTemplateValue(step.value))
+      const rawValue = step.input_key
+        ? resolveRequiredInputValue(runCase, step.input_key)
+        : resolveTemplateValue(step.value ?? '')
+      await fillWithStrictFallback(page, step.selector, rawValue)
       return
     }
 
@@ -441,11 +488,115 @@ async function executeStep(
       return
     }
 
+    case 'set_file': {
+      const locator = selectorToLocator(page, step.selector)
+      const filePath = step.input_key
+        ? resolveRequiredInputValue(runCase, step.input_key)
+        : resolveTemplateValue(step.file_path ?? '')
+      await locator.setInputFiles(filePath)
+      return
+    }
+
     default: {
       const unreachable: never = step
       throw new Error(`Unsupported step: ${JSON.stringify(unreachable)}`)
     }
   }
+}
+
+async function runPreflight(
+  page: Page,
+  runCase: RunCaseDsl,
+  request: RunRequestDslV1,
+  timeoutMs: number,
+  pushTrace: (line: string) => Promise<void>,
+): Promise<number> {
+  const preflightChecks = runCase.preflight_checks ?? []
+  const firstStep = runCase.steps[0]
+  let consumedGoto = false
+
+  await pushTrace(`Planning: ${runCase.execution_profile?.intent_summary ?? runCase.title}`)
+
+  if (runCase.execution_profile?.preconditions?.length) {
+    for (const precondition of runCase.execution_profile.preconditions) {
+      await pushTrace(`Planning: precondition -> ${precondition}`)
+    }
+  }
+
+  if (runCase.execution_profile?.required_inputs?.length) {
+    for (const input of runCase.execution_profile.required_inputs) {
+      const status = input.required ? 'required' : 'optional'
+      const valueState = input.value && input.value.trim() !== '' ? 'provided' : 'missing'
+      await pushTrace(`Planning: input ${input.key} (${status}, ${input.kind}) -> ${valueState}`)
+    }
+  }
+
+  if (firstStep?.action === 'goto') {
+    const preflightUrl = resolveUrl(request.target.base_url, firstStep.url)
+    await page.goto(preflightUrl, { timeout: timeoutMs, waitUntil: 'domcontentloaded' })
+    await pushTrace(`Preflight 0: page_accessible -> ok (${preflightUrl})`)
+    consumedGoto = true
+  } else if (preflightChecks.some((check) => check.kind === 'page_accessible')) {
+    const preflightUrl = resolveUrl(request.target.base_url, request.target.base_url)
+    await page.goto(preflightUrl, { timeout: timeoutMs, waitUntil: 'domcontentloaded' })
+    await pushTrace(`Preflight 0: page_accessible -> ok (${preflightUrl})`)
+  }
+
+  for (let index = 0; index < preflightChecks.length; index += 1) {
+    const check = preflightChecks[index]
+    const prefix = `Preflight ${index + 1}: ${check.label}`
+
+    try {
+      switch (check.kind) {
+        case 'unsupported':
+          throw new UnsupportedTestCaseError(check.failure_message)
+        case 'input_available': {
+          if (!check.input_key) {
+            throw new PreconditionFailureError(`${check.label} is missing an input_key definition.`)
+          }
+
+          resolveRequiredInputValue(runCase, check.input_key)
+          await pushTrace(`${prefix} -> ok`)
+          break
+        }
+        case 'url_contains': {
+          const currentUrl = page.url()
+          if (!check.expected || !currentUrl.includes(check.expected)) {
+            throw new PreconditionFailureError(check.failure_message)
+          }
+          await pushTrace(`${prefix} -> ok`)
+          break
+        }
+        case 'element_visible': {
+          if (!check.selector) {
+            throw new PreconditionFailureError(`${check.label} is missing a selector.`)
+          }
+          await waitForSelectorWithStrictFallback(page, check.selector, 'visible', timeoutMs)
+          await pushTrace(`${prefix} -> ok`)
+          break
+        }
+        case 'element_attached': {
+          if (!check.selector) {
+            throw new PreconditionFailureError(`${check.label} is missing a selector.`)
+          }
+          await waitForSelectorWithStrictFallback(page, check.selector, 'attached', timeoutMs)
+          await pushTrace(`${prefix} -> ok`)
+          break
+        }
+        case 'page_accessible':
+          await pushTrace(`${prefix} -> ok`)
+          break
+        default:
+          throw new AmbiguousTargetError(check.failure_message)
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      await pushTrace(`${prefix} -> failed (${message})`)
+      throw error
+    }
+  }
+
+  return consumedGoto ? 1 : 0
 }
 
 async function executeAssert(page: Page, assertItem: AssertDsl, timeoutMs: number): Promise<void> {
@@ -581,6 +732,7 @@ async function executeCase(
   let traceStarted = false
   const artifacts = createEmptyArtifacts()
   const executionTrace: string[] = []
+  const generatedPlan = cloneGeneratedPlan(runCase)
 
   const pushTrace = async (line: string): Promise<void> => {
     const prefixed = tracePrefix ? `[${tracePrefix}] ${line}` : line
@@ -593,9 +745,10 @@ async function executeCase(
   let status: CaseStatus = 'passed'
   let error_type: CaseResultV1['error_type'] = null
   let error_message: string | null = null
+  let failureSource: CaseResultV1['failure_source'] = null
 
   try {
-    await pushTrace('Browser context started')
+    await pushTrace('Planning: browser context starting')
 
     const caseStorageStatePath = runCase.use_auth === false ? undefined : storageStatePath
 
@@ -623,17 +776,30 @@ async function executeCase(
       traceStarted = true
     }
 
-    for (let index = 0; index < runCase.steps.length; index += 1) {
+    const firstExecutableStepIndex = await runPreflight(
+      page,
+      runCase,
+      request,
+      timeoutMs,
+      pushTrace,
+    )
+
+    for (let index = firstExecutableStepIndex; index < runCase.steps.length; index += 1) {
       const step = runCase.steps[index]
       const stepLabel = describeStep(step)
       const stepStart = Date.now()
 
       try {
-        await executeStep(page, step, request.target.base_url, timeoutMs, caseArtifactsDir)
+        await executeStep(page, runCase, step, request.target.base_url, timeoutMs, caseArtifactsDir)
         await pushTrace(`Step ${index + 1}: ${stepLabel} -> ok (${Date.now() - stepStart}ms)`)
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         await pushTrace(`Step ${index + 1}: ${stepLabel} -> failed (${message})`)
+        failureSource = {
+          phase: 'step',
+          reference: stepLabel,
+          message,
+        }
         throw error
       }
     }
@@ -649,13 +815,25 @@ async function executeCase(
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         await pushTrace(`Assert ${index + 1}: ${assertLabel} -> failed (${message})`)
+        failureSource = {
+          phase: 'assert',
+          reference: assertLabel,
+          message,
+        }
         throw error
       }
     }
   } catch (error) {
     const normalized = normalizeError(error)
 
-    if (normalized.error_type === 'missing_env_var' || normalized.error_type === 'selector_not_found') {
+    if (
+      normalized.error_type === 'missing_env_var' ||
+      normalized.error_type === 'selector_not_found' ||
+      normalized.error_type === 'precondition_failed' ||
+      normalized.error_type === 'unsupported_test_case' ||
+      normalized.error_type === 'input_data_missing' ||
+      normalized.error_type === 'ambiguous_target'
+    ) {
       status = 'blocked'
     } else {
       status = 'failed'
@@ -663,7 +841,16 @@ async function executeCase(
 
     error_type = normalized.error_type
     error_message = normalized.error_message
-    await pushTrace(`Run failed: ${normalized.error_message}`)
+    if (!failureSource) {
+      failureSource = {
+        phase: normalized.error_type === 'precondition_failed' || normalized.error_type === 'unsupported_test_case' || normalized.error_type === 'input_data_missing'
+          ? 'preflight'
+          : 'runtime',
+        reference: normalized.error_type,
+        message: normalized.error_message,
+      }
+    }
+    await pushTrace(`Failure analysis: ${normalized.error_type} -> ${normalized.error_message}`)
 
     if (status === 'failed' && request.runtime.screenshot === 'only-on-failure' && page) {
       const failScreenshotPath = path.join(caseArtifactsDir, 'fail.png')
@@ -703,6 +890,7 @@ async function executeCase(
     }
 
     if (status === 'passed') {
+      await pushTrace('Failure analysis: none')
       await pushTrace('Run completed successfully')
     }
   }
@@ -715,6 +903,8 @@ async function executeCase(
     error_type,
     error_message,
     artifacts,
+    generated_plan: generatedPlan,
+    failure_source: failureSource,
     execution_trace: executionTrace,
   }
 }
@@ -791,6 +981,8 @@ function aggregateBrowserResults(runCase: RunCaseDsl, browserResults: BrowserCas
     duration_ms: browserResults.reduce((sum, entry) => sum + entry.result.duration_ms, 0),
     error_type: firstFailure?.result.error_type ?? null,
     error_message: firstFailure?.result.error_message ?? null,
+    generated_plan: firstFailure?.result.generated_plan ?? browserResults[0]?.result.generated_plan ?? null,
+    failure_source: firstFailure?.result.failure_source ?? null,
     artifacts: {
       trace_path: firstNonNull(browserResults.map((entry) => entry.result.artifacts.trace_path)),
       screenshot_path: firstNonNull(browserResults.map((entry) => entry.result.artifacts.screenshot_path)),

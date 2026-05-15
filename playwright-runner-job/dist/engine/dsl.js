@@ -112,8 +112,16 @@ function validateStep(input, path, errors) {
             if (!validateSelector(input.selector, `${path}.selector`, errors)) {
                 return false;
             }
-            if (!isNonEmptyString(input.value)) {
-                errors.push(`${path}.value must be a non-empty string`);
+            if (input.value !== undefined && !isNonEmptyString(input.value)) {
+                errors.push(`${path}.value must be a non-empty string when provided`);
+                return false;
+            }
+            if (input.input_key !== undefined && !isNonEmptyString(input.input_key)) {
+                errors.push(`${path}.input_key must be a non-empty string when provided`);
+                return false;
+            }
+            if (input.value === undefined && input.input_key === undefined) {
+                errors.push(`${path}.value or ${path}.input_key must be provided`);
                 return false;
             }
             return true;
@@ -159,10 +167,192 @@ function validateStep(input, path, errors) {
                 return false;
             }
             return true;
+        case 'set_file':
+            if (!validateSelector(input.selector, `${path}.selector`, errors)) {
+                return false;
+            }
+            if (input.file_path !== undefined && !isNonEmptyString(input.file_path)) {
+                errors.push(`${path}.file_path must be a non-empty string when provided`);
+                return false;
+            }
+            if (input.input_key !== undefined && !isNonEmptyString(input.input_key)) {
+                errors.push(`${path}.input_key must be a non-empty string when provided`);
+                return false;
+            }
+            if (input.file_path === undefined && input.input_key === undefined) {
+                errors.push(`${path}.file_path or ${path}.input_key must be provided`);
+                return false;
+            }
+            return true;
         default:
             errors.push(`${path}.action has unsupported value '${String(input.action)}'`);
             return false;
     }
+}
+function validateRequiredInput(input, path, errors) {
+    if (!isObject(input)) {
+        errors.push(`${path} must be an object`);
+        return false;
+    }
+    if (!isNonEmptyString(input.key)) {
+        errors.push(`${path}.key must be a non-empty string`);
+    }
+    if (!isNonEmptyString(input.label)) {
+        errors.push(`${path}.label must be a non-empty string`);
+    }
+    if (!isNonEmptyString(input.kind) || !['text', 'email', 'password', 'textarea', 'search', 'file'].includes(input.kind)) {
+        errors.push(`${path}.kind must be one of text|email|password|textarea|search|file`);
+    }
+    if (typeof input.required !== 'boolean') {
+        errors.push(`${path}.required must be a boolean`);
+    }
+    if (input.description !== undefined && !isNonEmptyString(input.description)) {
+        errors.push(`${path}.description must be a non-empty string when provided`);
+    }
+    if (input.value !== undefined && input.value !== null && !isNonEmptyString(input.value)) {
+        errors.push(`${path}.value must be a non-empty string when provided`);
+    }
+    return true;
+}
+function validateDiagnostic(input, path, errors) {
+    if (!isObject(input)) {
+        errors.push(`${path} must be an object`);
+        return false;
+    }
+    if (!isNonEmptyString(input.code)) {
+        errors.push(`${path}.code must be a non-empty string`);
+    }
+    if (!isNonEmptyString(input.message)) {
+        errors.push(`${path}.message must be a non-empty string`);
+    }
+    if (!isNonEmptyString(input.severity) || !['info', 'warning', 'error'].includes(input.severity)) {
+        errors.push(`${path}.severity must be info|warning|error`);
+    }
+    return true;
+}
+function validatePreflightCheck(input, path, errors) {
+    if (!isObject(input)) {
+        errors.push(`${path} must be an object`);
+        return false;
+    }
+    if (!isNonEmptyString(input.id)) {
+        errors.push(`${path}.id must be a non-empty string`);
+    }
+    if (!isNonEmptyString(input.kind) ||
+        !['page_accessible', 'element_visible', 'element_attached', 'url_contains', 'input_available', 'unsupported'].includes(input.kind)) {
+        errors.push(`${path}.kind has unsupported value`);
+    }
+    if (!isNonEmptyString(input.label)) {
+        errors.push(`${path}.label must be a non-empty string`);
+    }
+    if (typeof input.required !== 'boolean') {
+        errors.push(`${path}.required must be a boolean`);
+    }
+    if (input.selector !== undefined) {
+        validateSelector(input.selector, `${path}.selector`, errors);
+    }
+    if (input.expected !== undefined && !isNonEmptyString(input.expected)) {
+        errors.push(`${path}.expected must be a non-empty string when provided`);
+    }
+    if (input.input_key !== undefined && !isNonEmptyString(input.input_key)) {
+        errors.push(`${path}.input_key must be a non-empty string when provided`);
+    }
+    if (!isNonEmptyString(input.failure_message)) {
+        errors.push(`${path}.failure_message must be a non-empty string`);
+    }
+    return true;
+}
+function validateGeneratedPlan(input, path, errors) {
+    if (!isObject(input)) {
+        errors.push(`${path} must be an object`);
+        return false;
+    }
+    if (input.title !== undefined && !isNonEmptyString(input.title)) {
+        errors.push(`${path}.title must be a non-empty string when provided`);
+    }
+    if (!isNonEmptyString(input.intent_summary)) {
+        errors.push(`${path}.intent_summary must be a non-empty string`);
+    }
+    if (!isNonEmptyString(input.coverage_type)) {
+        errors.push(`${path}.coverage_type must be a non-empty string`);
+    }
+    if (!Array.isArray(input.preflight_checks)) {
+        errors.push(`${path}.preflight_checks must be an array`);
+    }
+    else {
+        for (let i = 0; i < input.preflight_checks.length; i += 1) {
+            validatePreflightCheck(input.preflight_checks[i], `${path}.preflight_checks[${i}]`, errors);
+        }
+    }
+    if (!Array.isArray(input.steps)) {
+        errors.push(`${path}.steps must be an array`);
+    }
+    else {
+        for (let i = 0; i < input.steps.length; i += 1) {
+            validateStep(input.steps[i], `${path}.steps[${i}]`, errors);
+        }
+    }
+    if (!Array.isArray(input.asserts)) {
+        errors.push(`${path}.asserts must be an array`);
+    }
+    else {
+        for (let i = 0; i < input.asserts.length; i += 1) {
+            validateAssert(input.asserts[i], `${path}.asserts[${i}]`, errors);
+        }
+    }
+    if (!Array.isArray(input.expected_observations)) {
+        errors.push(`${path}.expected_observations must be an array`);
+    }
+    if (!Array.isArray(input.diagnostics)) {
+        errors.push(`${path}.diagnostics must be an array`);
+    }
+    else {
+        for (let i = 0; i < input.diagnostics.length; i += 1) {
+            validateDiagnostic(input.diagnostics[i], `${path}.diagnostics[${i}]`, errors);
+        }
+    }
+    return true;
+}
+function validateExecutionProfile(input, path, errors) {
+    if (!isObject(input)) {
+        errors.push(`${path} must be an object`);
+        return false;
+    }
+    if (!isNonEmptyString(input.intent_summary)) {
+        errors.push(`${path}.intent_summary must be a non-empty string`);
+    }
+    if (!isNonEmptyString(input.coverage_type)) {
+        errors.push(`${path}.coverage_type must be a non-empty string`);
+    }
+    if (!Array.isArray(input.preconditions)) {
+        errors.push(`${path}.preconditions must be an array`);
+    }
+    if (!Array.isArray(input.required_inputs)) {
+        errors.push(`${path}.required_inputs must be an array`);
+    }
+    else {
+        for (let i = 0; i < input.required_inputs.length; i += 1) {
+            validateRequiredInput(input.required_inputs[i], `${path}.required_inputs[${i}]`, errors);
+        }
+    }
+    if (!Array.isArray(input.expected_observations)) {
+        errors.push(`${path}.expected_observations must be an array`);
+    }
+    if (!Array.isArray(input.diagnostics)) {
+        errors.push(`${path}.diagnostics must be an array`);
+    }
+    else {
+        for (let i = 0; i < input.diagnostics.length; i += 1) {
+            validateDiagnostic(input.diagnostics[i], `${path}.diagnostics[${i}]`, errors);
+        }
+    }
+    if (input.generation_confidence !== undefined && typeof input.generation_confidence !== 'number') {
+        errors.push(`${path}.generation_confidence must be a number when provided`);
+    }
+    if (input.last_generated_plan !== undefined) {
+        validateGeneratedPlan(input.last_generated_plan, `${path}.last_generated_plan`, errors);
+    }
+    return true;
 }
 function validateAssert(input, path, errors) {
     if (!isObject(input)) {
@@ -402,6 +592,22 @@ function validateRunRequest(input) {
             if (c.use_auth !== undefined && typeof c.use_auth !== 'boolean') {
                 errors.push(`${basePath}.use_auth must be a boolean when provided`);
             }
+            if (c.execution_profile !== undefined) {
+                validateExecutionProfile(c.execution_profile, `${basePath}.execution_profile`, errors);
+            }
+            if (c.generated_plan !== undefined) {
+                validateGeneratedPlan(c.generated_plan, `${basePath}.generated_plan`, errors);
+            }
+            if (c.preflight_checks !== undefined) {
+                if (!Array.isArray(c.preflight_checks)) {
+                    errors.push(`${basePath}.preflight_checks must be an array when provided`);
+                }
+                else {
+                    for (let p = 0; p < c.preflight_checks.length; p += 1) {
+                        validatePreflightCheck(c.preflight_checks[p], `${basePath}.preflight_checks[${p}]`, errors);
+                    }
+                }
+            }
             if (Array.isArray(c.steps)) {
                 for (let s = 0; s < c.steps.length; s += 1) {
                     validateStep(c.steps[s], `${basePath}.steps[${s}]`, errors);
@@ -421,6 +627,9 @@ function validateRunRequest(input) {
                     title: c.title,
                     severity: c.severity,
                     use_auth: c.use_auth,
+                    execution_profile: c.execution_profile,
+                    generated_plan: c.generated_plan,
+                    preflight_checks: c.preflight_checks,
                     steps: c.steps,
                     asserts: c.asserts,
                 });

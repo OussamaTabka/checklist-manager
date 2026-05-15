@@ -1,5 +1,6 @@
 import { watch } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
+import { localizeMessage } from '@/lib/localization'
 
 const PHRASES = {
   nav_main: { en: 'MAIN', fr: 'PRINCIPAL', ar: 'الرئيسية' },
@@ -308,7 +309,8 @@ function translateKnownPhrase(sourceText, language) {
       }
     }
 
-    return sourceText
+    const localized = localizeMessage(sourceText, language)
+    return localized !== sourceText ? localized : sourceText
   }
 
   const translation = PHRASES[key]?.[language]

@@ -16,17 +16,25 @@ class ChecklistItem extends Model
         'criticality',
         'order',
         'status',
+        'qa_comment',
         'last_run_at',
         'run_count',
         'tested_by',
         'tested_at',
+        'execution_profile',
+        'source_type',
+        'source_checklist_id',
+        'source_checklist_name',
     ];
 
     protected $casts = [
         'status' => 'string',
+        'qa_comment' => 'string',
         'last_run_at' => 'datetime',
         'run_count' => 'integer',
         'tested_at' => 'datetime',
+        'execution_profile' => 'array',
+        'source_checklist_id' => 'integer',
     ];
 
     public function checklist(): BelongsTo

@@ -1,20 +1,29 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useUserStoriesStore } from '@/stores/userStories'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
-import { translateCurrentPhrase } from '@/lib/runtimeTranslations'
-import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, FlaskConical, Minus, Plus, Sparkles, Trash2, Zap } from 'lucide-vue-next'
+import { useToastStore } from '@/stores/toast'
+import { apiRequest } from '@/lib/api'
+import { localizeError, localizeMessage, tr } from '@/lib/localization'
+import { AlertCircle, ArrowLeft, Ellipsis, FileText, FlaskConical, Link, Plus, Sparkles, Trash2, WandSparkles, Zap } from 'lucide-vue-next'
+import StoryTabs from '@/components/story/StoryTabs.vue'
+import SuggestionCard from '@/components/story/SuggestionCard.vue'
+import ChecklistAccordion from '@/components/story/ChecklistAccordion.vue'
+import WorkflowStepper from '@/components/story/WorkflowStepper.vue'
 
 const route = useRoute()
 const router = useRouter()
 const storiesStore = useUserStoriesStore()
 const auth = useAuthStore()
 const settingsStore = useSettingsStore()
+const toast = useToastStore()
+const projectSummary = ref(null)
 
 const projectId = computed(() => route.query.projectId || null)
 const storyId = route.params.id
+const currentLanguage = computed(() => settingsStore.language || 'fr')
 
 const statusLabels = {
   backlog: 'Backlog',
@@ -40,27 +49,207 @@ const criticalities = {
 }
 
 const currentSuggestions = computed(() => storiesStore.suggestionsByStoryId?.[storyId] || null)
-const visibleSuggestions = computed(() => currentSuggestions.value?.suggestions || [])
 const currentAgentResult = computed(() => storiesStore.agentResultsByStoryId?.[storyId] || null)
 const currentPreview = computed(() => storiesStore.previewByStoryId?.[storyId] || null)
 const pendingDrafts = computed(() => storiesStore.currentStory?.pending_drafts || [])
-const attachedChecklistCount = computed(() => storiesStore.currentStory?.checklists?.length || 0)
+const attachedChecklists = computed(() => storiesStore.currentStory?.checklists || [])
+const attachedChecklistCount = computed(() => attachedChecklists.value.length)
+const attachedChecklistIds = computed(() => new Set(attachedChecklists.value.map((checklist) => Number(checklist.id))))
+const attachedChecklistLookup = computed(() => {
+  const ids = new Set()
+  const names = new Set()
+
+  for (const checklist of attachedChecklists.value) {
+    for (const candidate of [checklist?.id, checklist?.checklist_id, checklist?.source_checklist_id]) {
+      if (candidate !== null && candidate !== undefined && candidate !== '') {
+        ids.add(String(candidate))
+      }
+    }
+
+    const normalizedName = normalizeChecklistName(checklist?.name || checklist?.title)
+    if (normalizedName) {
+      names.add(normalizedName)
+    }
+  }
+
+  return { ids, names }
+})
+const visibleSuggestions = computed(() => {
+  const suggestions = Array.isArray(currentSuggestions.value?.suggestions)
+    ? currentSuggestions.value.suggestions
+    : []
+  const dedupedSuggestions = new Map()
+
+  for (const suggestion of suggestions) {
+    const suggestionId = suggestionIdentifier(suggestion)
+    const normalizedName = suggestionNameKey(suggestion)
+
+    if (
+      (suggestionId && attachedChecklistLookup.value.ids.has(String(suggestionId))) ||
+      (normalizedName && attachedChecklistLookup.value.names.has(normalizedName))
+    ) {
+      continue
+    }
+
+    const uniqueKey = suggestionId ? `id:${suggestionId}` : normalizedName ? `name:${normalizedName}` : null
+    if (!uniqueKey) {
+      continue
+    }
+
+    const existing = dedupedSuggestions.get(uniqueKey)
+    if (!existing || scoreValue(suggestion) > scoreValue(existing)) {
+      dedupedSuggestions.set(uniqueKey, suggestion)
+    }
+  }
+
+  return Array.from(dedupedSuggestions.values())
+})
 const suggestedChecklistCount = computed(() => visibleSuggestions.value.length || 0)
+const isAdminReadonly = computed(() => auth.isSystemAdmin && !auth.isProjectManager && !auth.isTester)
 const storyStatusLabel = computed(() => statusLabels[storiesStore.currentStory?.status] || storiesStore.currentStory?.status || '-')
 const storyPriorityLabel = computed(() => {
   const priority = storiesStore.currentStory?.priority || ''
   return priority ? priority.charAt(0).toUpperCase() + priority.slice(1) : '-'
 })
 const acceptanceCriteriaText = computed(() => storiesStore.currentStory?.acceptance_criteria || 'No acceptance criteria provided.')
-const currentLanguage = computed(() => settingsStore.language || 'fr')
+const attachableChecklists = computed(() =>
+  availableChecklists.value.filter((checklist) => {
+    const checklistId = Number(checklist.id)
+    const lifecycleStatus = String(checklist.lifecycle_status || '').toLowerCase()
+
+    return (
+      checklist.is_active &&
+      lifecycleStatus !== 'archived' &&
+      !attachedChecklistIds.value.has(checklistId)
+    )
+  }),
+)
+const attachChecklistPageSize = 5
+const attachChecklistTotalPages = computed(() => Math.max(1, Math.ceil(attachableChecklists.value.length / attachChecklistPageSize)))
+const paginatedAttachableChecklists = computed(() => {
+  const start = (attachChecklistPage.value - 1) * attachChecklistPageSize
+  return attachableChecklists.value.slice(start, start + attachChecklistPageSize)
+})
+const selectedExistingChecklists = computed(() =>
+  attachableChecklists.value.filter((checklist) => selectedExistingChecklistIds.value.includes(Number(checklist.id))),
+)
+const businessRules = computed(() => Array.isArray(storiesStore.currentStory?.business_rules) ? storiesStore.currentStory.business_rules : [])
+const businessScenarios = computed(() => Array.isArray(storiesStore.currentStory?.scenarios) ? storiesStore.currentStory.scenarios : [])
+const projectLabel = computed(() => projectSummary.value?.name || `Projet #${projectId.value || '-'}`)
+const hasSuggestions = computed(() => visibleSuggestions.value.length > 0)
+const hasDrafts = computed(() => pendingDrafts.value.length > 0)
+const hasAttachedChecklists = computed(() => attachedChecklists.value.length > 0)
+const activeStoryTab = ref('description')
+const openHeaderActions = ref(false)
+const previewIntent = ref('details')
+const prepareSection = ref(null)
+const suggestionsSection = ref(null)
+const workflowSteps = [
+  { id: 1, label: 'Analyser' },
+  { id: 2, label: 'Adapter checklist' },
+  { id: 3, label: 'Associer' },
+  { id: 4, label: 'Executer' },
+]
+const workflowCurrentStep = computed(() => {
+  if (hasAttachedChecklists.value) return 4
+  if (hasDrafts.value) return 3
+  if (hasSuggestions.value || currentAgentResult.value) return 2
+  return 1
+})
+const summaryChips = computed(() => [
+  { label: 'Statut', value: storyStatusLabel.value, tone: 'neutral' },
+  { label: 'Priorite', value: storyPriorityLabel.value, tone: 'warning' },
+  { label: 'Suggestions', value: String(suggestedChecklistCount.value), tone: 'info' },
+  { label: 'Checklists associees', value: String(attachedChecklistCount.value), tone: 'success' },
+])
+const storyTabs = computed(() => [
+  {
+    id: 'description',
+    label: 'Description',
+    content: storiesStore.currentStory?.description || 'Aucune description disponible.',
+  },
+  {
+    id: 'criteria',
+    label: 'Criteres d acceptation',
+    content: acceptanceCriteriaText.value || 'Aucun critere d acceptation disponible.',
+  },
+  {
+    id: 'rules',
+    label: 'Regles metier',
+    items: businessRules.value,
+    badge: businessRules.value.length,
+    emptyText: 'Aucune regle metier renseignee.',
+  },
+  {
+    id: 'scenarios',
+    label: 'Scenarios metier',
+    items: businessScenarios.value,
+    badge: businessScenarios.value.length,
+    emptyText: 'Aucun scenario metier renseigne.',
+  },
+])
+const primaryAction = computed(() => {
+  if (hasAttachedChecklists.value) {
+    return { key: 'execution', label: 'Ouvrir l espace d execution' }
+  }
+  if (hasDrafts.value) {
+    return { key: 'drafts', label: 'Continuer la validation' }
+  }
+  return { key: 'prepare', label: 'Preparer une checklist' }
+})
+const agentStatus = computed(() => {
+  if (storiesStore.isGenerating) {
+    return {
+      label: 'Generation en cours',
+      description: 'L agent prepare une proposition de checklist.',
+      tone: 'info',
+    }
+  }
+
+  if (storiesStore.error) {
+    return {
+      label: 'Erreur',
+      description: storiesStore.error,
+      tone: 'danger',
+    }
+  }
+
+  if (currentAgentResult.value?.checklist || currentAgentResult.value?.reuse_summary) {
+    return {
+      label: 'Termine',
+      description: 'Une proposition de checklist est disponible.',
+      tone: 'success',
+    }
+  }
+
+  return {
+    label: 'Pret',
+    description: 'Choisissez une methode pour preparer la checklist.',
+    tone: 'neutral',
+  }
+})
 
 const previewOpen = ref(false)
 const previewLoading = ref(false)
 const adapting = ref(false)
 const attaching = ref(false)
+const loadingAvailableChecklists = ref(false)
+const loadingSuggestions = ref(false)
+const attachingExistingChecklist = ref(false)
+const approvingDraftId = ref(null)
 const collapsedDrafts = ref({})
 const previewMode = ref('suggestion')
 const previewChecklistId = ref(null)
+const availableChecklists = ref([])
+const showAttachExistingPanel = ref(false)
+const selectedExistingChecklistIds = ref([])
+const attachChecklistPage = ref(1)
+const attachedSection = ref(null)
+const highlightedChecklistId = ref(null)
+const openDraftMenuId = ref(null)
+const rejectingDraftId = ref(null)
+let highlightTimeoutId = null
+let scrollTimeoutId = null
 const previewForm = ref({
   name: '',
   description: '',
@@ -76,12 +265,62 @@ async function loadStory() {
   await Promise.all([
     storiesStore.fetchStory(projectId.value, storyId),
     storiesStore.fetchGeneratorStatus(projectId.value),
-    storiesStore.fetchChecklistSuggestions(projectId.value, storyId),
+    refreshSuggestedChecklists(),
+    loadProjectSummary(),
+    auth.isTester ? loadAvailableChecklists() : Promise.resolve(),
   ])
 }
 
+async function refreshSuggestedChecklists() {
+  if (!projectId.value) {
+    return
+  }
+
+  try {
+    loadingSuggestions.value = true
+    await storiesStore.fetchChecklistSuggestions(projectId.value, storyId)
+  } finally {
+    loadingSuggestions.value = false
+  }
+}
+
+async function loadAvailableChecklists() {
+  if (!projectId.value || !auth.isTester) {
+    availableChecklists.value = []
+    return
+  }
+
+  try {
+    loadingAvailableChecklists.value = true
+    const data = await apiRequest(`/checklists?project_id=${projectId.value}&per_page=100`, {}, auth.token)
+    availableChecklists.value = Array.isArray(data?.data) ? data.data : []
+  } catch {
+    availableChecklists.value = []
+  } finally {
+    loadingAvailableChecklists.value = false
+    goToAttachChecklistPage(attachChecklistPage.value)
+  }
+}
+
+async function loadProjectSummary() {
+  if (!projectId.value) {
+    projectSummary.value = null
+    return
+  }
+
+  try {
+    projectSummary.value = await apiRequest(`/projects/${projectId.value}`, {}, auth.token)
+  } catch {
+    projectSummary.value = { id: projectId.value, name: `Projet #${projectId.value}` }
+  }
+}
+
+function scrollToSection(target) {
+  target?.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 async function generateChecklist() {
-  if (!confirm(translateCurrentPhrase('Launch the checklist agent? It will reuse approved checklists first, then generate missing coverage.'))) {
+  if (!confirm(localizeMessage('Launch the checklist agent? It will reuse approved checklists first, then generate missing coverage.', currentLanguage.value))) {
     return
   }
   if (!projectId.value) {
@@ -92,12 +331,12 @@ async function generateChecklist() {
     await storiesStore.generateChecklistWithAgent(projectId.value, storyId)
     await loadStory()
   } catch (err) {
-    alert(`${translateCurrentPhrase('Error')}: ${err.message}`)
+    alert(`${tr('error_prefix', {}, currentLanguage.value)}: ${localizeError(err, 'error_generic', currentLanguage.value)}`)
   }
 }
 
 async function detachChecklist(checklistId) {
-  if (!confirm(translateCurrentPhrase('Detach this checklist?'))) {
+  if (!confirm(localizeMessage('Detach this checklist?', currentLanguage.value))) {
     return
   }
   if (!projectId.value) {
@@ -106,9 +345,72 @@ async function detachChecklist(checklistId) {
 
   try {
     await storiesStore.detachChecklist(projectId.value, storyId, checklistId)
-    await storiesStore.fetchChecklistSuggestions(projectId.value, storyId)
+    await refreshSuggestedChecklists()
+    toast.success(localizeMessage('Checklist detachee de la User Story.', currentLanguage.value))
   } catch (err) {
-    alert(`${translateCurrentPhrase('Error')}: ${err.message}`)
+    alert(`${tr('error_prefix', {}, currentLanguage.value)}: ${localizeError(err, 'error_generic', currentLanguage.value)}`)
+  }
+}
+
+function toggleAttachExistingPanel() {
+  showAttachExistingPanel.value = !showAttachExistingPanel.value
+
+  if (!showAttachExistingPanel.value) {
+    selectedExistingChecklistIds.value = []
+    attachChecklistPage.value = 1
+  }
+}
+
+function goToAttachChecklistPage(page) {
+  attachChecklistPage.value = Math.min(Math.max(1, page), attachChecklistTotalPages.value)
+}
+
+async function attachExistingChecklist() {
+  if (!projectId.value || selectedExistingChecklistIds.value.length === 0) {
+    return
+  }
+
+  try {
+    attachingExistingChecklist.value = true
+    const checklistIds = [...selectedExistingChecklistIds.value]
+
+    await Promise.all(
+      checklistIds.map((checklistId) => storiesStore.attachChecklist(projectId.value, storyId, checklistId)),
+    )
+    await Promise.all([
+      refreshSuggestedChecklists(),
+      loadAvailableChecklists(),
+    ])
+
+    toast.success(
+      checklistIds.length > 1
+        ? localizeMessage('Checklists existantes associees a la User Story.', currentLanguage.value)
+        : localizeMessage('Checklist existante associee a la User Story.', currentLanguage.value),
+    )
+    showAttachExistingPanel.value = false
+    selectedExistingChecklistIds.value = []
+
+    await nextTick()
+
+    highlightedChecklistId.value = checklistIds[0]
+
+    if (scrollTimeoutId) {
+      clearTimeout(scrollTimeoutId)
+    }
+    scrollTimeoutId = setTimeout(() => {
+      attachedSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 250)
+
+    if (highlightTimeoutId) {
+      clearTimeout(highlightTimeoutId)
+    }
+    highlightTimeoutId = setTimeout(() => {
+      highlightedChecklistId.value = null
+    }, 2000)
+  } catch (err) {
+    toast.error(localizeError(err, 'error_generic', currentLanguage.value))
+  } finally {
+    attachingExistingChecklist.value = false
   }
 }
 
@@ -135,9 +437,22 @@ async function viewSuggestedChecklist(checklistId) {
     previewChecklistId.value = checklistId
     previewOpen.value = true
   } catch (err) {
-    alert(`${translateCurrentPhrase('Error')}: ${err.message}`)
+    alert(`${tr('error_prefix', {}, currentLanguage.value)}: ${localizeError(err, 'error_generic', currentLanguage.value)}`)
   } finally {
     previewLoading.value = false
+  }
+}
+
+function removePendingDraftFromView(checklistId) {
+  if (!storiesStore.currentStory?.pending_drafts) {
+    return
+  }
+
+  storiesStore.currentStory = {
+    ...storiesStore.currentStory,
+    pending_drafts: storiesStore.currentStory.pending_drafts.filter(
+      (draft) => Number(draft.id) !== Number(checklistId),
+    ),
   }
 }
 
@@ -145,12 +460,55 @@ async function approveGeneratedChecklist(checklistId) {
   if (!projectId.value) {
     return
   }
+  try {
+    approvingDraftId.value = checklistId
+    openDraftMenuId.value = null
+    const response = await storiesStore.approveGeneratedChecklist(projectId.value, storyId, checklistId)
+    const approvedChecklistId = response?.approved_checklist?.id || checklistId
+    removePendingDraftFromView(checklistId)
+    await loadStory()
+    toast.success(localizeMessage('Checklist approuvee et associee a la User Story.', currentLanguage.value))
+    await nextTick()
+    highlightedChecklistId.value = approvedChecklistId
+    if (scrollTimeoutId) {
+      clearTimeout(scrollTimeoutId)
+    }
+    scrollTimeoutId = setTimeout(() => {
+      attachedSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 250)
+    if (highlightTimeoutId) {
+      clearTimeout(highlightTimeoutId)
+    }
+    highlightTimeoutId = setTimeout(() => {
+      highlightedChecklistId.value = null
+    }, 2000)
+  } catch (err) {
+    toast.error(localizeError(err, 'error_generic', currentLanguage.value))
+  } finally {
+    approvingDraftId.value = null
+  }
+}
+
+async function rejectPendingDraft(checklistId) {
+  if (!projectId.value) {
+    return
+  }
+
+  if (!confirm(localizeMessage('Reject this generated checklist draft?', currentLanguage.value))) {
+    return
+  }
 
   try {
-    await storiesStore.approveGeneratedChecklist(projectId.value, storyId, checklistId)
+    rejectingDraftId.value = checklistId
+    openDraftMenuId.value = null
+    await storiesStore.rejectGeneratedChecklist(projectId.value, storyId, checklistId)
+    removePendingDraftFromView(checklistId)
     await loadStory()
+    toast.success(localizeMessage('Checklist brouillon rejetee.', currentLanguage.value))
   } catch (err) {
-    alert(`${translateCurrentPhrase('Error')}: ${err.message}`)
+    toast.error(localizeError(err, 'error_generic', currentLanguage.value))
+  } finally {
+    rejectingDraftId.value = null
   }
 }
 
@@ -165,13 +523,14 @@ function removeSuggestedChecklist(checklistId) {
     [storyId]: {
       ...current,
       suggestions: current.suggestions.filter(
-        (suggestion) => String(suggestion.source_checklist_id || suggestion.id) !== String(checklistId)
+        (suggestion) => String(suggestion.source_checklist_id || suggestion.id) !== String(checklistId),
       ),
     },
   }
 }
 
 function openManualDraft() {
+  previewIntent.value = 'manual'
   previewMode.value = 'manual'
   previewChecklistId.value = null
   previewForm.value = {
@@ -193,6 +552,7 @@ function openManualDraft() {
 }
 
 function editPendingDraft(draft) {
+  previewIntent.value = 'draft'
   previewMode.value = 'draft'
   previewChecklistId.value = draft.id
   previewForm.value = {
@@ -227,60 +587,288 @@ function isDraftCollapsed(draftId) {
   return Boolean(collapsedDrafts.value[draftId])
 }
 
+function toggleDraftMenu(draftId) {
+  openDraftMenuId.value = openDraftMenuId.value === draftId ? null : draftId
+}
+
+function executionSpaceRoute(checklistId = null) {
+  if (!projectId.value) {
+    return { name: 'project-detail' }
+  }
+
+  if (checklistId) {
+    return {
+      name: 'checklist-detail',
+      params: { id: checklistId },
+      query: { projectId: projectId.value },
+    }
+  }
+
+  const firstChecklistId = attachedChecklists.value[0]?.id
+  if (firstChecklistId) {
+    return {
+      name: 'checklist-detail',
+      params: { id: firstChecklistId },
+      query: { projectId: projectId.value },
+    }
+  }
+
+  return { name: 'project-detail', params: { id: projectId.value } }
+}
+
+function toggleHeaderActions() {
+  openHeaderActions.value = !openHeaderActions.value
+}
+
+function handlePrimaryAction() {
+  if (primaryAction.value.key === 'execution') {
+    router.push(executionSpaceRoute(attachedChecklists.value[0]?.id))
+    return
+  }
+
+  if (primaryAction.value.key === 'drafts') {
+    scrollToSection(prepareSection)
+    return
+  }
+
+  scrollToSection(prepareSection)
+}
+
+async function openSuggestionPreview(checklistId, intent = 'details') {
+  previewIntent.value = intent
+  await viewSuggestedChecklist(checklistId)
+}
+
+function normalizeChecklistName(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+}
+
+function suggestionIdentifier(suggestion) {
+  const candidates = [suggestion?.checklist_id, suggestion?.source_checklist_id, suggestion?.id]
+
+  for (const candidate of candidates) {
+    if (candidate !== null && candidate !== undefined && candidate !== '') {
+      return String(candidate)
+    }
+  }
+
+  return ''
+}
+
+function suggestionNameKey(suggestion) {
+  return normalizeChecklistName(
+    suggestion?.title ||
+    suggestion?.name ||
+    suggestion?.checklist?.title ||
+    suggestion?.checklist?.name,
+  )
+}
+
+function suggestionRenderKey(suggestion) {
+  return suggestionIdentifier(suggestion) || suggestionNameKey(suggestion)
+}
+
 function localizeGeneratedText(text) {
-  const value = String(text || '')
-  if (!value) {
-    return value
-  }
-
-  if (currentLanguage.value === 'fr') {
-    return value
-      .replace(/^Successful payment creates order confirmation$/g, 'Le paiement reussi cree une confirmation de commande')
-      .replace(
-        /^Verify order number, receipt, customer email, and inventory updates after payment success\.$/g,
-        'Verifier le numero de commande, le recu, l email client et la mise a jour du stock apres un paiement reussi.'
-      )
-      .replace(/^Criterion (\d+):/g, 'Critere $1 :')
-      .replace(/Expected result:/g, 'Resultat attendu :')
-  }
-
-  if (currentLanguage.value === 'en') {
-    return value
-      .replace(/^Le paiement reussi cree une confirmation de commande$/g, 'Successful payment creates order confirmation')
-      .replace(
-        /^Verifier le numero de commande, le recu, l email client et la mise a jour du stock apres un paiement reussi\.$/g,
-        'Verify order number, receipt, customer email, and inventory updates after payment success.'
-      )
-      .replace(/^Critere (\d+)\s*:/g, 'Criterion $1:')
-      .replace(/Resultat attendu\s*:/g, 'Expected result:')
-      .replace(/^Cas nominal reussi pour /g, 'Successful happy path for ')
-      .replace(/^Validation des champs pour /g, 'Input validation for ')
-      .replace(/^Regles metier appliquees pour /g, 'Business rules enforced for ')
-      .replace(/^Gestion des erreurs pour /g, 'Error handling for ')
-      .replace(/^Notifications correctes pour /g, 'Notifications sent correctly for ')
-      .replace(/^Integrite des donnees preservee pour /g, 'Data integrity preserved for ')
-      .replace(/^Securite des donnees sensibles pour /g, 'Sensitive data stays protected for ')
-      .replace(/^Retours utilisateur clairs pour /g, 'Clear user feedback for ')
-      .replace(/^Prevention des actions en double pour /g, 'Duplicate actions are prevented for ')
-      .replace(/^Integrations externes fiables pour /g, 'External integrations are reliable for ')
-  }
-
-  return value
+  return String(text || '')
+    .replace(/Ã©/g, 'é')
+    .replace(/Ã¨/g, 'è')
+    .replace(/Ãª/g, 'ê')
+    .replace(/Ã /g, 'à')
+    .replace(/Ã¢/g, 'â')
+    .replace(/Ã®/g, 'î')
+    .replace(/Ã´/g, 'ô')
+    .replace(/Ã¹/g, 'ù')
+    .replace(/Ã»/g, 'û')
+    .replace(/Ã§/g, 'ç')
+    .replace(/â€™/g, '’')
+    .replace(/Â/g, '')
 }
 
-function addPreviewItem() {
-  previewForm.value.items.push({
-    id: `TC-${String(previewForm.value.items.length + 1).padStart(3, '0')}`,
-    title: '',
-    description: '',
-    priority: 'Medium',
-    criticality: 'Major',
-    status: 'pending',
-  })
+function provenanceLabel(item) {
+  if (item?.source_type === 'reused') {
+    return currentLanguage.value === 'en' ? 'Reused' : 'Réutilisé'
+  }
+
+  if (item?.source_type === 'generated') {
+    return currentLanguage.value === 'en' ? 'Generated' : 'Généré'
+  }
+
+  return currentLanguage.value === 'en' ? 'Custom' : 'Personnalisé'
 }
 
-function removePreviewItem(index) {
-  previewForm.value.items.splice(index, 1)
+function provenanceClass(item) {
+  if (item?.source_type === 'reused') {
+    return 'story-source-badge-reused'
+  }
+
+  if (item?.source_type === 'generated') {
+    return 'story-source-badge-generated'
+  }
+
+  return 'story-source-badge-custom'
+}
+
+function provenanceSourceText(item) {
+  if (item?.source_type !== 'reused' || !item?.source_checklist_name) {
+    return ''
+  }
+
+  return currentLanguage.value === 'en'
+    ? `Reused from ${item.source_checklist_name}`
+    : `Réutilisé depuis ${item.source_checklist_name}`
+}
+
+function scoreValue(suggestion) {
+  return Number(suggestion?.score || 0)
+}
+
+function scoreLabel(suggestion) {
+  return `${scoreValue(suggestion)} / 100`
+}
+
+function confidenceLabel(suggestion) {
+  const score = scoreValue(suggestion)
+  if (score >= 85) return 'Correspondance elevee'
+  if (score >= 60) return 'Correspondance moyenne'
+  return 'Correspondance faible'
+}
+
+function recommendationLabel(recommendation) {
+  const labels = {
+    reuse: 'Reutilisation recommandee',
+    review: 'Relecture recommandee',
+    adapt: 'Adaptation recommandee',
+    create_draft: 'Creation de brouillon recommandee',
+    create_new_draft: 'Creation de brouillon recommandee',
+    generate_new: 'Generation recommandee',
+    generate_new_draft: 'Generation recommandee',
+  }
+
+  const normalized = String(recommendation || '').trim().toLowerCase()
+  return labels[normalized] || 'Preparation recommandee'
+}
+
+function coveredCount(suggestion) {
+  return Array.isArray(suggestion?.coverage) ? suggestion.coverage.length : 0
+}
+
+function missingCount(suggestion) {
+  return Array.isArray(suggestion?.missing) ? suggestion.missing.length : 0
+}
+
+function suggestionItemCount(suggestion) {
+  if (typeof suggestion?.items_count === 'number') return suggestion.items_count
+  if (typeof suggestion?.test_cases_count === 'number') return suggestion.test_cases_count
+  if (typeof suggestion?.test_case_count === 'number') return suggestion.test_case_count
+  if (typeof suggestion?.checklist_items_count === 'number') return suggestion.checklist_items_count
+  if (Array.isArray(suggestion?.items)) return suggestion.items.length
+  if (Array.isArray(suggestion?.checklist?.items)) return suggestion.checklist.items.length
+  if (coveredCount(suggestion) > 0) return coveredCount(suggestion)
+  return 0
+}
+
+function suggestionStatusText(suggestion) {
+  if (suggestion?.lifecycle_status) {
+    return lifecycleLabel(suggestion.lifecycle_status)
+  }
+
+  return suggestion?.status || 'Active'
+}
+
+function suggestionCriticality(suggestion) {
+  if (suggestion?.criticality) return suggestion.criticality
+  if (suggestion?.global_criticality) return suggestion.global_criticality
+  if (suggestion?.checklist?.global_criticality) return suggestion.checklist.global_criticality
+
+  const items = Array.isArray(suggestion?.items)
+    ? suggestion.items
+    : Array.isArray(suggestion?.checklist?.items)
+      ? suggestion.checklist.items
+      : []
+  const rank = { Critical: 4, High: 3, Major: 3, Medium: 2, Low: 1, Minor: 1 }
+  let current = ''
+
+  for (const item of items) {
+    if (!current || (rank[item?.criticality] || 0) > (rank[current] || 0)) {
+      current = item?.criticality || current
+    }
+  }
+
+  return current
+}
+
+function humanizeTechnicalLabel(value) {
+  return String(value || '')
+    .replaceAll('_', ' ')
+    .replaceAll('-', ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function generatedSourceLabel(value) {
+  const labels = {
+    ai: 'Generation automatique',
+    reuse: 'Reutilisation d une checklist existante',
+    manual: 'Creation manuelle',
+  }
+
+  return labels[value] || 'Preparation manuelle'
+}
+
+function generatedFromLabel(value) {
+  const labels = currentLanguage.value === 'en'
+    ? { ai: 'AI draft', reuse: 'Reuse draft', manual: 'Manual draft' }
+    : { ai: 'Brouillon IA', reuse: 'Brouillon réutilisé', manual: 'Brouillon manuel' }
+
+  return labels[value] || value || '-'
+}
+
+function lifecycleLabel(value) {
+  const labels = {
+    draft: 'Brouillon',
+    approved: 'Approuvee',
+    archived: 'Archivee',
+  }
+
+  return labels[value] || value || '-'
+}
+
+function suggestionStatusLabel() {
+  return 'Suggestion'
+}
+
+function summaryChipClass(tone) {
+  switch (tone) {
+    case 'warning':
+      return 'border-amber-200 bg-amber-50 text-amber-800'
+    case 'info':
+      return 'border-sky-200 bg-sky-50 text-sky-800'
+    case 'success':
+      return 'border-emerald-200 bg-emerald-50 text-emerald-800'
+    default:
+      return 'border-slate-200 bg-slate-50 text-slate-700'
+  }
+}
+
+function agentStatusClass(tone) {
+  switch (tone) {
+    case 'info':
+      return 'border-sky-200 bg-sky-50 text-sky-800'
+    case 'success':
+      return 'border-emerald-200 bg-emerald-50 text-emerald-800'
+    case 'danger':
+      return 'border-rose-200 bg-rose-50 text-rose-700'
+    default:
+      return 'border-slate-200 bg-slate-50 text-slate-700'
+  }
+}
+
+function handleWindowClick() {
+  openDraftMenuId.value = null
+  openHeaderActions.value = false
 }
 
 async function adaptSuggestedChecklist() {
@@ -312,17 +900,32 @@ async function adaptSuggestedChecklist() {
         projectId.value,
         storyId,
         currentPreview.value.source_checklist_id,
-        payload
+        payload,
       )
     }
 
     previewOpen.value = false
     await loadStory()
   } catch (err) {
-    alert(`${translateCurrentPhrase('Error')}: ${err.message}`)
+    alert(`${tr('error_prefix', {}, currentLanguage.value)}: ${localizeError(err, 'error_generic', currentLanguage.value)}`)
   } finally {
     adapting.value = false
   }
+}
+
+function addPreviewItem() {
+  previewForm.value.items.push({
+    id: `TC-${Date.now()}`,
+    title: '',
+    description: '',
+    priority: 'Medium',
+    criticality: 'Major',
+    status: 'pending',
+  })
+}
+
+function removePreviewItem(index) {
+  previewForm.value.items.splice(index, 1)
 }
 
 function editStory() {
@@ -338,521 +941,695 @@ function editStory() {
 }
 
 function goBack() {
+  if (projectId.value) {
+    router.push({ name: 'project-detail', params: { id: projectId.value } })
+    return
+  }
+
   router.back()
 }
 
 onMounted(() => {
+  window.addEventListener('click', handleWindowClick)
   loadStory()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('click', handleWindowClick)
+  if (highlightTimeoutId) {
+    clearTimeout(highlightTimeoutId)
+  }
+  if (scrollTimeoutId) {
+    clearTimeout(scrollTimeoutId)
+  }
 })
 </script>
 
 <template>
   <section class="page stack story-detail-page">
-    <div class="story-detail-topbar">
-      <button @click="goBack" class="story-detail-back">
+    <div class="flex items-center gap-4">
+      <button
+        @click="goBack"
+        class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-sky-200 hover:text-sky-700"
+      >
         <ArrowLeft :size="20" />
       </button>
-      <div class="story-detail-topbar-copy">
-        <h1>{{ storiesStore.currentStory?.title || 'Chargement...' }}</h1>
-        <p class="muted">Story ID: #{{ storyId }}</p>
+      <div class="min-w-0 flex-1">
+        <h1 class="m-0 text-[clamp(1.9rem,2.8vw,2.8rem)] font-semibold tracking-[-0.04em] text-slate-950">
+          {{ storiesStore.currentStory?.title || 'Chargement...' }}
+        </h1>
+        <p class="muted">User Story #{{ storyId }}</p>
       </div>
-      <button
-        v-if="auth.isProjectManager && storiesStore.currentStory"
-        @click="editStory"
-        class="btn btn-secondary"
-      >
-        Modifier la User Story
-      </button>
     </div>
 
     <div v-if="storiesStore.loading" class="flex justify-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border border-blue-500 border-t-transparent"></div>
+      <div class="h-8 w-8 animate-spin rounded-full border border-blue-500 border-t-transparent"></div>
     </div>
 
-    <div v-else-if="storiesStore.currentStory" class="stack stack-gap-lg">
-      <div class="story-detail-hero">
-        <div>
-          <p class="story-detail-kicker">Espace User Story</p>
-          <h2>{{ storiesStore.currentStory.title }}</h2>
-          <p class="story-detail-subtitle">
-            Analysez le besoin, adaptez la checklist la plus pertinente, puis passez à l’espace d’exécution pour lancer les tests.
-          </p>
+    <div v-else-if="storiesStore.currentStory" class="space-y-6">
+      <section class="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_24px_60px_-44px_rgba(15,23,42,0.35)]">
+        <div class="bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.15),transparent_18rem),radial-gradient(circle_at_bottom_left,rgba(14,165,233,0.12),transparent_18rem)] px-6 py-6 md:px-8">
+          <div class="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+            <div class="min-w-0 flex-1 space-y-4">
+              <p class="text-xs font-extrabold uppercase tracking-[0.28em] text-teal-700">Espace user story</p>
+              <div class="space-y-3">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                    ID #{{ storyId }}
+                  </span>
+                  <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                    {{ storyStatusLabel }}
+                  </span>
+                  <span :class="['rounded-full border px-3 py-1 text-xs font-semibold', priorityColors[storiesStore.currentStory.priority]]">
+                    Priorite {{ storyPriorityLabel }}
+                  </span>
+                  <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                    {{ projectLabel }}
+                  </span>
+                </div>
+                <p class="max-w-4xl text-sm leading-7 text-slate-600">
+                  {{ isAdminReadonly
+                    ? 'Consultez la story, son contexte et les checklists deja rattachees dans un mode lecture seule.'
+                    : 'Analysez le besoin, preparez la checklist la plus pertinente, puis faites progresser la validation jusqu a l execution.' }}
+                </p>
+              </div>
+            </div>
+
+            <div class="flex w-full flex-col gap-3 xl:max-w-md xl:items-end">
+              <button
+                v-if="!isAdminReadonly"
+                type="button"
+                class="btn btn-primary w-full justify-center xl:w-auto"
+                @click="handlePrimaryAction"
+              >
+                <FlaskConical v-if="primaryAction.key === 'execution'" :size="16" />
+                <WandSparkles v-else-if="primaryAction.key === 'prepare'" :size="16" />
+                <Sparkles v-else :size="16" />
+                <span>{{ primaryAction.label }}</span>
+              </button>
+
+              <div class="relative w-full xl:w-auto">
+                
+                  
+
+                <div
+                  v-if="openHeaderActions"
+                  class="absolute right-0 top-[calc(100%+0.5rem)] z-20 min-w-[16rem] overflow-hidden rounded-3xl border border-slate-200 bg-white p-2 shadow-xl"
+                  @click.stop
+                >
+                  <button
+                    v-if="auth.isTester"
+                    type="button"
+                    class="story-menu-action"
+                    @click="toggleAttachExistingPanel(); openHeaderActions = false"
+                  >
+                    <Link :size="15" />
+                    <span>{{ showAttachExistingPanel ? 'Masquer les checklists existantes' : 'Associer une checklist existante' }}</span>
+                  </button>
+                  <button
+                    v-if="auth.isTester"
+                    type="button"
+                    class="story-menu-action"
+                    @click="openManualDraft(); openHeaderActions = false"
+                  >
+                    <Plus :size="15" />
+                    <span>Creer manuellement</span>
+                  </button>
+                  <RouterLink
+                    v-if="projectId && !isAdminReadonly"
+                    :to="executionSpaceRoute()"
+                    class="story-menu-action"
+                    @click="openHeaderActions = false"
+                  >
+                    <FlaskConical :size="15" />
+                    <span>Ouvrir l espace d execution</span>
+                  </RouterLink>
+                  <button
+                    v-if="auth.isProjectManager"
+                    type="button"
+                    class="story-menu-action"
+                    @click="editStory(); openHeaderActions = false"
+                  >
+                    <FileText :size="15" />
+                    <span>Modifier la user story</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="story-detail-hero-actions">
-          <button
-            v-if="auth.isTester"
-            @click="openManualDraft"
-            class="btn btn-secondary"
-          >
-            <Sparkles :size="16" />
-            <span>Ajouter une checklist manuelle</span>
-          </button>
-          <RouterLink
-            v-if="projectId"
-            class="btn btn-primary"
-            :to="{ name: 'project-detail', params: { id: projectId } }"
-          >
-            <FlaskConical :size="16" />
-            <span>Ouvrir l’espace d’exécution</span>
-          </RouterLink>
-          <button
-            v-if="auth.isTester"
-            @click="generateChecklist"
-            :disabled="storiesStore.isGenerating"
-            class="btn btn-secondary"
-          >
-            <Zap :size="16" />
-            <span>{{ storiesStore.isGenerating ? 'Génération en cours...' : 'Lancer l’agent' }}</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="story-detail-metrics">
-        <article class="story-detail-metric">
-          <span>Statut</span>
-          <strong>{{ storyStatusLabel }}</strong>
-        </article>
-        <article class="story-detail-metric">
-          <span>Priorité</span>
-          <strong>{{ storyPriorityLabel }}</strong>
-        </article>
-        <article class="story-detail-metric">
-          <span>Checklists associées</span>
-          <strong>{{ attachedChecklistCount }}</strong>
-        </article>
-        <article class="story-detail-metric">
-          <span>Suggestions</span>
-          <strong>{{ suggestedChecklistCount }}</strong>
-        </article>
-      </div>
-
-      <div class="story-detail-grid">
-        <div class="card stack story-detail-summary-card">
-          <div class="story-detail-card-head">
-            <h3>Description</h3>
-            <span :class="['story-priority-pill', priorityColors[storiesStore.currentStory.priority]]">
-              {{ storyPriorityLabel }}
+        <div class="space-y-4 border-t border-slate-100 px-6 py-5 md:px-8">
+          <div class="flex flex-wrap gap-2">
+            <span
+              v-for="chip in summaryChips"
+              :key="chip.label"
+              :class="['inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold', summaryChipClass(chip.tone)]"
+            >
+              <span class="uppercase tracking-[0.14em]">{{ chip.label }}</span>
+              <span class="text-sm font-bold normal-case">{{ chip.value }}</span>
             </span>
           </div>
-          <p class="story-detail-richtext">{{ storiesStore.currentStory.description }}</p>
-        </div>
-
-        <div class="card stack story-detail-summary-card">
-          <div class="story-detail-card-head">
-            <h3>Critères d’acceptation</h3>
-            <CheckCircle2 :size="18" />
-          </div>
-          <div class="story-detail-criteria-box">
-            {{ acceptanceCriteriaText }}
+          <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p class="text-sm font-semibold text-slate-900">Progression QA</p>
+              <p class="text-sm text-slate-500">Analyser, adapter, associer puis executer sur la checklist retenue.</p>
+            </div>
+            <WorkflowStepper :steps="workflowSteps" :current-step="workflowCurrentStep" />
           </div>
         </div>
-      </div>
+      </section>
 
-      <div class="story-workflow-strip">
-        <div class="story-workflow-step active">
-          <span>1</span>
-          <strong>Analyser la story</strong>
-        </div>
-        <ArrowRight :size="16" class="story-workflow-arrow" />
-        <div class="story-workflow-step active">
-          <span>2</span>
-          <strong>Adapter la checklist</strong>
-        </div>
-        <ArrowRight :size="16" class="story-workflow-arrow" />
-        <div class="story-workflow-step">
-          <span>3</span>
-          <strong>Associer au projet</strong>
-        </div>
-        <ArrowRight :size="16" class="story-workflow-arrow" />
-        <div class="story-workflow-step">
-          <span>4</span>
-          <strong>Exécuter le test</strong>
-        </div>
-      </div>
-
-      <div v-if="visibleSuggestions.length" class="card stack story-suggestions-card">
-        <div class="story-detail-card-head story-detail-card-head-start">
+      <section class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+        <div class="mb-4 flex items-center justify-between gap-3">
           <div>
-            <h3>Checklists suggérées</h3>
-            <p class="muted">
-              Vérifiez chaque proposition avant rattachement. L’assistant suggère des modèles QA réutilisables et met en évidence les couvertures manquantes.
-            </p>
+            <h2 class="text-xl font-semibold text-slate-950">Contexte de la user story</h2>
+            <p class="text-sm text-slate-500">Consultez le besoin par onglets pour eviter de surcharger la page.</p>
           </div>
-          <span class="story-recommendation-pill">
-            Recommandation : {{ currentSuggestions.summary?.recommended_action || 'GENERATE_NEW' }}
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+            {{ storyTabs.length }} vues
           </span>
         </div>
+        <StoryTabs v-model="activeStoryTab" :tabs="storyTabs" />
+      </section>
 
-        <div v-if="visibleSuggestions.length" class="stack stack-gap-sm">
-          <div
-            v-for="suggestion in visibleSuggestions"
-            :key="suggestion.source_checklist_id || suggestion.id"
-            class="story-suggestion-card"
-          >
-            <div class="story-suggestion-head">
-              <div class="story-suggestion-copy">
-                <p class="story-suggestion-title">{{ suggestion.title || suggestion.name }}</p>
-                <p class="muted">{{ suggestion.description || 'Aucune description' }}</p>
-                <p class="story-suggestion-meta">
-                  {{ suggestion.checklist_id }} | Score: {{ suggestion.score }} | {{ suggestion.items_count }} items | {{ suggestion.status }}
-                </p>
-                <p class="story-suggestion-meta">
-                  Match: {{ (suggestion.matching_keywords || suggestion.matched_terms || []).join(', ') || '-' }}
-                </p>
-              </div>
-              <div class="story-suggestion-actions">
-                <button
-                  v-if="auth.canCurateStoryChecklists"
-                  @click="viewSuggestedChecklist(suggestion.source_checklist_id || suggestion.id)"
-                  class="btn btn-secondary btn-sm"
-                  :disabled="previewLoading"
-                >
-                  {{ previewLoading ? 'Chargement...' : 'Voir les détails' }}
-                </button>
-                <button
-                  v-if="auth.isTester"
-                  @click="removeSuggestedChecklist(suggestion.source_checklist_id || suggestion.id)"
-                  class="btn btn-danger btn-sm"
-                  type="button"
-                >
-                  <Trash2 :size="14" />
-                  <span>Retirer</span>
-                </button>
-              </div>
+      <section
+        v-if="!isAdminReadonly"
+        ref="prepareSection"
+        class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm md:p-6"
+      >
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div class="space-y-3">
+            <div class="flex flex-wrap items-center gap-2">
+              <h2 class="text-xl font-semibold text-slate-950">Preparer une checklist</h2>
+              <span :class="['rounded-full border px-3 py-1 text-xs font-semibold', agentStatusClass(agentStatus.tone)]">
+                {{ agentStatus.label }}
+              </span>
             </div>
-
-            <div class="story-suggestion-grid">
-              <div class="story-suggestion-chip story-suggestion-chip-good">
-                Couverture : {{ (suggestion.coverage || []).join(', ') || '-' }}
-              </div>
-              <div class="story-suggestion-chip story-suggestion-chip-warn">
-                Manques : {{ (suggestion.missing || []).join(', ') || '-' }}
-              </div>
-              <div class="story-suggestion-chip story-suggestion-chip-neutral">
-                Recommandation : {{ suggestion.recommendation }}
-              </div>
-            </div>
+            <p class="max-w-3xl text-sm leading-7 text-slate-600">
+              {{ agentStatus.description }}
+            </p>
+          </div>
+          <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            <p class="font-semibold text-slate-900">Source : {{ generatedSourceLabel('ai') }}</p>
+            <p class="mt-1">Le workflow garde la meme logique metier, avec une lecture plus progressive.</p>
           </div>
         </div>
 
-        <p v-else class="muted">
-          Aucune checklist approuvée n’est suffisamment proche. Étape recommandée : générer un nouveau brouillon.
-        </p>
-      </div>
-
-      <div class="story-agent-panel">
-        <div class="story-agent-panel-inner">
-          <div>
-            <h3 class="story-agent-title">
-              <Sparkles :size="20" />
-              Agent de génération de checklist
-            </h3>
-            <p class="muted">
-              L’agent réutilise d’abord les checklists approuvées, puis génère uniquement la couverture de test manquante.
-            </p>
-            <p class="story-agent-caption">
-              Générateur actif : <span>{{ storiesStore.generatorStatus.current || 'Détection en cours...' }}</span>
-            </p>
-            <div v-if="currentAgentResult?.reuse_summary" class="story-agent-metrics">
-              <span class="story-agent-metric">
-                Reused: <strong>{{ currentAgentResult.reuse_summary.reused_items }}</strong>
+        <div class="mt-5 grid gap-4 xl:grid-cols-3">
+          <button type="button" class="prepare-choice-card text-left" @click="toggleAttachExistingPanel">
+            <div class="flex items-center gap-3">
+              <span class="rounded-2xl bg-sky-50 p-3 text-sky-700">
+                <Link :size="18" />
               </span>
-              <span class="story-agent-metric">
-                Generated: <strong>{{ currentAgentResult.reuse_summary.generated_items }}</strong>
-              </span>
-              <span class="story-agent-metric">
-                Final: <strong>{{ currentAgentResult.reuse_summary.final_items }}</strong>
-              </span>
+              <div>
+                <p class="font-semibold text-slate-900">Reutiliser une checklist existante</p>
+                <p class="text-sm text-slate-500">Associez un modele deja valide dans le projet.</p>
+              </div>
             </div>
-          </div>
+            <p class="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+              {{ attachableChecklists.length }} disponible(s)
+            </p>
+          </button>
+
           <button
-            v-if="auth.isTester"
-            @click="generateChecklist"
+            type="button"
+            class="prepare-choice-card text-left"
             :disabled="storiesStore.isGenerating"
-            class="btn btn-primary"
+            @click="generateChecklist"
           >
-            {{ storiesStore.isGenerating ? 'Génération en cours...' : 'Lancer l’agent' }}
+            <div class="flex items-center gap-3">
+              <span class="rounded-2xl bg-violet-50 p-3 text-violet-700">
+                <Sparkles :size="18" />
+              </span>
+              <div>
+                <p class="font-semibold text-slate-900">Generer avec l agent</p>
+                <p class="text-sm text-slate-500">L agent privilegie la reutilisation avant de completer la couverture manquante.</p>
+              </div>
+            </div>
+            <p class="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+              {{ storiesStore.isGenerating ? 'Generation en cours' : 'Pret a lancer' }}
+            </p>
+          </button>
+
+          <button type="button" class="prepare-choice-card text-left" @click="openManualDraft">
+            <div class="flex items-center gap-3">
+              <span class="rounded-2xl bg-amber-50 p-3 text-amber-700">
+                <Plus :size="18" />
+              </span>
+              <div>
+                <p class="font-semibold text-slate-900">Creer manuellement</p>
+                <p class="text-sm text-slate-500">Preparez un brouillon sur mesure avant validation.</p>
+              </div>
+            </div>
+            <p class="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+              Brouillon editable
+            </p>
           </button>
         </div>
-      </div>
 
-      <div v-if="pendingDrafts.length > 0" class="stack stack-gap-sm">
-        <div class="story-detail-card-head story-detail-card-head-start">
-          <div>
-            <h3>En attente de validation testeur ({{ pendingDrafts.length }})</h3>
-            <p class="muted">Les brouillons generes par l agent restent ici jusqu a validation du testeur. Ils ne sont pas encore associes a la story.</p>
-          </div>
-        </div>
-
-        <div
-          v-for="draft in pendingDrafts"
-          :key="draft.id"
-          class="story-attached-card"
-        >
-          <div class="story-attached-head">
-            <div class="story-attached-copy">
-              <h4>{{ localizeGeneratedText(draft.name) }}</h4>
-              <p v-if="!isDraftCollapsed(draft.id)" class="muted">{{ localizeGeneratedText(draft.description) }}</p>
-              <p v-if="!isDraftCollapsed(draft.id)" class="story-suggestion-meta">Lifecycle: {{ draft.lifecycle_status }} | Source: {{ draft.generated_from }}</p>
+        <div v-if="auth.isTester && showAttachExistingPanel" class="mt-5 rounded-3xl border border-slate-200 bg-slate-50/80 p-5">
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h3 class="text-lg font-semibold text-slate-950">Associer une checklist existante</h3>
+              <p class="text-sm text-slate-500">Selectionnez une checklist active du projet pour l associer directement a cette user story.</p>
             </div>
-            <div class="story-draft-actions">
+            <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+              {{ attachableChecklists.length }} disponible(s)
+            </span>
+          </div>
+
+          <div v-if="loadingAvailableChecklists" class="mt-4 text-sm text-slate-500">Chargement des checklists disponibles...</div>
+
+          <div v-else-if="attachableChecklists.length === 0" class="mt-4 rounded-3xl border border-dashed border-slate-200 bg-white px-5 py-8 text-center">
+            <AlertCircle :size="30" class="mx-auto mb-3 text-slate-400" />
+            <p class="font-medium text-slate-900">Aucune checklist existante disponible</p>
+            <p class="mt-2 text-sm text-slate-500">Toutes les checklists actives du projet sont deja associees ou archivees.</p>
+          </div>
+
+          <form v-else class="mt-4 space-y-4" @submit.prevent="attachExistingChecklist">
+            <div class="grid gap-3">
+              <label
+                v-for="checklist in paginatedAttachableChecklists"
+                :key="checklist.id"
+                class="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 transition hover:border-sky-200 hover:shadow-sm"
+              >
+                <input
+                  v-model="selectedExistingChecklistIds"
+                  type="checkbox"
+                  :value="Number(checklist.id)"
+                  :disabled="attachingExistingChecklist"
+                  class="mt-1 h-4 w-4 rounded border-slate-300"
+                />
+                <span class="min-w-0">
+                  <strong class="block text-sm font-semibold text-slate-900">{{ checklist.name }}</strong>
+                  <small class="mt-1 block text-sm text-slate-500">
+                    {{ checklist.category || 'Sans categorie' }} · {{ checklist.items?.length || 0 }} cas de test · {{ checklist.lifecycle_status || checklist.status || 'validee' }}
+                  </small>
+                  <span v-if="checklist.description" class="mt-1 block text-sm leading-6 text-slate-600">{{ checklist.description }}</span>
+                </span>
+              </label>
+            </div>
+
+            <div v-if="attachChecklistTotalPages > 1" class="flex items-center justify-end gap-3">
               <button
                 type="button"
-                class="story-collapse-btn"
-                :aria-label="isDraftCollapsed(draft.id) ? 'Developper le brouillon' : 'Reduire le brouillon'"
-                @click="toggleDraftCollapse(draft.id)"
-              >
-                <Minus v-if="!isDraftCollapsed(draft.id)" :size="16" />
-                <Plus v-else :size="16" />
-              </button>
-              <button
-                v-if="auth.isTester"
-                @click="editPendingDraft(draft)"
                 class="btn btn-secondary btn-sm"
+                :disabled="attachChecklistPage === 1 || attachingExistingChecklist"
+                @click="goToAttachChecklistPage(attachChecklistPage - 1)"
               >
-                Relire le brouillon
+                Precedent
               </button>
+              <span class="text-sm font-semibold text-slate-500">Page {{ attachChecklistPage }} / {{ attachChecklistTotalPages }}</span>
               <button
-                v-if="auth.isTester"
-                @click="approveGeneratedChecklist(draft.id)"
-                class="btn btn-primary btn-sm"
+                type="button"
+                class="btn btn-secondary btn-sm"
+                :disabled="attachChecklistPage === attachChecklistTotalPages || attachingExistingChecklist"
+                @click="goToAttachChecklistPage(attachChecklistPage + 1)"
               >
-                Approuver et associer
+                Suivant
               </button>
             </div>
-          </div>
 
-          <div v-if="!isDraftCollapsed(draft.id)" class="story-attached-items">
-            <div
-              v-for="item in draft.items"
-              :key="item.id"
-              class="story-attached-item"
-            >
-              <div class="flex-1">
-                <p class="story-attached-item-title">{{ localizeGeneratedText(item.title) }}</p>
-                <p v-if="item.description" class="muted">{{ localizeGeneratedText(item.description) }}</p>
-              </div>
-              <span v-if="item.criticality" :class="['story-attached-criticality', criticalities[item.criticality] || 'bg-slate-100 text-slate-800']">
-                {{ item.criticality }}
-              </span>
+            <div v-if="selectedExistingChecklists.length > 0" class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+              <strong class="block text-sm font-semibold text-slate-900">{{ selectedExistingChecklists.length }} checklist(s) selectionnee(s)</strong>
+              <p class="mt-1 text-sm text-slate-500">Elles seront associees a cette user story et visibles dans la section des checklists associees.</p>
             </div>
+
+            <div class="flex justify-end gap-3">
+              <button type="button" class="btn btn-secondary" @click="toggleAttachExistingPanel">
+                Annuler
+              </button>
+              <button class="btn btn-primary" type="submit" :disabled="attachingExistingChecklist || selectedExistingChecklistIds.length === 0">
+                {{ attachingExistingChecklist ? 'Association...' : 'Associer les checklists' }}
+              </button>
+            </div>
+          </form>
+        </div>
+        <div class="mt-8 border-t border-slate-100 pt-6">
+          <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h3 class="text-xl font-semibold text-slate-950">En attente de validation testeur</h3>
+              <p class="text-sm text-slate-500">Les brouillons restent ici jusqu a validation puis association a la user story.</p>
+            </div>
+            <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
+              {{ pendingDrafts.length }} brouillon(s)
+            </span>
           </div>
 
-          <div class="story-ai-origin">
-            <Zap :size="16" />
-            En attente de validation avant association
+          <div v-if="hasDrafts" class="mt-5 flex flex-col gap-4">
+          <article
+            v-for="draft in pendingDrafts"
+            :key="draft.id"
+            class="rounded-3xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm"
+          >
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div class="min-w-0 flex-1 space-y-2">
+                <div class="flex flex-wrap items-center gap-2">
+                  <h3 class="text-base font-semibold text-slate-900">{{ localizeGeneratedText(draft.name) }}</h3>
+                  <span class="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                    En attente
+                  </span>
+                </div>
+                <p class="text-sm leading-6 text-slate-600">
+                  {{ localizeGeneratedText(draft.description) || 'Brouillon pret pour relecture et validation.' }}
+                </p>
+                <div class="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
+                  <span class="rounded-full bg-white px-2.5 py-1">{{ draft.items?.length || 0 }} test case(s)</span>
+                  <span class="rounded-full bg-white px-2.5 py-1">Statut : {{ lifecycleLabel(draft.lifecycle_status) }}</span>
+                  <span class="rounded-full bg-white px-2.5 py-1">Source : {{ generatedSourceLabel(draft.generated_from) }}</span>
+                </div>
+              </div>
+
+              <div v-if="auth.isTester" class="relative self-start">
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-sm"
+                    :aria-expanded="openDraftMenuId === draft.id"
+                    @click.stop="toggleDraftMenu(draft.id)"
+                  >
+                    <Ellipsis :size="14" />
+                  </button>
+                  <div
+                    v-if="openDraftMenuId === draft.id"
+                    class="absolute right-0 top-[calc(100%+0.35rem)] z-20 min-w-[12rem] overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-lg"
+                    @click.stop
+                  >
+                    <button type="button" class="story-menu-action" @click="editPendingDraft(draft); openDraftMenuId = null">
+                      Relire le brouillon
+                    </button>
+                    <button
+                      type="button"
+                      class="story-menu-action"
+                      :disabled="approvingDraftId === draft.id"
+                      @click="approveGeneratedChecklist(draft.id); openDraftMenuId = null"
+                    >
+                      {{ approvingDraftId === draft.id ? 'Association...' : 'Associer' }}
+                    </button>
+                    <button
+                      type="button"
+                      class="story-menu-action text-rose-600"
+                      :disabled="rejectingDraftId === draft.id"
+                      @click="rejectPendingDraft(draft.id)"
+                    >
+                      {{ rejectingDraftId === draft.id ? 'Refus...' : 'Refuser' }}
+                    </button>
+                  </div>
+              </div>
+            </div>
+          </article>
+        </div>
+
+          <div v-else class="mt-5 rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 py-9 text-center">
+            <AlertCircle :size="30" class="mx-auto mb-3 text-slate-400" />
+            <p class="font-medium text-slate-900">Aucun brouillon en attente</p>
+            <p class="mt-2 text-sm text-slate-500">Lorsqu une checklist doit etre relue avant association, elle apparait ici.</p>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div v-if="storiesStore.currentStory.checklists?.length > 0" class="stack stack-gap-sm">
-        <div class="story-detail-card-head story-detail-card-head-start">
+      <section
+        v-if="!isAdminReadonly"
+        ref="suggestionsSection"
+        class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm md:p-6"
+      >
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h3>Checklists associées ({{ storiesStore.currentStory.checklists.length }})</h3>
-            <p class="muted">These checklists are linked to the story. Automated Run Test happens in the project execution workspace.</p>
+            <h2 class="text-xl font-semibold text-slate-950">Checklists suggerees</h2>
+            <p class="text-sm text-slate-500">Checklists existantes proches de cette User Story.</p>
+          </div>
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm self-start"
+            :disabled="loadingSuggestions"
+            @click="refreshSuggestedChecklists"
+          >
+            <Zap :size="14" />
+            <span>{{ loadingSuggestions ? 'Recherche...' : 'Recommander' }}</span>
+          </button>
+        </div>
+
+        <div v-if="hasSuggestions" class="mt-5 flex flex-col gap-4">
+          <SuggestionCard
+            v-for="suggestion in visibleSuggestions"
+            :key="suggestionRenderKey(suggestion)"
+            :title="suggestion.title || suggestion.name || 'Checklist suggeree'"
+            :description="suggestion.description || 'Aucune description disponible.'"
+            :score-label="scoreLabel(suggestion)"
+            :item-count="suggestionItemCount(suggestion)"
+            :status-label="suggestionStatusText(suggestion)"
+            :criticality-label="suggestionCriticality(suggestion)"
+            :can-create-draft="auth.canCurateStoryChecklists"
+            :actions-disabled="!suggestionIdentifier(suggestion)"
+            :loading="previewLoading"
+            @view-details="openSuggestionPreview(suggestionIdentifier(suggestion), 'details')"
+            @adapt="openSuggestionPreview(suggestionIdentifier(suggestion), 'adapt')"
+            @create-draft="openSuggestionPreview(suggestionIdentifier(suggestion), 'draft')"
+          />
+        </div>
+
+        <div v-else class="mt-5 rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 py-9 text-center">
+          <AlertCircle :size="30" class="mx-auto mb-3 text-slate-400" />
+          <p class="font-medium text-slate-900">Aucune checklist similaire trouvee</p>
+          <p class="mt-2 text-sm text-slate-500">Vous pouvez creer une checklist manuellement ou lancer l agent de generation.</p>
+        </div>
+      </section>
+
+      <section
+        ref="attachedSection"
+        class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm md:p-6"
+      >
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h2 class="text-xl font-semibold text-slate-950">Checklists associees</h2>
+            <p class="text-sm text-slate-500">Ces checklists sont pretes a etre consultees puis executees dans l espace dedie.</p>
           </div>
           <RouterLink
-            v-if="projectId"
+            v-if="projectId && hasAttachedChecklists && !isAdminReadonly"
             class="btn btn-secondary btn-sm"
-            :to="{ name: 'project-detail', params: { id: projectId } }"
+            :to="executionSpaceRoute(attachedChecklists[0]?.id)"
           >
-            Ouvrir l’espace
+            
           </RouterLink>
         </div>
 
-        <div
-          v-for="checklist in storiesStore.currentStory.checklists"
-          :key="checklist.id"
-          class="story-attached-card"
-        >
-          <div class="story-attached-head">
-            <div class="story-attached-copy">
-              <h4>{{ localizeGeneratedText(checklist.name) }}</h4>
-              <p class="muted">{{ localizeGeneratedText(checklist.description) }}</p>
-            </div>
-            <button
-              v-if="auth.isTester"
-              @click="detachChecklist(checklist.id)"
-              class="btn btn-danger btn-sm"
-              title="Detach"
-            >
-              <Trash2 :size="18" />
-            </button>
-          </div>
-
-          <div class="story-attached-items">
-            <div
-              v-for="item in checklist.items"
-              :key="item.id"
-              class="story-attached-item"
-            >
-              <div class="flex-1">
-                <p class="story-attached-item-title">{{ localizeGeneratedText(item.title) }}</p>
-                <p v-if="item.description" class="muted">{{ localizeGeneratedText(item.description) }}</p>
-              </div>
-              <span v-if="item.criticality" :class="['story-attached-criticality', criticalities[item.criticality] || 'bg-slate-100 text-slate-800']">
-                {{ item.criticality }}
-              </span>
-            </div>
-          </div>
-
-          <div v-if="checklist.pivot?.is_generated_from_arxis" class="story-ai-origin">
-            <Zap :size="16" />
-            Générée automatiquement par l’IA
-          </div>
+        <div v-if="hasAttachedChecklists" class="mt-5 flex flex-col gap-4">
+          <ChecklistAccordion
+            v-for="checklist in attachedChecklists"
+            :key="checklist.id"
+            :checklist="checklist"
+            :execution-to="executionSpaceRoute(checklist.id)"
+            :can-execute="Boolean(projectId) && !isAdminReadonly"
+            :can-manage="auth.isTester"
+            :highlighted="highlightedChecklistId === checklist.id"
+            @detach="detachChecklist(checklist.id)"
+          />
         </div>
-      </div>
 
-      <div v-else class="card empty-dashed-card story-empty-state">
-        <AlertCircle :size="32" class="story-empty-icon" />
-        <p>Aucune checklist n’est encore associée.</p>
-        <p class="muted">Générez une checklist avec l’IA ou adaptez un modèle suggéré avant de passer à l’exécution.</p>
-      </div>
+        <div v-else class="mt-5 rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 py-9 text-center">
+          <AlertCircle :size="30" class="mx-auto mb-3 text-slate-400" />
+          <p class="font-medium text-slate-900">Aucune checklist associee</p>
+          <p class="mt-2 text-sm text-slate-500">Preparez ou associez une checklist pour debloquer l execution.</p>
+          <button
+            v-if="!isAdminReadonly"
+            type="button"
+            class="btn btn-primary mt-4"
+            @click="scrollToSection(prepareSection)"
+          >
+            Preparer une checklist
+          </button>
+        </div>
+      </section>
     </div>
 
     <div v-else class="card empty-dashed-card story-empty-state">
       <p class="muted">User Story introuvable.</p>
     </div>
 
-    <div v-if="previewOpen" class="fixed inset-0 z-50 bg-slate-950/40 flex items-center justify-center p-4">
-      <div class="w-full max-w-5xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+    <div v-if="previewOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+      <div class="max-h-[88vh] w-full max-w-6xl overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl">
+        <div class="flex flex-col gap-3 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h3 class="text-xl font-semibold text-slate-900">
               {{
                 previewMode === 'manual'
-                  ? 'Manual checklist draft'
+                  ? 'Nouveau brouillon manuel'
                   : previewMode === 'draft'
-                    ? previewForm.name || 'Draft checklist'
-                    : currentPreview?.checklist?.title
+                    ? previewForm.name || 'Brouillon de checklist'
+                    : currentPreview?.checklist?.title || previewForm.name || 'Checklist suggeree'
               }}
             </h3>
             <p class="text-sm text-slate-500">
               {{
-                previewMode === 'suggestion'
-                  ? `${currentPreview?.suggestion?.recommendation || 'REVIEW'} | Score ${currentPreview?.suggestion?.score ?? '-'}`
+                previewMode === 'manual'
+                  ? 'Preparez un brouillon manuel avant validation.'
                   : previewMode === 'draft'
-                    ? 'Draft checklist review and item customization'
-                    : 'Create a manual checklist draft, then approve it later'
+                    ? 'Relisez et ajustez le brouillon avant association.'
+                    : previewIntent === 'adapt'
+                      ? 'Adaptez la suggestion retenue avant creation du brouillon.'
+                      : previewIntent === 'draft'
+                        ? 'Creez un brouillon a partir de cette suggestion.'
+                        : 'Consultez les details de la suggestion puis decidez de la suite.'
               }}
             </p>
           </div>
-          <button @click="closePreview" class="px-3 py-2 text-sm rounded-lg border border-slate-200 hover:bg-slate-50">Close</button>
+          <button @click="closePreview" class="rounded-xl border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50">
+            Fermer
+          </button>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)]">
-          <aside class="border-r border-slate-200 bg-slate-50/80 p-5 space-y-4">
-            <div v-if="previewMode === 'suggestion'">
-              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Coverage</p>
-              <div class="mt-2 flex flex-wrap gap-2">
-                <span v-for="item in currentPreview?.suggestion?.coverage || []" :key="item" class="px-2 py-1 rounded-full text-xs bg-emerald-100 text-emerald-800">{{ item }}</span>
+        <div class="grid max-h-[calc(88vh-5.5rem)] grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <aside class="border-r border-slate-200 bg-slate-50/80 p-5">
+            <div class="space-y-4">
+              <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Synthese</p>
+                <div class="mt-3 space-y-2 text-sm text-slate-600">
+                  <p v-if="previewMode === 'suggestion'">Decision : {{ recommendationLabel(currentPreview?.suggestion?.recommendation) }}</p>
+                  <p v-if="previewMode === 'suggestion'">Correspondance : {{ confidenceLabel(currentPreview?.suggestion) }}</p>
+                  <p>Source : {{ previewMode === 'manual' ? generatedSourceLabel('manual') : previewMode === 'draft' ? generatedSourceLabel('reuse') : generatedSourceLabel('ai') }}</p>
+                </div>
               </div>
-            </div>
-            <div v-if="previewMode === 'suggestion'">
-              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Missing</p>
-              <div class="mt-2 flex flex-wrap gap-2">
-                <span v-for="item in currentPreview?.suggestion?.missing || []" :key="item" class="px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-800">{{ item }}</span>
+
+              <div v-if="previewMode === 'suggestion'" class="rounded-2xl border border-slate-200 bg-white p-4">
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Couverture</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <span
+                    v-for="item in currentPreview?.suggestion?.coverage || []"
+                    :key="item"
+                    class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
+                  >
+                    {{ humanizeTechnicalLabel(item) }}
+                  </span>
+                </div>
               </div>
-            </div>
-            <div class="rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-800">
-              <template v-if="previewMode === 'suggestion'">
-              {{ currentPreview?.suggestion?.explanation }}
-              </template>
-              <template v-else-if="previewMode === 'draft'">
-                Edit this draft freely: add items, remove items, or change titles and descriptions before approval.
-              </template>
-              <template v-else>
-                Start from scratch, define the checklist items you want, then approve and attach the draft once ready.
-              </template>
-            </div>
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</p>
-              <div class="mt-3 space-y-2">
-                <button
-                  class="w-full px-4 py-3 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50"
-                  :disabled="adapting || attaching || previewForm.items.length === 0"
-                  @click="adaptSuggestedChecklist"
-                >
-                  {{
-                    adapting
-                      ? 'Saving...'
-                      : previewMode === 'manual'
-                        ? 'SAVE_MANUAL_DRAFT'
-                        : previewMode === 'draft'
-                          ? 'SAVE_DRAFT_CHANGES'
-                          : 'CREATE_DRAFT_FOR_REVIEW'
-                  }}
-                </button>
+
+              <div v-if="previewMode === 'suggestion'" class="rounded-2xl border border-slate-200 bg-white p-4">
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Couverture manquante</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <span
+                    v-for="item in currentPreview?.suggestion?.missing || []"
+                    :key="item"
+                    class="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700"
+                  >
+                    {{ humanizeTechnicalLabel(item) }}
+                  </span>
+                </div>
               </div>
+
+              <div class="rounded-2xl bg-sky-50 px-4 py-4 text-sm leading-6 text-sky-900">
+                <template v-if="previewMode === 'suggestion'">
+                  {{ currentPreview?.suggestion?.explanation || 'Cette suggestion peut etre adaptee avant validation.' }}
+                </template>
+                <template v-else-if="previewMode === 'draft'">
+                  Ajustez librement le brouillon avant de l associer a la user story.
+                </template>
+                <template v-else>
+                  Construisez un brouillon manuel puis faites-le valider dans le workflow habituel.
+                </template>
+              </div>
+
+              <details class="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+                <summary class="cursor-pointer font-semibold text-slate-900">Afficher les details techniques</summary>
+                <div class="mt-3 space-y-2 leading-6">
+                  <p v-if="previewMode === 'suggestion'">Score brut : {{ currentPreview?.suggestion?.score ?? '-' }}</p>
+                  <p v-if="previewMode === 'suggestion'">Recommendation source : {{ currentPreview?.suggestion?.recommendation || '-' }}</p>
+                  <p v-if="previewMode === 'suggestion'">Termes relies : {{ (currentPreview?.suggestion?.matching_keywords || currentPreview?.suggestion?.matched_terms || []).join(', ') || '-' }}</p>
+                  <p>Mode : {{ previewMode }}</p>
+                </div>
+              </details>
+
+              <button
+                class="w-full rounded-2xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:opacity-50"
+                :disabled="adapting || attaching || previewForm.items.length === 0"
+                @click="adaptSuggestedChecklist"
+              >
+                {{
+                  adapting
+                    ? 'Enregistrement...'
+                    : previewMode === 'manual'
+                      ? 'Enregistrer le brouillon manuel'
+                      : previewMode === 'draft'
+                        ? 'Enregistrer les modifications'
+                        : previewIntent === 'adapt'
+                          ? 'Creer un brouillon adapte'
+                          : 'Creer un brouillon de validation'
+                }}
+              </button>
             </div>
-            <p class="text-xs text-slate-500 leading-5">
-              Review and editing happen before any attachment. The assigned tester can add or remove items, then approve separately.
-            </p>
           </aside>
 
-          <div class="p-6 space-y-5 max-h-[80vh] overflow-auto">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="space-y-5 overflow-auto p-6">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
               <label class="block">
-                <span class="text-sm font-medium text-slate-700">Checklist title</span>
-                <input v-model="previewForm.name" class="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3" />
+                <span class="text-sm font-medium text-slate-700">Nom de la checklist</span>
+                <input v-model="previewForm.name" class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3" />
               </label>
               <label class="block">
-                <span class="text-sm font-medium text-slate-700">Category</span>
-                <input v-model="previewForm.category" class="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3" />
+                <span class="text-sm font-medium text-slate-700">Categorie</span>
+                <input v-model="previewForm.category" class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3" />
               </label>
             </div>
 
             <label class="block">
               <span class="text-sm font-medium text-slate-700">Description</span>
-              <textarea v-model="previewForm.description" rows="3" class="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3"></textarea>
+              <textarea v-model="previewForm.description" rows="3" class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3"></textarea>
             </label>
 
-            <div class="flex items-center justify-between">
-              <h4 class="text-lg font-semibold text-slate-900">Checklist Items</h4>
-              <button @click="addPreviewItem" class="px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-sm">Add item</button>
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <h4 class="text-lg font-semibold text-slate-900">Cas de test</h4>
+                <p class="text-sm text-slate-500">Les cas de test restent modifiables avant validation.</p>
+              </div>
+              <button @click="addPreviewItem" class="rounded-xl border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50">
+                Ajouter un item
+              </button>
             </div>
 
             <div class="space-y-4">
-              <div v-for="(item, index) in previewForm.items" :key="item.id || index" class="rounded-2xl border border-slate-200 p-4 space-y-4">
-                <div class="flex items-start justify-between gap-3">
-                  <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div
+                v-for="(item, index) in previewForm.items"
+                :key="item.id || index"
+                class="rounded-3xl border border-slate-200 bg-slate-50 p-4"
+              >
+                <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                  <div class="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2">
                     <label class="block md:col-span-2">
-                      <span class="text-sm font-medium text-slate-700">Title</span>
-                      <input v-model="item.title" class="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3" />
+                      <span class="text-sm font-medium text-slate-700">Titre</span>
+                      <input v-model="item.title" class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3" />
                     </label>
                     <label class="block md:col-span-2">
                       <span class="text-sm font-medium text-slate-700">Description</span>
-                      <textarea v-model="item.description" rows="2" class="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3"></textarea>
+                      <textarea v-model="item.description" rows="2" class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3"></textarea>
                     </label>
                     <label class="block">
-                      <span class="text-sm font-medium text-slate-700">Priority</span>
-                      <select v-model="item.priority" class="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3">
+                      <span class="text-sm font-medium text-slate-700">Priorite</span>
+                      <select v-model="item.priority" class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3">
                         <option>Low</option>
                         <option>Medium</option>
                         <option>High</option>
                       </select>
                     </label>
                     <label class="block">
-                      <span class="text-sm font-medium text-slate-700">Criticality</span>
-                      <select v-model="item.criticality" class="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3">
+                      <span class="text-sm font-medium text-slate-700">Criticite</span>
+                      <select v-model="item.criticality" class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3">
                         <option>Minor</option>
                         <option>Major</option>
                         <option>Critical</option>
                       </select>
                     </label>
                     <label class="block">
-                      <span class="text-sm font-medium text-slate-700">Status</span>
-                      <select v-model="item.status" class="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3">
+                      <span class="text-sm font-medium text-slate-700">Statut</span>
+                      <select v-model="item.status" class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3">
                         <option value="pending">Pending</option>
                         <option value="passed">Passed</option>
                         <option value="failed">Failed</option>
                       </select>
                     </label>
                   </div>
-                  <button @click="removePreviewItem(index)" class="btn btn-danger btn-sm" type="button">
+
+                  <button @click="removePreviewItem(index)" class="btn btn-danger btn-sm self-start" type="button">
                     <Trash2 :size="14" />
-                    <span>Delete test case</span>
+                    <span>Supprimer</span>
                   </button>
                 </div>
               </div>
@@ -869,477 +1646,42 @@ onMounted(() => {
   gap: 1.35rem;
 }
 
-.story-detail-topbar {
+.story-menu-action {
   display: flex;
+  width: 100%;
   align-items: center;
-  gap: 1rem;
-}
-
-.story-detail-topbar-copy {
-  flex: 1;
-}
-
-.story-detail-topbar-copy h1 {
-  margin: 0;
-  font-size: clamp(1.9rem, 2.7vw, 2.6rem);
-  letter-spacing: -0.04em;
-}
-
-.story-detail-back {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.7rem;
-  height: 2.7rem;
-  border-radius: 0.9rem;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  background: rgba(255, 255, 255, 0.86);
-  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
-}
-
-.story-detail-back:hover {
-  background: #ffffff;
-  border-color: rgba(14, 165, 233, 0.35);
-  transform: translateY(-1px);
-}
-
-.story-detail-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.25fr) auto;
-  gap: 1rem;
-  padding: 1.5rem 1.6rem;
-  border-radius: 1.6rem;
-  background:
-    radial-gradient(circle at top right, rgba(14, 165, 233, 0.16), transparent 13rem),
-    radial-gradient(circle at bottom left, rgba(37, 99, 235, 0.1), transparent 14rem),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  box-shadow: 0 22px 40px -34px rgba(15, 23, 42, 0.32);
-}
-
-.story-detail-kicker {
-  margin: 0 0 0.45rem;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: #0f766e;
-}
-
-.story-detail-hero h2 {
-  margin: 0;
-  font-size: clamp(1.6rem, 2.1vw, 2.3rem);
-  letter-spacing: -0.04em;
-}
-
-.story-detail-subtitle {
-  margin: 0.8rem 0 0;
-  max-width: 52rem;
-  color: #475569;
-  line-height: 1.7;
-}
-
-.story-detail-hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: flex-end;
-  gap: 0.75rem;
-}
-
-.story-detail-hero-actions .btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.story-detail-metrics {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.9rem;
-}
-
-.story-detail-metric {
-  padding: 1rem 1.05rem;
-  border-radius: 1.15rem;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  box-shadow: 0 16px 30px -28px rgba(15, 23, 42, 0.28);
-}
-
-.story-detail-metric span {
-  display: block;
-  margin-bottom: 0.35rem;
-  font-size: 0.75rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #64748b;
-  font-weight: 800;
-}
-
-.story-detail-metric strong {
-  font-size: 1.25rem;
-  color: #0f172a;
-}
-
-.story-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-}
-
-.story-detail-summary-card {
-  min-height: 100%;
-}
-
-.story-detail-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.story-detail-card-head-start {
-  align-items: flex-start;
-}
-
-.story-detail-card-head h3 {
-  margin: 0;
-}
-
-.story-priority-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.45rem 0.75rem;
-  border-radius: 999px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  border-width: 1px;
-}
-
-.story-detail-richtext,
-.story-detail-criteria-box {
-  margin: 0;
-  white-space: pre-wrap;
-  line-height: 1.75;
-  color: #334155;
-}
-
-.story-detail-criteria-box {
-  padding: 1rem;
-  border-radius: 1rem;
-  background: #f8fafc;
-  font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
-  font-size: 0.92rem;
-}
-
-.story-workflow-strip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.7rem;
-  padding: 1rem 1.1rem;
-  border-radius: 1.1rem;
-  background: rgba(241, 245, 249, 0.9);
-  border: 1px solid rgba(148, 163, 184, 0.18);
-}
-
-.story-workflow-step {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.55rem 0.8rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.88);
-  color: #334155;
-  font-weight: 600;
-}
-
-.story-workflow-step span {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.6rem;
-  height: 1.6rem;
-  border-radius: 999px;
-  background: #dbeafe;
-  color: #1d4ed8;
-  font-size: 0.8rem;
-  font-weight: 800;
-}
-
-.story-workflow-step.active {
-  background: rgba(219, 234, 254, 0.78);
-}
-
-.story-workflow-arrow {
-  color: #94a3b8;
-}
-
-.story-suggestions-card,
-.story-attached-card {
-  border: 1px solid rgba(148, 163, 184, 0.16);
-}
-
-.story-recommendation-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.5rem 0.8rem;
-  border-radius: 999px;
-  background: #dbeafe;
-  color: #1d4ed8;
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.story-suggestion-card {
-  padding: 1rem 1.05rem;
-  border-radius: 1.1rem;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-}
-
-.story-suggestion-head,
-.story-attached-head,
-.story-agent-panel-inner {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.story-draft-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.story-collapse-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.2rem;
-  height: 2.2rem;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  background: #ffffff;
-  color: #0f172a;
-  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
-}
-
-.story-collapse-btn:hover {
-  background: #f8fafc;
-  border-color: rgba(37, 99, 235, 0.35);
-  transform: translateY(-1px);
-}
-
-.story-suggestion-copy,
-.story-attached-copy {
-  flex: 1;
-}
-
-.story-suggestion-title,
-.story-attached-copy h4 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.story-suggestion-meta {
-  margin: 0.35rem 0 0;
-  font-size: 0.82rem;
-  color: #64748b;
-}
-
-.story-suggestion-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.6rem;
-  margin-top: 0.85rem;
-}
-
-.story-suggestion-chip {
-  padding: 0.75rem 0.8rem;
-  border-radius: 0.95rem;
-  font-size: 0.82rem;
-  line-height: 1.5;
-}
-
-.story-suggestion-chip-good {
-  background: #ecfdf5;
-  color: #047857;
-}
-
-.story-suggestion-chip-warn {
-  background: #fffbeb;
-  color: #b45309;
-}
-
-.story-suggestion-chip-neutral {
-  background: #f8fafc;
-  color: #334155;
-}
-
-.story-agent-panel {
-  padding: 1.15rem 1.2rem;
-  border-radius: 1.4rem;
-  background:
-    radial-gradient(circle at top right, rgba(59, 130, 246, 0.16), transparent 11rem),
-    linear-gradient(90deg, rgba(239, 246, 255, 0.95), rgba(248, 250, 252, 0.96));
-  border: 1px solid rgba(59, 130, 246, 0.18);
-}
-
-.story-agent-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  margin: 0 0 0.45rem;
-}
-
-.story-agent-caption {
-  margin: 0.7rem 0 0;
-  font-size: 0.82rem;
-  color: #64748b;
-}
-
-.story-agent-caption span {
-  font-weight: 700;
-  color: #1d4ed8;
-}
-
-.story-agent-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.65rem;
-  margin-top: 0.95rem;
-}
-
-.story-agent-metric {
-  padding: 0.75rem 0.8rem;
-  border-radius: 0.9rem;
-  background: rgba(255, 255, 255, 0.78);
-  color: #334155;
-  font-size: 0.84rem;
-}
-
-.story-attached-card {
-  padding: 1.2rem;
-  border-left: 4px solid #2563eb;
-  border-radius: 1.2rem;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
-}
-
-.story-attached-items {
-  display: grid;
-  gap: 0.7rem;
-  margin-top: 1rem;
-}
-
-.story-attached-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.9rem;
   border-radius: 1rem;
-  background: rgba(248, 250, 252, 0.92);
+  padding: 0.8rem 0.95rem;
+  text-align: left;
+  font-size: 0.92rem;
+  color: #334155;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
-.story-attached-item-title {
-  margin: 0 0 0.25rem;
-  font-weight: 700;
+.story-menu-action:hover {
+  background: #f8fafc;
   color: #0f172a;
 }
 
-.story-attached-criticality {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.35rem 0.65rem;
-  border-radius: 999px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  white-space: nowrap;
+.prepare-choice-card {
+  border-radius: 1.5rem;
+  border: 1px solid rgba(226, 232, 240, 1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(248, 250, 252, 0.94));
+  padding: 1.15rem;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.story-ai-origin {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin-top: 1rem;
-  padding: 0.75rem 0.9rem;
-  border-radius: 0.95rem;
-  background: #eff6ff;
-  color: #1d4ed8;
-  font-size: 0.88rem;
-  font-weight: 600;
+.prepare-choice-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(125, 211, 252, 1);
+  box-shadow: 0 18px 32px -28px rgba(15, 23, 42, 0.28);
 }
 
-.story-empty-state {
-  text-align: center;
-}
-
-.story-empty-icon {
-  margin: 0 auto 0.75rem;
-  color: #94a3b8;
-}
-
-.dark .story-detail-back,
-.dark .story-detail-hero,
-.dark .story-detail-metric,
-.dark .story-suggestion-card,
-.dark .story-attached-card,
-.dark .story-workflow-strip,
-.dark .story-agent-panel {
-  background: rgba(15, 23, 42, 0.92);
-  border-color: rgba(51, 65, 85, 0.9);
-}
-
-.dark .story-detail-subtitle,
-.dark .story-detail-richtext,
-.dark .story-suggestion-meta,
-.dark .story-agent-caption,
-.dark .story-workflow-arrow {
-  color: #94a3b8;
-}
-
-.dark .story-detail-topbar-copy h1,
-.dark .story-detail-hero h2,
-.dark .story-detail-metric strong,
-.dark .story-suggestion-title,
-.dark .story-attached-copy h4,
-.dark .story-attached-item-title {
-  color: #f8fafc;
-}
-
-.dark .story-detail-criteria-box,
-.dark .story-workflow-step,
-.dark .story-attached-item,
-.dark .story-agent-metric {
-  background: rgba(15, 23, 42, 0.88);
-  color: #cbd5e1;
-  border-color: rgba(51, 65, 85, 0.9);
-}
-
-@media (max-width: 960px) {
-  .story-detail-topbar,
-  .story-detail-hero,
-  .story-agent-panel-inner,
-  .story-suggestion-head,
-  .story-attached-head {
-    flex-direction: column;
-  }
-
-  .story-detail-grid,
-  .story-suggestion-grid,
-  .story-agent-metrics {
-    grid-template-columns: 1fr;
-  }
-
-  .story-detail-hero-actions {
-    justify-content: flex-start;
-  }
+.prepare-choice-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  transform: none;
+  box-shadow: none;
 }
 </style>

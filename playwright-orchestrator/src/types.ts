@@ -18,6 +18,54 @@ type RunAuthUi = {
   mode: 'ui'
 }
 
+export interface RequiredInputDsl {
+  key: string
+  label: string
+  kind: 'text' | 'email' | 'password' | 'textarea' | 'search' | 'file'
+  required: boolean
+  description?: string
+  value?: string | null
+}
+
+export interface ExecutionDiagnosticDsl {
+  code: string
+  message: string
+  severity: 'info' | 'warning' | 'error'
+}
+
+export interface PreflightCheckDsl {
+  id: string
+  kind: 'page_accessible' | 'element_visible' | 'element_attached' | 'url_contains' | 'input_available' | 'unsupported'
+  label: string
+  required: boolean
+  selector?: Record<string, unknown>
+  expected?: string
+  input_key?: string
+  failure_message: string
+}
+
+export interface GeneratedPlanDsl {
+  title?: string
+  intent_summary: string
+  coverage_type: string
+  preflight_checks: PreflightCheckDsl[]
+  steps: Array<Record<string, unknown>>
+  asserts: Array<Record<string, unknown>>
+  expected_observations: string[]
+  diagnostics: ExecutionDiagnosticDsl[]
+}
+
+export interface ExecutionProfileDsl {
+  intent_summary: string
+  coverage_type: string
+  preconditions: string[]
+  required_inputs: RequiredInputDsl[]
+  expected_observations: string[]
+  diagnostics: ExecutionDiagnosticDsl[]
+  generation_confidence?: number
+  last_generated_plan?: GeneratedPlanDsl
+}
+
 export interface RunRequestDslV1 {
   schema_version: '1.0'
   run_id: string
@@ -40,6 +88,9 @@ export interface RunRequestDslV1 {
     title: string
     severity?: 'minor' | 'major' | 'critical'
     use_auth?: boolean
+    execution_profile?: ExecutionProfileDsl
+    generated_plan?: GeneratedPlanDsl
+    preflight_checks?: PreflightCheckDsl[]
     steps: Array<Record<string, unknown>>
     asserts: Array<Record<string, unknown>>
   }>
@@ -55,11 +106,18 @@ export interface RunnerCaseResult {
   duration_ms: number
   error_type: string | null
   error_message: string | null
+  generated_plan?: Record<string, unknown> | null
+  failure_source?: {
+    phase: 'planning' | 'preflight' | 'step' | 'assert' | 'runtime'
+    reference: string
+    message: string
+  } | null
   artifacts: {
     trace_path: string | null
     screenshot_path: string | null
     video_path: string | null
   }
+  execution_trace?: string[]
 }
 
 export interface RunnerResultV1 {

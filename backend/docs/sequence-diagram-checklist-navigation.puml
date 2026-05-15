@@ -1,0 +1,199 @@
+@startuml
+title Sequence Diagram - Add a Checklist Not Linked to a User Story
+
+autonumber 1
+hide footbox
+skinparam responseMessageBelowArrow true
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 140
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+actor Utilisateur
+
+box "Frontend" #D9E8FF
+participant "<<view>>\nApp.vue" as AppView
+participant "<<router>>\nvue-router" as Router
+participant "<<view>>\nChecklistsView.vue" as ChecklistsView
+participant "<<service>>\napi.js / apiRequest()" as ApiRequest
+end box
+
+box "Backend" #DFF2DF
+participant "<<middleware>>\nauth:sanctum" as AuthMw
+participant "<<middleware>>\nrole:testeur" as RoleMw
+participant "<<controller>>\nApi\\ChecklistController" as ChecklistController
+participant "<<model>>\nProject" as ProjectModel
+participant "<<model>>\nChecklist" as ChecklistModel
+participant "<<model>>\nChecklistItem" as ChecklistItemModel
+end box
+
+database "Database\n<<tables>>\nchecklists\nchecklist_items\nprojects\nusers" as DB
+
+Utilisateur -> AppView : click "Checklists" in sidebar
+AppView -> Router : router.push({ name: 'checklists' })
+Router -> Router : router.beforeEach(to)
+
+alt [to.meta.requiresAuth && auth.isAuthenticated]
+  Router -> ChecklistsView : resolve route { name: 'checklists' }
+else [not authenticated or role mismatch]
+  Router -> AppView : redirect to { name: 'login' }\nor { name: 'dashboard' }
+end
+
+Router -> ChecklistsView : mount component
+ChecklistsView -> ChecklistsView : onMounted()
+ChecklistsView -> ChecklistsView : resetForm()
+ChecklistsView -> ChecklistsView : loadChecklists(page = 1)
+ChecklistsView -> ApiRequest : apiRequest(withQuery('/checklists',\n{ page, ...(projectId ? { project_id: projectId } : {}) }),\n{}, auth.token)
+ApiRequest -> AuthMw : GET /api/checklists
+AuthMw -> RoleMw : authenticated request
+RoleMw -> ChecklistController : ChecklistController::index(Request $request)
+ChecklistController -> ChecklistModel : Checklist::with('items')\n->where('is_active', true)\n->orderByDesc('id')
+
+alt [project_id present in query]
+  ChecklistController -> ChecklistModel : where(project_id = projectId)\n/orWhere(template_scope = 'global')\n/orWhereNull(project_id)\n/related story filters
+else [project_id absent]
+  ChecklistController -> ProjectModel : Project::whereHas('testers', fn (...) =>\nwhere('users.id', Auth::id()))->pluck('id')
+  ProjectModel -> DB : select assigned project ids
+  DB --> ProjectModel : project ids
+  ProjectModel --> ChecklistController : assignedProjectIds
+  ChecklistController -> ChecklistModel : filter accessible checklists for tester
+end
+
+ChecklistController -> DB : paginate($perPage)
+DB --> ChecklistController : paginated checklists JSON
+ChecklistController --> ApiRequest : response()->json($query->paginate($perPage))
+ApiRequest --> ChecklistsView : { data, current_page, last_page }
+ChecklistsView -> ChecklistsView : assign checklists.value and pagination
+
+ChecklistsView -> ChecklistsView : loadAvailableItems()
+ChecklistsView -> ApiRequest : apiRequest('/checklists/items/available', {}, auth.token)
+ApiRequest -> AuthMw : GET /api/checklists/items/available
+AuthMw -> RoleMw : authenticated request
+RoleMw -> ChecklistController : ChecklistController::getAvailableItems()
+ChecklistController -> ChecklistItemModel : ChecklistItem::selectRaw('MIN(id) as id,\ntitle, description, priority, criticality')
+ChecklistController -> DB : groupBy(title, description, priority, criticality)\n+ orderBy('title') + get()
+DB --> ChecklistController : reusable items JSON
+ChecklistController --> ApiRequest : response()->json($items)
+ApiRequest --> ChecklistsView : availableItems
+
+newpage Checklist creation and persistence flow
+
+alt [auth.canManageChecklists == true]
+  Utilisateur -> ChecklistsView : click "Creer une checklist"
+  ChecklistsView -> ChecklistsView : openCreateChecklistForm()
+  ChecklistsView -> ChecklistsView : resetForm()
+  ChecklistsView -> ChecklistsView : showChecklistForm = true
+else [auth.canManageChecklists == false]
+  ChecklistsView --> Utilisateur : form is not displayed
+end
+
+Utilisateur -> ChecklistsView : fill name, description,\ncategory, is_active, items[]
+Utilisateur -> ChecklistsView : submit form
+ChecklistsView -> ChecklistsView : submitChecklist()
+ChecklistsView -> ChecklistsView : submitting.value = true
+ChecklistsView -> ChecklistsView : build payload
+
+alt [projectId present in route.query]
+  ChecklistsView -> ChecklistsView : payload.project_id = Number(form.project_id || projectId)
+  ChecklistsView -> ChecklistsView : payload.template_scope = 'project'
+  ChecklistsView -> ChecklistsView : payload.lifecycle_status = 'draft'
+else [projectId absent]
+  ChecklistsView -> ChecklistsView : payload.project_id = null
+  ChecklistsView -> ChecklistsView : payload.template_scope = 'global'
+  ChecklistsView -> ChecklistsView : payload.lifecycle_status = 'approved'
+end
+
+loop [for each form item in form.items.map(...)]
+  ChecklistsView -> ChecklistsView : map item -> { title, description,\npriority, criticality, ...(id ? { id } : {}) }
+end
+
+note over ChecklistsView
+payload:
+- project_id
+- template_scope
+- lifecycle_status
+- name
+- description
+- category
+- is_active
+- items[] { title, description, priority, criticality }
+end note
+
+ChecklistsView -> ApiRequest : apiRequest('/checklists',\n{ method: 'POST', body: payload }, auth.token)
+ApiRequest -> AuthMw : POST /api/checklists
+AuthMw -> RoleMw : authenticated request
+RoleMw -> ChecklistController : ChecklistController::store(Request $request)
+ChecklistController -> ChecklistController : $request->validate([...])
+
+alt [validation KO]
+  ChecklistController --> ApiRequest : 422 validation errors
+  ApiRequest --> ChecklistsView : throw Error(localized message)
+  ChecklistsView -> ChecklistsView : errorMessage = localizeError(error,\n'error_generic', settings.language)
+  ChecklistsView -> ChecklistsView : submitting.value = false
+else [validation OK]
+  alt [project_id provided]
+    ChecklistController -> ProjectModel : Project::findOrFail($data['project_id'])
+    ProjectModel -> DB : select project by id
+    DB --> ProjectModel : project row
+    ProjectModel --> ChecklistController : Project instance
+    ChecklistController -> ChecklistController : ensureTesterOwnsProject(Project $project)
+  else [project_id null]
+    ChecklistController -> ChecklistController : skip ensureTesterOwnsProject()
+  end
+
+  note over ChecklistController
+  source_user_story_id flow not applicable
+  in this scenario
+  end note
+
+  ChecklistController -> ChecklistController : DB::beginTransaction()
+  ChecklistController -> ChecklistModel : Checklist::create([...])
+  ChecklistModel -> DB : insert into checklists
+  DB --> ChecklistModel : created checklist row
+  ChecklistModel --> ChecklistController : Checklist instance
+
+  loop [foreach ($data['items'] as $index => $item)]
+    ChecklistController -> ChecklistItemModel : ChecklistItem::create([...])
+    ChecklistItemModel -> DB : insert into checklist_items
+    DB --> ChecklistItemModel : created checklist_item row
+    ChecklistItemModel --> ChecklistController : ChecklistItem instance
+  end
+
+  alt [success]
+    ChecklistController -> ChecklistController : DB::commit()
+    ChecklistController -> ChecklistModel : $checklist->load('items')
+    ChecklistModel -> DB : select checklist + related items
+    DB --> ChecklistModel : hydrated checklist with items
+    ChecklistModel --> ChecklistController : checklist JSON-ready model
+    ChecklistController --> ApiRequest : response()->json($checklist->load('items'), 201)
+    ApiRequest --> ChecklistsView : created checklist payload
+    ChecklistsView -> ChecklistsView : successMessage = localizeMessage(\n'Checklist creee avec succes.', settings.language)
+    ChecklistsView -> ChecklistsView : resetForm()
+    ChecklistsView -> ChecklistsView : showChecklistForm = false
+    ChecklistsView -> ChecklistsView : loadChecklists()
+    ref over ChecklistsView,ChecklistController
+      loadChecklists
+    end ref
+    ChecklistsView -> ChecklistsView : watch(successMessage, ...) -> toast.success(message)
+    ChecklistsView -> ChecklistsView : successMessage = ''
+    ChecklistsView -> ChecklistsView : submitting.value = false
+    ChecklistsView --> Utilisateur : updated list + success toast
+  else [exception during transaction]
+    ChecklistController -> ChecklistController : DB::rollBack()
+    ChecklistController --> ApiRequest : response()->json(['message' => 'Error creating checklist'], 500)
+    ApiRequest --> ChecklistsView : throw Error(localized message)
+    ChecklistsView -> ChecklistsView : errorMessage = localizeError(error,\n'error_generic', settings.language)
+    ChecklistsView -> ChecklistsView : submitting.value = false
+  end
+end
+
+note over ChecklistController,DB
+Explicit exclusions:
+- UserStoryController does not participate
+- user_story_checklists pivot does not participate
+- no dedicated backend service layer in this scenario
+- persistence uses checklists and checklist_items
+- security uses auth:sanctum then role:testeur
+end note
+
+@enduml

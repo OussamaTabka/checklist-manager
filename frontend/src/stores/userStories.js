@@ -414,6 +414,37 @@ export const useUserStoriesStore = defineStore('userStories', () => {
     }
   }
 
+  async function rejectGeneratedChecklist(projectId, storyId, checklistId) {
+    loading.value = true
+    error.value = null
+
+    try {
+      const response = await apiRequest(
+        `/projects/${projectId}/user-stories/${storyId}/reject-draft/${checklistId}`,
+        {
+          method: 'POST',
+          body: {},
+        }
+      )
+
+      if (currentStory.value?.id === storyId && response?.user_story) {
+        currentStory.value = response.user_story
+      }
+
+      const index = stories.value.findIndex(s => s.id === storyId)
+      if (index !== -1 && response?.user_story) {
+        stories.value[index] = response.user_story
+      }
+
+      return response
+    } catch (err) {
+      error.value = err.message || 'Failed to reject generated checklist'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   function clearError() {
     error.value = null
   }
@@ -449,6 +480,7 @@ export const useUserStoriesStore = defineStore('userStories', () => {
     createManualDraft,
     updateDraftChecklist,
     approveGeneratedChecklist,
+    rejectGeneratedChecklist,
     attachChecklist,
     detachChecklist,
     resetCurrentStory,

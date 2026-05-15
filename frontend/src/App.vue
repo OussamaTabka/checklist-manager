@@ -9,7 +9,6 @@ import {
   Gauge,
   Home,
   Menu,
-  NotebookPen,
   Plus,
   Search,
   Sparkles,
@@ -17,10 +16,13 @@ import {
   UsersRound,
 } from 'lucide-vue-next'
 import { apiRequest, withQuery } from '@/lib/api'
+import { formatNotificationDate, notificationTone } from '@/lib/notifications'
+import { localizeNotification } from '@/lib/localization'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
 import { translatePhrase } from '@/lib/runtimeTranslations'
 import LogoHeader from '@/components/LogoHeader.vue'
+import GlobalToast from '@/components/GlobalToast.vue'
 
 const SIDEBAR_STORAGE_KEY = 'ui_sidebar_collapsed'
 
@@ -74,6 +76,7 @@ const headerMetrics = reactive({
 const userNotifications = reactive({
   items: [],
   unreadCount: 0,
+  loading: false,
 })
 
 const searchIndex = reactive({
@@ -94,12 +97,6 @@ const sidebarSections = computed(() => {
     {
       title: tr('TEST MANAGEMENT'),
       items: [
-        {
-          label: tr('User Stories'),
-          route: { name: 'stories' },
-          icon: NotebookPen,
-          show: auth.hasAnyRole(['admin', 'chef', 'testeur']),
-        },
         {
           label: tr('Checklists'),
           route: { name: 'checklists' },
@@ -131,21 +128,11 @@ const sidebarSections = computed(() => {
 
 const quickActions = computed(() => {
   const actions = []
-  const currentProjectId = String(route.query.projectId || route.params.id || '').trim()
 
   if (auth.canManageProjects) {
     actions.push({
       label: 'Créer un projet',
       route: { name: 'projects', query: { create: '1' } },
-    })
-  }
-
-  if (auth.canManageStories) {
-    actions.push({
-      label: 'Ajouter une User Story',
-      route: currentProjectId
-        ? { name: 'story-create', query: { projectId: currentProjectId } }
-        : { name: 'stories' },
     })
   }
 
@@ -157,7 +144,7 @@ const failedAlertCount = computed(() => {
   return Number.isFinite(count) ? Math.max(0, count) : 0
 })
 
-const totalNotificationCount = computed(() => failedAlertCount.value + Number(userNotifications.unreadCount || 0))
+const totalNotificationCount = computed(() => Number(userNotifications.unreadCount || 0))
 
 const notificationBadge = computed(() => {
   if (totalNotificationCount.value > 99) {
@@ -167,7 +154,7 @@ const notificationBadge = computed(() => {
   return String(totalNotificationCount.value)
 })
 
-const notificationItems = computed(() => {
+const legacyNotificationItems = computed(() => {
   const items = []
 
   userNotifications.items.forEach((item) => {
@@ -205,6 +192,14 @@ const notificationItems = computed(() => {
 
   return items
 })
+
+const notificationItems = computed(() =>
+  userNotifications.items.map((item) => ({
+    ...localizeNotification(item, settings.language),
+    tone: notificationTone(item),
+    formattedDate: formatNotificationDate(item.created_at, settings.language),
+  }))
+)
 
 const workspaceSignals = computed(() => [
   {
@@ -361,18 +356,24 @@ async function loadGlobalSearchIndex() {
   }
 }
 
-async function loadUserNotifications() {
-  if (!auth.isAuthenticated) {
+async function loadUserNotifications(limit = 6, filter = 'all') {
+  if (!auth.isAuthenticated || !auth.canReceiveNotifications) {
+    userNotifications.items = []
+    userNotifications.unreadCount = 0
     return
   }
 
+  userNotifications.loading = true
+
   try {
-    const response = await apiRequest('/notifications', {}, auth.token)
+    const response = await apiRequest(withQuery('/notifications', { limit, filter }), {}, auth.token)
     userNotifications.items = Array.isArray(response.items) ? response.items : []
     userNotifications.unreadCount = Number(response.unread_count || 0)
   } catch {
     userNotifications.items = []
     userNotifications.unreadCount = 0
+  } finally {
+    userNotifications.loading = false
   }
 }
 
@@ -387,6 +388,10 @@ function toggleProfileMenu() {
 }
 
 async function toggleNotifications() {
+  if (!auth.canReceiveNotifications) {
+    return
+  }
+
   showNotificationPanel.value = !showNotificationPanel.value
   showProfileMenu.value = false
 
@@ -394,19 +399,50 @@ async function toggleNotifications() {
     return
   }
 
-  await loadUserNotifications()
+  await loadUserNotifications(6, 'all')
+}
 
-  if (userNotifications.unreadCount > 0) {
-    try {
-      await apiRequest('/notifications/read-all', { method: 'POST' }, auth.token)
-      userNotifications.unreadCount = 0
-      userNotifications.items = userNotifications.items.map((item) => ({
-        ...item,
-        read_at: item.read_at || new Date().toISOString(),
-      }))
-    } catch {
-    }
+async function markAllNotificationsRead() {
+  if (userNotifications.unreadCount < 1) {
+    return
   }
+
+  try {
+    await apiRequest('/notifications/read-all', { method: 'PATCH' }, auth.token)
+    userNotifications.unreadCount = 0
+    userNotifications.items = userNotifications.items.map((item) => ({
+      ...item,
+      is_read: true,
+      read_at: item.read_at || new Date().toISOString(),
+    }))
+  } catch {
+  }
+}
+
+async function openNotification(item) {
+  try {
+    let nextItem = item
+
+    if (!item.is_read) {
+      const response = await apiRequest(`/notifications/${item.id}/read`, { method: 'PATCH' }, auth.token)
+      nextItem = response.item
+      userNotifications.unreadCount = Math.max(0, userNotifications.unreadCount - 1)
+      userNotifications.items = userNotifications.items.map((entry) => (entry.id === item.id ? nextItem : entry))
+    }
+
+    showNotificationPanel.value = false
+    await router.push(nextItem.link || '/notifications')
+  } catch {
+  }
+}
+
+async function goToNotificationsPage() {
+  if (!auth.canReceiveNotifications) {
+    return
+  }
+
+  showNotificationPanel.value = false
+  await router.push({ name: 'notifications' })
 }
 
 function handleGlobalSearchSubmit() {
@@ -503,6 +539,8 @@ watch(
 
 <template>
   <div class="portal-shell">
+    <GlobalToast />
+
     <template v-if="auth.isAuthenticated">
       <header class="topbar">
         <div class="topbar-left">
@@ -540,25 +578,51 @@ watch(
         </div>
 
         <div class="topbar-right">
-          <div class="notifications-wrap" ref="notificationsRef">
+          <div v-if="auth.canReceiveNotifications" class="notifications-wrap" ref="notificationsRef">
             <button class="icon-btn" type="button" @click="toggleNotifications" title="Notifications">
               <Bell :size="18" :stroke-width="1.9" />
               <span v-if="totalNotificationCount > 0" class="icon-badge">{{ notificationBadge }}</span>
             </button>
 
             <div v-if="showNotificationPanel" class="notifications-panel">
-              <div class="notifications-title">Notifications</div>
-              <div class="notifications-list">
-                <div
-                  v-for="item in notificationItems"
-                  :key="item.key"
-                  class="notification-item"
-                  :class="`notification-${item.tone}`"
+              <div class="notifications-panel-head">
+                <div class="notifications-title">Notifications</div>
+                <button
+                  type="button"
+                  class="notifications-inline-action"
+                  @click="markAllNotificationsRead"
+                  :disabled="userNotifications.unreadCount < 1"
                 >
-                  <span>{{ item.text }}</span>
-                  <small v-if="item.meta">{{ item.meta }}</small>
-                </div>
+                  Tout marquer comme lu
+                </button>
               </div>
+
+              <div v-if="userNotifications.loading" class="notifications-empty">
+                Chargement des notifications...
+              </div>
+
+              <div v-else-if="notificationItems.length === 0" class="notifications-empty">
+                Aucune notification pour le moment
+              </div>
+
+              <div v-else class="notifications-list">
+                <button
+                  v-for="item in notificationItems"
+                  :key="item.id"
+                  type="button"
+                  class="notification-item notification-item-button"
+                  :class="`notification-${item.tone}`"
+                  @click="openNotification(item)"
+                >
+                  <span class="notification-item-title">{{ item.title }}</span>
+                  <span>{{ item.message }}</span>
+                  <small>{{ item.formattedDate }}</small>
+                </button>
+              </div>
+
+              <button type="button" class="notifications-footer-link" @click="goToNotificationsPage">
+                Voir toutes les notifications
+              </button>
             </div>
           </div>
 

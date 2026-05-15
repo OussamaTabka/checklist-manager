@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import LoginView from '@/views/LoginView.vue'
 import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
-import ResetPasswordView from '@/views/ResetPasswordView.vue'
+import SetPasswordView from '@/views/SetPasswordView.vue'
 import AcceptInvitationView from '@/views/AcceptInvitationView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import ProjectsView from '@/views/ProjectsView.vue'
@@ -15,6 +15,7 @@ import UserStoryFormView from '@/views/UserStoryFormView.vue'
 import UserStoryImportView from '@/views/UserStoryImportView.vue'
 import UserStoryDetailView from '@/views/UserStoryDetailView.vue'
 import SettingsView from '@/views/SettingsView.vue'
+import NotificationsView from '@/views/NotificationsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -34,13 +35,20 @@ const router = createRouter({
     {
       path: '/reset-password',
       name: 'reset-password',
-      component: ResetPasswordView,
+      component: SetPasswordView,
+      meta: { guestOnly: true },
+    },
+    {
+      path: '/set-password',
+      name: 'set-password',
+      component: SetPasswordView,
       meta: { guestOnly: true },
     },
     {
       path: '/accept-invitation',
       name: 'accept-invitation',
       component: AcceptInvitationView,
+      meta: { guestOnly: true },
     },
     {
       path: '/',
@@ -65,6 +73,10 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/projects/:id/versions/:versionId',
+      redirect: (to) => ({ name: 'project-detail', params: { id: to.params.id } }),
+    },
+    {
       path: '/checklists',
       name: 'checklists',
       component: ChecklistsView,
@@ -79,6 +91,12 @@ const router = createRouter({
     {
       path: '/users',
       name: 'users',
+      component: UsersView,
+      meta: { requiresAuth: true, roles: ['admin'] },
+    },
+    {
+      path: '/admin/users',
+      name: 'admin-users',
       component: UsersView,
       meta: { requiresAuth: true, roles: ['admin'] },
     },
@@ -117,6 +135,12 @@ const router = createRouter({
       name: 'settings',
       component: SettingsView,
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/notifications',
+      name: 'notifications',
+      component: NotificationsView,
+      meta: { requiresAuth: true, roles: ['chef', 'testeur'] },
     },
   ],
 })

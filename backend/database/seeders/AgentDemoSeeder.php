@@ -16,9 +16,7 @@ class AgentDemoSeeder extends Seeder
     {
         $chef = $this->user('chef@test.com', 'Chef de Projet', 'chef');
         $tester = $this->user('testeur@test.com', 'Testeur', 'testeur');
-        $contentAdmin = $this->user('admin_contenus@test.com', 'Admin Contenus', 'admin_contenus');
-
-        $templates = $this->seedChecklistTemplates($chef, $contentAdmin);
+        $templates = $this->seedChecklistTemplates($chef, $tester);
         $projects = $this->seedProjects($chef);
 
         foreach ($projects as $project) {
@@ -45,7 +43,7 @@ class AgentDemoSeeder extends Seeder
 
         $this->command?->info('Agent demo data seeded: 3 projects, approved reusable checklist templates, and user stories ready for agent tests.');
         $this->command?->info('Try: E-Commerce Checkout > "Guest checkout applies promo code and completes payment" for strong checklist reuse.');
-        $this->command?->info('Login users: chef@test.com / testeur@test.com / admin_contenus@test.com with password password123.');
+        $this->command?->info('Login users: chef@test.com / testeur@test.com with password password123.');
     }
 
     private function user(string $email, string $name, string $role): User
@@ -65,7 +63,7 @@ class AgentDemoSeeder extends Seeder
         return $user;
     }
 
-    private function seedChecklistTemplates(User $chef, User $contentAdmin): array
+    private function seedChecklistTemplates(User $chef, User $tester): array
     {
         $templates = [
             'auth' => [
@@ -82,7 +80,7 @@ class AgentDemoSeeder extends Seeder
                 ],
             ],
             'checkout' => [
-                'creator' => $contentAdmin,
+                'creator' => $tester,
                 'name' => 'Reusable E-Commerce Checkout Checklist',
                 'description' => 'Approved regression checklist for cart, promo code, payment, order confirmation, and inventory checks.',
                 'category' => 'E-Commerce',
@@ -108,7 +106,7 @@ class AgentDemoSeeder extends Seeder
                 ],
             ],
             'ui' => [
-                'creator' => $contentAdmin,
+                'creator' => $tester,
                 'name' => 'Reusable Web UI and Accessibility Checklist',
                 'description' => 'Approved checklist for forms, navigation, responsive layout, browser coverage, and accessibility.',
                 'category' => 'UI/UX',

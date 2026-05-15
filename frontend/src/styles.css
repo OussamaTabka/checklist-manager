@@ -1194,9 +1194,40 @@
     margin-bottom: 0.55rem;
   }
 
+  .notifications-panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.55rem;
+  }
+
   .notifications-list {
     display: grid;
     gap: 0.45rem;
+  }
+
+  .notifications-inline-action,
+  .notifications-footer-link {
+    border: none;
+    background: transparent;
+    color: #2563eb;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+  }
+
+  .notifications-inline-action:disabled {
+    color: #94a3b8;
+    cursor: not-allowed;
+  }
+
+  .notifications-empty {
+    color: #64748b;
+    font-size: 0.82rem;
+    padding: 0.25rem 0;
   }
 
   .notification-item {
@@ -1209,9 +1240,25 @@
     font-family: var(--font-body);
   }
 
+  .notification-item-button {
+    width: 100%;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .notification-item-title {
+    font-weight: 800;
+    color: inherit;
+  }
+
   .notification-item small {
     font-size: 0.72rem;
     opacity: 0.8;
+  }
+
+  .notifications-footer-link {
+    margin-top: 0.75rem;
   }
 
   .notification-danger {
@@ -1232,6 +1279,167 @@
   .notification-brand {
     background: rgba(31, 111, 235, 0.14);
     color: #174fbb;
+  }
+
+  .notification-medium {
+    background: rgba(31, 111, 235, 0.14);
+    color: #174fbb;
+  }
+
+  .notification-low {
+    background: #eef2ff;
+    color: #3730a3;
+  }
+
+  .notification-high {
+    background: #fff7ed;
+    color: #c2410c;
+  }
+
+  .notification-critical {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .notification-read {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .notifications-page {
+    gap: 1rem;
+  }
+
+  .notifications-page-head {
+    align-items: flex-start;
+  }
+
+  .notifications-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .notifications-counter {
+    background: #eff6ff;
+    color: #1d4ed8;
+  }
+
+  .notifications-page-list {
+    display: grid;
+    gap: 0.9rem;
+  }
+
+  .notification-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.9rem;
+    align-items: stretch;
+    border-radius: 1rem;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(255, 255, 255, 0.88);
+    padding: 0.95rem 1rem;
+  }
+
+  .notification-card-main {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.9rem;
+    align-items: flex-start;
+    border: none;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .notification-card-icon {
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 0.85rem;
+    display: grid;
+    place-items: center;
+    background: #e2e8f0;
+    color: #334155;
+  }
+
+  .notification-card-copy {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .notification-card-copy p {
+    margin: 0;
+    color: #475569;
+  }
+
+  .notification-card-top,
+  .notification-card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .notification-card-meta {
+    font-size: 0.78rem;
+    color: #64748b;
+  }
+
+  .notification-status-pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #334155;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+  }
+
+  .notification-archive-btn {
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    background: #ffffff;
+    border-radius: 0.8rem;
+    padding: 0.55rem 0.75rem;
+    cursor: pointer;
+    color: #334155;
+  }
+
+  .notification-card-low .notification-card-icon {
+    background: #eef2ff;
+    color: #3730a3;
+  }
+
+  .notification-card-medium .notification-card-icon {
+    background: #eff6ff;
+    color: #1d4ed8;
+  }
+
+  .notification-card-high .notification-card-icon {
+    background: #fff7ed;
+    color: #c2410c;
+  }
+
+  .notification-card-critical .notification-card-icon {
+    background: #fef2f2;
+    color: #b91c1c;
+  }
+
+  .notification-card-read {
+    opacity: 0.82;
+  }
+
+  .notification-card-read .notification-card-icon {
+    background: #f8fafc;
+    color: #64748b;
   }
 
   .profile-trigger {

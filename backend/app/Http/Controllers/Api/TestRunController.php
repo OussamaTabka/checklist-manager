@@ -8,6 +8,7 @@ use App\Models\ProjectVersion;
 use App\Models\TestResult;
 use App\Models\TestRun;
 use App\Models\VersionItem;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,11 @@ use Illuminate\Validation\ValidationException;
 
 class TestRunController extends Controller
 {
+    public function __construct(
+        private readonly NotificationService $notificationService
+    ) {
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -186,6 +192,8 @@ class TestRunController extends Controller
                 'summary_skipped' => $summary['skipped'],
             ]);
         });
+
+        $this->notificationService->notifyAutomatedExecutionCompleted($testRun->fresh(['requester.roles', 'projectVersion.project.creator.roles', 'projectVersion.project.testers.roles']));
 
         return response()->json($this->buildRunResponse($testRun->fresh('results')));
     }

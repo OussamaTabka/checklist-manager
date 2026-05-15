@@ -2,31 +2,22 @@
 
 namespace App\Services;
 
-use App\Models\UserStory;
 use App\Models\Checklist;
 use App\Models\ChecklistItem;
-use App\Services\TestCaseGeneration\TestCaseGeneratorInterface;
+use App\Models\UserStory;
 use App\Services\TestCaseGeneration\TestCaseGeneratorFactory;
-use Illuminate\Support\Facades\Auth;
+use App\Services\TestCaseGeneration\TestCaseGeneratorInterface;
 use Exception;
+use Illuminate\Support\Facades\Auth;
 
-/**
- * Main Test Case Generation Service
- * 
- * Coordinates test case generation using multiple free/open-source backends:
- * - Local LLM (Ollama, LM Studio) - Recommended
- * - EvoMaster - For API testing
- * - Fallback - Rule-based generator
- */
 class TestCaseGenerationService
 {
-    /**
-     * Generate checklist from user story using available LLM/AI service
-     *
-     * @param UserStory $userStory
-     * @return Checklist
-     * @throws Exception
-     */
+    public function __construct(
+        private ?ChecklistGenerationTextService $generationText = null
+    ) {
+        $this->generationText ??= app(ChecklistGenerationTextService::class);
+    }
+
     public function generateChecklistFromUserStory(UserStory $userStory): Checklist
     {
         $generation = $this->generateTestCasesForUserStory($userStory);
@@ -37,7 +28,6 @@ class TestCaseGenerationService
             throw new Exception('No test cases generated');
         }
 
-        // Create a new checklist with the generated items
         $checklist = Checklist::create([
             'name' => "Generated ({$generator->getName()}): {$userStory->title}",
             'description' => $this->buildChecklistDescription($userStory, $generator->getName()),
@@ -50,12 +40,13 @@ class TestCaseGenerationService
             'source_user_story_id' => $userStory->id,
         ]);
 
-        // Add test cases as checklist items
         foreach ($testCases as $index => $testCase) {
+            $language = $this->generationText->normalizeLanguage($testCase['language'] ?? 'fr');
+
             ChecklistItem::create([
                 'checklist_id' => $checklist->id,
-                'title' => $testCase['name'] ?? 'Test Case ' . ($index + 1),
-                'description' => $this->buildItemDescription($testCase),
+                'title' => $this->generationText->localizeCaseName((string) ($testCase['name'] ?? 'Test Case ' . ($index + 1)), $language),
+                'description' => $this->buildItemDescription($testCase, $language),
                 'priority' => $this->mapSeverityToPriority($testCase['severity'] ?? 'medium'),
                 'criticality' => $this->mapSeveritytoCriticality($testCase['severity'] ?? 'medium'),
                 'order' => $index + 1,
@@ -65,13 +56,6 @@ class TestCaseGenerationService
         return $checklist;
     }
 
-    /**
-     * Generate raw test cases without persisting a checklist.
-     *
-     * @param UserStory $userStory
-     * @return array{generator: TestCaseGeneratorInterface, generator_name: string, test_cases: array}
-     * @throws Exception
-     */
     public function generateTestCasesForUserStory(UserStory $userStory, array $context = []): array
     {
         $errors = [];
@@ -98,22 +82,11 @@ class TestCaseGenerationService
         throw new Exception('No test cases generated. ' . implode(' | ', $errors));
     }
 
-    /**
-     * Get available generators and their status
-     *
-     * @return array
-     */
     public function getAvailableGenerators(): array
     {
         return TestCaseGeneratorFactory::getAvailable();
     }
 
-    /**
-     * Map severity level to criticality
-     *
-     * @param string $severity
-     * @return string
-     */
     private function mapSeveritytoCriticality(string $severity): string
     {
         $mapping = [
@@ -138,7 +111,7 @@ class TestCaseGenerationService
         return $mapping[strtolower($severity)] ?? 'Medium';
     }
 
-    private function buildItemDescription(array $testCase): string
+    private function buildItemDescription(array $testCase, string $language = 'fr'): string
     {
         $description = trim((string) ($testCase['description'] ?? ''));
         $expected = trim((string) ($testCase['expected_result'] ?? ''));
@@ -147,16 +120,9 @@ class TestCaseGenerationService
             return $description;
         }
 
-        return trim($description . "\n\nExpected result: " . $expected);
+        return trim($description . "\n\n" . $this->generationText->text($language, 'expected_result_label') . ' ' . $expected);
     }
 
-    /**
-     * Build checklist description
-     *
-     * @param UserStory $userStory
-     * @param string $generatorName
-     * @return string
-     */
     private function buildChecklistDescription(UserStory $userStory, string $generatorName): string
     {
         return <<<DESC
@@ -172,11 +138,6 @@ Acceptance Criteria:
 DESC;
     }
 
-    /**
-     * Get current timestamp
-     *
-     * @return string
-     */
     private function getCurrentTimestamp(): string
     {
         return now()->format('Y-m-d H:i:s');

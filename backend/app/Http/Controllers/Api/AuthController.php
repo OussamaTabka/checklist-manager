@@ -21,7 +21,7 @@ class AuthController extends Controller
         ]);
 
         if (!Auth::attempt($credentials)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
+            return response()->json(['message' => 'Identifiants invalides.'], 401);
         }
 
         $request->session()->regenerate();
@@ -34,11 +34,10 @@ class AuthController extends Controller
             $request->session()->regenerateToken();
 
             return response()->json([
-                'message' => 'Your account is not active yet. Please complete your invitation setup.',
+                'message' => "Votre compte n'est pas encore actif. Veuillez initialiser votre mot de passe depuis le lien recu par email.",
             ], 403);
         }
-        
-        // Generate Sanctum token for API usage
+
         $token = $user->createToken('api-token')->plainTextToken;
 
         return response()->json([
@@ -53,11 +52,9 @@ class AuthController extends Controller
         Auth::guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        
-        // Revoke all tokens
         $request->user()?->tokens()->delete();
 
-        return response()->json(['message' => 'Logged out successfully']);
+        return response()->json(['message' => 'Deconnexion reussie.']);
     }
 
     public function me(Request $request)
@@ -74,7 +71,7 @@ class AuthController extends Controller
         $user = $request->user();
 
         if (!$user) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
+            return response()->json(['message' => 'Non authentifie.'], 401);
         }
 
         $data = $request->validate([
@@ -103,37 +100,32 @@ class AuthController extends Controller
         return response()->json([
             'user' => $user->fresh(),
             'roles' => $user->getRoleNames(),
-            'message' => 'Profile updated successfully.',
+            'message' => 'Profil mis a jour avec succes.',
         ]);
     }
 
-    /**
-     * Get or create API token for authenticated user
-     */
     public function getToken(Request $request)
     {
         $user = $request->user();
-        
+
         if (!$user) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
+            return response()->json(['message' => 'Non authentifie.'], 401);
         }
-        
-        // Check if user already has a token
+
         $existingToken = $user->tokens()->where('name', 'api-token')->first();
-        
+
         if ($existingToken) {
             return response()->json([
                 'token' => $existingToken->plainTextToken ?? '',
-                'message' => 'Using existing token'
+                'message' => 'Jeton existant reutilise.',
             ]);
         }
-        
-        // Create new token
+
         $token = $user->createToken('api-token')->plainTextToken;
-        
+
         return response()->json([
             'token' => $token,
-            'message' => 'New token created'
+            'message' => 'Nouveau jeton cree.',
         ]);
     }
 
@@ -149,17 +141,26 @@ class AuthController extends Controller
 
         if ($status === Password::RESET_THROTTLED) {
             return response()->json([
-                'message' => __($status),
+                'message' => 'Une demande recente existe deja. Veuillez patienter avant de recommencer.',
             ], 429);
         }
 
-        // Do not disclose whether the user exists.
         return response()->json([
-            'message' => __('passwords.sent'),
+            'message' => "Si cette adresse email existe, un lien d'initialisation du mot de passe a ete envoye.",
         ]);
     }
 
     public function resetPassword(Request $request)
+    {
+        return $this->completePasswordReset($request);
+    }
+
+    public function setPassword(Request $request)
+    {
+        return $this->completePasswordReset($request);
+    }
+
+    private function completePasswordReset(Request $request)
     {
         $credentials = $request->validate([
             'token' => ['required', 'string'],
@@ -170,12 +171,21 @@ class AuthController extends Controller
         $status = Password::reset(
             $credentials,
             function (User $user, string $password) {
-                $user->forceFill([
+                $updates = [
                     'password' => $password,
                     'remember_token' => Str::random(60),
-                ])->save();
+                ];
 
-                // Invalidate API tokens after password reset.
+                if (($user->account_status ?? 'active') === 'pending') {
+                    $updates['account_status'] = 'active';
+                    $updates['activated_at'] = now();
+
+                    if (!$user->email_verified_at) {
+                        $updates['email_verified_at'] = now();
+                    }
+                }
+
+                $user->forceFill($updates)->save();
                 $user->tokens()->delete();
 
                 event(new PasswordReset($user));
@@ -184,12 +194,12 @@ class AuthController extends Controller
 
         if ($status === Password::PASSWORD_RESET) {
             return response()->json([
-                'message' => __($status),
+                'message' => 'Mot de passe initialise avec succes.',
             ]);
         }
 
         return response()->json([
-            'message' => __($status),
+            'message' => 'Lien invalide ou expire.',
         ], 422);
     }
 }

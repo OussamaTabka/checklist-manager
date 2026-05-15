@@ -8,6 +8,8 @@ use App\Models\ItemChange;
 use App\Models\TestResult;
 use App\Models\TestRun;
 use App\Models\VersionItem;
+use App\Services\NotificationService;
+use App\Services\ExecutionProfileService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -50,9 +52,6 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
             'started_at' => now(),
         ]);
 
-        $testCaseTitle = trim((string) ($payload['test_case_title'] ?? $item->title));
-        $testCaseDescription = trim((string) ($payload['test_case_description'] ?? ($item->description ?? '')));
-        $testCaseText = trim((string) ($payload['test_case_text'] ?? ($testCaseTitle . "\n" . $testCaseDescription)));
         $environmentName = trim((string) ($payload['environment_name'] ?? ''));
         $notes = trim((string) ($payload['notes'] ?? ''));
         $priority = trim((string) ($payload['priority'] ?? ($item->priority ?? '')));
@@ -62,6 +61,7 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
             ? (int) ($payload['project_version_id'] ?? $item->project_version_id)
             : null;
         $watchMode = (bool) ($payload['watch_mode'] ?? true);
+        $providedInputs = is_array($payload['provided_inputs'] ?? null) ? $payload['provided_inputs'] : [];
 
         try {
             $workspaceRoot = realpath(base_path('..'));
@@ -69,21 +69,12 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
                 throw new \RuntimeException('Unable to resolve workspace root from backend path.');
             }
 
-            $agentDir = $workspaceRoot . DIRECTORY_SEPARATOR . 'playwright-agent';
             $orchestratorDir = $workspaceRoot . DIRECTORY_SEPARATOR . 'playwright-orchestrator';
             $runnerDir = $workspaceRoot . DIRECTORY_SEPARATOR . 'playwright-runner-job';
             $runsRoot = $workspaceRoot . DIRECTORY_SEPARATOR . 'runs';
 
-            $agentEntrypoint = $agentDir . DIRECTORY_SEPARATOR . 'dist' . DIRECTORY_SEPARATOR . 'generateRunSpec.js';
-            if (!is_file($agentEntrypoint)) {
-                $agentEntrypoint = $agentDir . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'generateRunSpec.js';
-            }
             $orchestratorEntrypoint = $orchestratorDir . DIRECTORY_SEPARATOR . 'dist' . DIRECTORY_SEPARATOR . 'cli' . DIRECTORY_SEPARATOR . 'fromDsl.js';
             $runnerEntrypoint = $runnerDir . DIRECTORY_SEPARATOR . 'dist' . DIRECTORY_SEPARATOR . 'main.js';
-
-            if (!is_file($agentEntrypoint)) {
-                throw new \RuntimeException('Missing built agent entrypoint dist/generateRunSpec.js. Run npm run build in playwright-agent.');
-            }
 
             if ($watchMode) {
                 if (!is_file($runnerEntrypoint)) {
@@ -95,48 +86,52 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
                 }
             }
 
-            $agentInputPath = $orchestratorDir . DIRECTORY_SEPARATOR . 'tmp' . DIRECTORY_SEPARATOR . 'agent-input-' . $run->run_id . '.json';
             $dslPath = $orchestratorDir . DIRECTORY_SEPARATOR . 'tmp' . DIRECTORY_SEPARATOR . 'run-single-' . $run->run_id . '.json';
 
-            $this->ensureDirectory(dirname($agentInputPath));
             $this->ensureDirectory(dirname($dslPath));
 
-            $agentInput = [
-                'run_id' => $run->run_id,
-                'external_id' => $item->id,
-                'test_case_title' => $testCaseTitle,
-                'test_case_description' => $testCaseDescription,
-                'test_case_text' => $testCaseText,
-                'base_url' => $run->base_url,
-                'use_auth' => (bool) ($payload['use_auth'] ?? true),
-                'environment_name' => $environmentName,
-                'notes' => $notes,
-                'priority' => $priority,
-                'criticality' => $criticality,
-                'current_status' => $currentStatus,
-                'project_version_id' => $projectVersionId,
-                'target_type' => $targetType,
-            ];
+            $planner = app(ExecutionProfileService::class);
+            $generated = $item instanceof VersionItem
+                ? $planner->generateForVersionItem($item, $run->base_url, [
+                    'run_id' => $run->run_id,
+                    'use_auth' => (bool) ($payload['use_auth'] ?? true),
+                    'environment_name' => $environmentName,
+                    'notes' => $notes,
+                    'priority' => $priority,
+                    'criticality' => $criticality,
+                    'current_status' => $currentStatus,
+                    'project_version_id' => $projectVersionId,
+                    'target_type' => $targetType,
+                ])
+                : $planner->generateForChecklistItem($item, $run->base_url, [
+                    'run_id' => $run->run_id,
+                    'use_auth' => (bool) ($payload['use_auth'] ?? true),
+                    'environment_name' => $environmentName,
+                    'notes' => $notes,
+                    'priority' => $priority,
+                    'criticality' => $criticality,
+                    'current_status' => $currentStatus,
+                    'target_type' => $targetType,
+                ]);
 
-            file_put_contents($agentInputPath, json_encode($agentInput, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
-
-            $agentOutput = $this->runCommand(
-                ['node', $agentEntrypoint, '--input', $agentInputPath],
-                $agentDir,
-                [],
-                180,
-            );
-
-            $runSpec = json_decode(trim($agentOutput), true);
-            if (!is_array($runSpec)) {
-                throw new \RuntimeException('Agent output is not valid JSON.');
-            }
+            $runSpec = $generated['run_spec'];
 
             // Enforce single-case payload and id coupling before handing to orchestrator.
             $runSpec['run_id'] = $run->run_id;
             $runSpec['target']['base_url'] = rtrim($run->base_url, '/');
             $runSpec['cases'][0]['external_id'] = $item->id;
             $runSpec['cases'][0]['use_auth'] = (bool) ($payload['use_auth'] ?? true);
+            $runSpec['cases'][0]['execution_profile'] = $this->mergeProvidedInputsIntoExecutionProfile(
+                is_array($runSpec['cases'][0]['execution_profile'] ?? null) ? $runSpec['cases'][0]['execution_profile'] : [],
+                $providedInputs,
+            );
+            $runSpec['cases'][0]['generated_plan'] = is_array($runSpec['cases'][0]['generated_plan'] ?? null)
+                ? $runSpec['cases'][0]['generated_plan']
+                : ($runSpec['cases'][0]['execution_profile']['last_generated_plan'] ?? null);
+
+            $item->update([
+                'execution_profile' => $runSpec['cases'][0]['execution_profile'],
+            ]);
 
             file_put_contents($dslPath, json_encode($runSpec, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
             $resultPath = $runsRoot . DIRECTORY_SEPARATOR . $run->run_id . DIRECTORY_SEPARATOR . 'result.json';
@@ -351,7 +346,26 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
                 'summary_blocked' => (int) ($summary['blocked'] ?? 0),
                 'summary_skipped' => (int) ($summary['skipped'] ?? 0),
             ]);
+
+            if ($item instanceof ChecklistItem) {
+                $this->logChecklistExecutionEvent(
+                    $item,
+                    $run->requested_by,
+                    'automated_test_finished',
+                    'running',
+                    $this->displayChecklistStatus($mappedItemStatus),
+                    $this->buildAutomatedResultNotes($run->run_id, $resultStatus, $caseResult),
+                );
+            }
         });
+
+        app(NotificationService::class)->notifyAutomatedExecutionCompleted(
+            $run->fresh([
+                'requester.roles',
+                'projectVersion.project.creator.roles',
+                'projectVersion.project.testers.roles',
+            ])
+        );
     }
 
     private function resolveCaseResult(array $results, VersionItem|ChecklistItem $item, array $runPayload): ?array
@@ -440,7 +454,20 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
                     'executed_at' => now(),
                 ],
             );
+
+            if ($item instanceof ChecklistItem) {
+                $this->logChecklistExecutionEvent(
+                    $item,
+                    $run->requested_by,
+                    'automated_test_finished',
+                    'running',
+                    'Blocked',
+                    'Automated test failed for run ' . $run->run_id . '. Result: blocked. Reason: ' . $safeMessage,
+                );
+            }
         });
+
+        app(NotificationService::class)->notifySystemExecutionError($run->fresh(['projectVersion.project']), $errorType, $safeMessage);
     }
 
     private function resolveTestResultIdentity(int $runId, VersionItem|ChecklistItem $item): array
@@ -511,6 +538,47 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
             'change_type' => 'status_changed',
             'notes' => $notes,
         ]);
+    }
+
+    private function logChecklistExecutionEvent(
+        ChecklistItem $item,
+        ?int $requestedBy,
+        string $changeType,
+        ?string $oldValue,
+        ?string $newValue,
+        ?string $notes,
+    ): void {
+        ChecklistItemHistory::create([
+            'checklist_item_id' => $item->id,
+            'changed_by' => $requestedBy,
+            'field_name' => 'execution',
+            'old_value' => $oldValue,
+            'new_value' => $newValue,
+            'change_type' => $changeType,
+            'notes' => $notes,
+        ]);
+    }
+
+    private function displayChecklistStatus(string $status): string
+    {
+        return match ($status) {
+            'passed', 'Passed' => 'Passed',
+            'failed', 'Failed' => 'Failed',
+            'blocked', 'Blocked' => 'Blocked',
+            default => 'Not Tested',
+        };
+    }
+
+    private function buildAutomatedResultNotes(string $runId, string $resultStatus, array $caseResult): string
+    {
+        $details = ['Automated test completed for run ' . $runId . '. Result: ' . $resultStatus . '.'];
+
+        $errorMessage = trim((string) ($caseResult['error_message'] ?? ''));
+        if ($errorMessage !== '') {
+            $details[] = 'Details: ' . $errorMessage;
+        }
+
+        return implode(' ', $details);
     }
 
     private function ensureDirectory(string $path): void
@@ -672,5 +740,35 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
         }
 
         return array_merge($environment, $extraEnv);
+    }
+
+    /**
+     * @param  array<string, mixed>  $executionProfile
+     * @param  array<string, mixed>  $providedInputs
+     * @return array<string, mixed>
+     */
+    private function mergeProvidedInputsIntoExecutionProfile(array $executionProfile, array $providedInputs): array
+    {
+        $requiredInputs = is_array($executionProfile['required_inputs'] ?? null)
+            ? $executionProfile['required_inputs']
+            : [];
+
+        foreach ($requiredInputs as $index => $input) {
+            if (!is_array($input)) {
+                continue;
+            }
+
+            $key = isset($input['key']) && is_string($input['key']) ? $input['key'] : null;
+            if (!$key) {
+                continue;
+            }
+
+            if (array_key_exists($key, $providedInputs) && is_string($providedInputs[$key])) {
+                $requiredInputs[$index]['value'] = $providedInputs[$key];
+            }
+        }
+
+        $executionProfile['required_inputs'] = $requiredInputs;
+        return $executionProfile;
     }
 }

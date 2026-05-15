@@ -162,6 +162,8 @@ function describeStep(step) {
             return `wait_for_selector ${(0, selectors_1.selectorDebugText)(step.selector)} state=${step.state}`;
         case 'screenshot':
             return `screenshot ${step.name}`;
+        case 'set_file':
+            return `set_file ${(0, selectors_1.selectorDebugText)(step.selector)}`;
         default: {
             const unreachable = step;
             return JSON.stringify(unreachable);
@@ -185,6 +187,36 @@ function describeAssert(assertItem) {
             return JSON.stringify(unreachable);
         }
     }
+}
+function cloneGeneratedPlan(runCase) {
+    if (runCase.generated_plan) {
+        return JSON.parse(JSON.stringify(runCase.generated_plan));
+    }
+    if (!runCase.execution_profile) {
+        return null;
+    }
+    return {
+        title: runCase.title,
+        intent_summary: runCase.execution_profile.intent_summary,
+        coverage_type: runCase.execution_profile.coverage_type,
+        preflight_checks: runCase.preflight_checks ?? [],
+        steps: runCase.steps,
+        asserts: runCase.asserts,
+        expected_observations: runCase.execution_profile.expected_observations,
+        diagnostics: runCase.execution_profile.diagnostics,
+    };
+}
+function resolveRequiredInputValue(runCase, inputKey) {
+    const requiredInputs = runCase.execution_profile?.required_inputs ?? [];
+    const matched = requiredInputs.find((entry) => entry.key === inputKey);
+    if (!matched) {
+        throw new results_1.InputDataMissingError(`Required input '${inputKey}' is not defined in the generated execution profile.`);
+    }
+    const value = matched.value;
+    if (matched.required && (value === undefined || value === null || String(value).trim() === '')) {
+        throw new results_1.InputDataMissingError(`Required input '${matched.label}' (${matched.key}) is missing a value.`);
+    }
+    return typeof value === 'string' ? value : '';
 }
 function isStrictModeViolation(error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -272,7 +304,7 @@ async function textContentWithStrictFallback(page, selector, timeout) {
         return fallbackLocator.textContent({ timeout });
     }
 }
-async function executeStep(page, step, baseUrl, timeoutMs, caseArtifactsDir) {
+async function executeStep(page, runCase, step, baseUrl, timeoutMs, caseArtifactsDir) {
     switch (step.action) {
         case 'goto': {
             const finalUrl = resolveUrl(baseUrl, step.url);
@@ -284,7 +316,10 @@ async function executeStep(page, step, baseUrl, timeoutMs, caseArtifactsDir) {
             return;
         }
         case 'fill': {
-            await fillWithStrictFallback(page, step.selector, resolveTemplateValue(step.value));
+            const rawValue = step.input_key
+                ? resolveRequiredInputValue(runCase, step.input_key)
+                : resolveTemplateValue(step.value ?? '');
+            await fillWithStrictFallback(page, step.selector, rawValue);
             return;
         }
         case 'press': {
@@ -312,11 +347,101 @@ async function executeStep(page, step, baseUrl, timeoutMs, caseArtifactsDir) {
             });
             return;
         }
+        case 'set_file': {
+            const locator = (0, selectors_1.selectorToLocator)(page, step.selector);
+            const filePath = step.input_key
+                ? resolveRequiredInputValue(runCase, step.input_key)
+                : resolveTemplateValue(step.file_path ?? '');
+            await locator.setInputFiles(filePath);
+            return;
+        }
         default: {
             const unreachable = step;
             throw new Error(`Unsupported step: ${JSON.stringify(unreachable)}`);
         }
     }
+}
+async function runPreflight(page, runCase, request, timeoutMs, pushTrace) {
+    const preflightChecks = runCase.preflight_checks ?? [];
+    const firstStep = runCase.steps[0];
+    let consumedGoto = false;
+    await pushTrace(`Planning: ${runCase.execution_profile?.intent_summary ?? runCase.title}`);
+    if (runCase.execution_profile?.preconditions?.length) {
+        for (const precondition of runCase.execution_profile.preconditions) {
+            await pushTrace(`Planning: precondition -> ${precondition}`);
+        }
+    }
+    if (runCase.execution_profile?.required_inputs?.length) {
+        for (const input of runCase.execution_profile.required_inputs) {
+            const status = input.required ? 'required' : 'optional';
+            const valueState = input.value && input.value.trim() !== '' ? 'provided' : 'missing';
+            await pushTrace(`Planning: input ${input.key} (${status}, ${input.kind}) -> ${valueState}`);
+        }
+    }
+    if (firstStep?.action === 'goto') {
+        const preflightUrl = resolveUrl(request.target.base_url, firstStep.url);
+        await page.goto(preflightUrl, { timeout: timeoutMs, waitUntil: 'domcontentloaded' });
+        await pushTrace(`Preflight 0: page_accessible -> ok (${preflightUrl})`);
+        consumedGoto = true;
+    }
+    else if (preflightChecks.some((check) => check.kind === 'page_accessible')) {
+        const preflightUrl = resolveUrl(request.target.base_url, request.target.base_url);
+        await page.goto(preflightUrl, { timeout: timeoutMs, waitUntil: 'domcontentloaded' });
+        await pushTrace(`Preflight 0: page_accessible -> ok (${preflightUrl})`);
+    }
+    for (let index = 0; index < preflightChecks.length; index += 1) {
+        const check = preflightChecks[index];
+        const prefix = `Preflight ${index + 1}: ${check.label}`;
+        try {
+            switch (check.kind) {
+                case 'unsupported':
+                    throw new results_1.UnsupportedTestCaseError(check.failure_message);
+                case 'input_available': {
+                    if (!check.input_key) {
+                        throw new results_1.PreconditionFailureError(`${check.label} is missing an input_key definition.`);
+                    }
+                    resolveRequiredInputValue(runCase, check.input_key);
+                    await pushTrace(`${prefix} -> ok`);
+                    break;
+                }
+                case 'url_contains': {
+                    const currentUrl = page.url();
+                    if (!check.expected || !currentUrl.includes(check.expected)) {
+                        throw new results_1.PreconditionFailureError(check.failure_message);
+                    }
+                    await pushTrace(`${prefix} -> ok`);
+                    break;
+                }
+                case 'element_visible': {
+                    if (!check.selector) {
+                        throw new results_1.PreconditionFailureError(`${check.label} is missing a selector.`);
+                    }
+                    await waitForSelectorWithStrictFallback(page, check.selector, 'visible', timeoutMs);
+                    await pushTrace(`${prefix} -> ok`);
+                    break;
+                }
+                case 'element_attached': {
+                    if (!check.selector) {
+                        throw new results_1.PreconditionFailureError(`${check.label} is missing a selector.`);
+                    }
+                    await waitForSelectorWithStrictFallback(page, check.selector, 'attached', timeoutMs);
+                    await pushTrace(`${prefix} -> ok`);
+                    break;
+                }
+                case 'page_accessible':
+                    await pushTrace(`${prefix} -> ok`);
+                    break;
+                default:
+                    throw new results_1.AmbiguousTargetError(check.failure_message);
+            }
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            await pushTrace(`${prefix} -> failed (${message})`);
+            throw error;
+        }
+    }
+    return consumedGoto ? 1 : 0;
 }
 async function executeAssert(page, assertItem, timeoutMs) {
     switch (assertItem.type) {
@@ -409,6 +534,7 @@ async function executeCase(browser, runCase, request, options, storageStatePath,
     let traceStarted = false;
     const artifacts = createEmptyArtifacts();
     const executionTrace = [];
+    const generatedPlan = cloneGeneratedPlan(runCase);
     const pushTrace = async (line) => {
         const prefixed = tracePrefix ? `[${tracePrefix}] ${line}` : line;
         executionTrace.push(prefixed);
@@ -419,8 +545,9 @@ async function executeCase(browser, runCase, request, options, storageStatePath,
     let status = 'passed';
     let error_type = null;
     let error_message = null;
+    let failureSource = null;
     try {
-        await pushTrace('Browser context started');
+        await pushTrace('Planning: browser context starting');
         const caseStorageStatePath = runCase.use_auth === false ? undefined : storageStatePath;
         context = await browser.newContext({
             viewport: request.runtime.viewport,
@@ -442,17 +569,23 @@ async function executeCase(browser, runCase, request, options, storageStatePath,
             });
             traceStarted = true;
         }
-        for (let index = 0; index < runCase.steps.length; index += 1) {
+        const firstExecutableStepIndex = await runPreflight(page, runCase, request, timeoutMs, pushTrace);
+        for (let index = firstExecutableStepIndex; index < runCase.steps.length; index += 1) {
             const step = runCase.steps[index];
             const stepLabel = describeStep(step);
             const stepStart = Date.now();
             try {
-                await executeStep(page, step, request.target.base_url, timeoutMs, caseArtifactsDir);
+                await executeStep(page, runCase, step, request.target.base_url, timeoutMs, caseArtifactsDir);
                 await pushTrace(`Step ${index + 1}: ${stepLabel} -> ok (${Date.now() - stepStart}ms)`);
             }
             catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
                 await pushTrace(`Step ${index + 1}: ${stepLabel} -> failed (${message})`);
+                failureSource = {
+                    phase: 'step',
+                    reference: stepLabel,
+                    message,
+                };
                 throw error;
             }
         }
@@ -467,13 +600,23 @@ async function executeCase(browser, runCase, request, options, storageStatePath,
             catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
                 await pushTrace(`Assert ${index + 1}: ${assertLabel} -> failed (${message})`);
+                failureSource = {
+                    phase: 'assert',
+                    reference: assertLabel,
+                    message,
+                };
                 throw error;
             }
         }
     }
     catch (error) {
         const normalized = (0, results_1.normalizeError)(error);
-        if (normalized.error_type === 'missing_env_var' || normalized.error_type === 'selector_not_found') {
+        if (normalized.error_type === 'missing_env_var' ||
+            normalized.error_type === 'selector_not_found' ||
+            normalized.error_type === 'precondition_failed' ||
+            normalized.error_type === 'unsupported_test_case' ||
+            normalized.error_type === 'input_data_missing' ||
+            normalized.error_type === 'ambiguous_target') {
             status = 'blocked';
         }
         else {
@@ -481,7 +624,16 @@ async function executeCase(browser, runCase, request, options, storageStatePath,
         }
         error_type = normalized.error_type;
         error_message = normalized.error_message;
-        await pushTrace(`Run failed: ${normalized.error_message}`);
+        if (!failureSource) {
+            failureSource = {
+                phase: normalized.error_type === 'precondition_failed' || normalized.error_type === 'unsupported_test_case' || normalized.error_type === 'input_data_missing'
+                    ? 'preflight'
+                    : 'runtime',
+                reference: normalized.error_type,
+                message: normalized.error_message,
+            };
+        }
+        await pushTrace(`Failure analysis: ${normalized.error_type} -> ${normalized.error_message}`);
         if (status === 'failed' && request.runtime.screenshot === 'only-on-failure' && page) {
             const failScreenshotPath = node_path_1.default.join(caseArtifactsDir, 'fail.png');
             await page.screenshot({ path: failScreenshotPath, fullPage: true });
@@ -515,6 +667,7 @@ async function executeCase(browser, runCase, request, options, storageStatePath,
             }
         }
         if (status === 'passed') {
+            await pushTrace('Failure analysis: none');
             await pushTrace('Run completed successfully');
         }
     }
@@ -526,6 +679,8 @@ async function executeCase(browser, runCase, request, options, storageStatePath,
         error_type,
         error_message,
         artifacts,
+        generated_plan: generatedPlan,
+        failure_source: failureSource,
         execution_trace: executionTrace,
     };
 }
@@ -591,6 +746,8 @@ function aggregateBrowserResults(runCase, browserResults) {
         duration_ms: browserResults.reduce((sum, entry) => sum + entry.result.duration_ms, 0),
         error_type: firstFailure?.result.error_type ?? null,
         error_message: firstFailure?.result.error_message ?? null,
+        generated_plan: firstFailure?.result.generated_plan ?? browserResults[0]?.result.generated_plan ?? null,
+        failure_source: firstFailure?.result.failure_source ?? null,
         artifacts: {
             trace_path: firstNonNull(browserResults.map((entry) => entry.result.artifacts.trace_path)),
             screenshot_path: firstNonNull(browserResults.map((entry) => entry.result.artifacts.screenshot_path)),

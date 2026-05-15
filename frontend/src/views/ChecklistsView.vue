@@ -3,9 +3,14 @@ import { onMounted, reactive, ref, computed, watch } from 'vue'
 import { CirclePlus, Filter, Search, X } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import { apiRequest, withQuery } from '@/lib/api'
+import { localizeError, localizeMessage } from '@/lib/localization'
 import { useAuthStore } from '@/stores/auth'
+import { useSettingsStore } from '@/stores/settings'
+import { useToastStore } from '@/stores/toast'
 
 const auth = useAuthStore()
+const settings = useSettingsStore()
+const toast = useToastStore()
 const route = useRoute()
 const router = useRouter()
 const projectId = computed(() => String(route.query.projectId || '').trim())
@@ -149,10 +154,6 @@ function resetForm() {
 }
 
 function openCreateChecklistForm() {
-  if (!projectId.value) {
-    errorMessage.value = 'Ouvrez d’abord un projet assigné pour créer une checklist d’exécution.'
-    return
-  }
   resetForm()
   showChecklistForm.value = true
 }
@@ -168,7 +169,7 @@ function consumeCreateQuery() {
 }
 
 function openCreateChecklistFormFromQuery() {
-  if (!auth.canManageChecklists || route.query.create !== '1' || !projectId.value) {
+  if (!auth.canManageChecklists || route.query.create !== '1') {
     return
   }
 
@@ -215,7 +216,6 @@ function editChecklist(checklist) {
   form.name = checklist.name
   form.description = checklist.description || ''
   form.category = checklist.category || ''
-  form.is_active = Boolean(checklist.is_active)
   form.items = checklist.items.map((item) => ({
     id: item.id,
     title: item.title,
@@ -284,7 +284,7 @@ async function loadChecklists(page = 1) {
     pagination.current_page = data.current_page
     pagination.last_page = data.last_page
   } catch (error) {
-    errorMessage.value = error.data?.message || error.message
+    errorMessage.value = localizeError(error, 'error_generic', settings.language)
   } finally {
     loading.value = false
   }
@@ -302,11 +302,12 @@ async function loadAvailableItems() {
 async function submitChecklist() {
   submitting.value = true
   errorMessage.value = ''
-  successMessage.value = ''
 
   try {
     const payload = {
-      project_id: Number(form.project_id || projectId.value),
+      project_id: projectId.value ? Number(form.project_id || projectId.value) : null,
+      template_scope: projectId.value ? 'project' : 'global',
+      lifecycle_status: projectId.value ? 'draft' : 'approved',
       name: form.name,
       description: form.description || null,
       category: form.category || null,
@@ -322,29 +323,19 @@ async function submitChecklist() {
 
     if (form.id) {
       await apiRequest(`/checklists/${form.id}`, { method: 'PUT', body: payload }, auth.token)
-      successMessage.value = 'Checklist mise à jour avec succès.'
+      successMessage.value = localizeMessage('Checklist mise a jour avec succes.', settings.language)
     } else {
       await apiRequest('/checklists', { method: 'POST', body: payload }, auth.token)
-      successMessage.value = 'Checklist créée avec succès.'
+      successMessage.value = localizeMessage('Checklist creee avec succes.', settings.language)
     }
 
     resetForm()
     showChecklistForm.value = false
     await loadChecklists()
   } catch (error) {
-    errorMessage.value = error.data?.message || error.message
+    errorMessage.value = localizeError(error, 'error_generic', settings.language)
   } finally {
     submitting.value = false
-  }
-}
-
-async function toggleChecklist(checklist) {
-  errorMessage.value = ''
-  try {
-    await apiRequest(`/checklists/${checklist.id}/toggle`, { method: 'PATCH' }, auth.token)
-    await loadChecklists(pagination.current_page)
-  } catch (error) {
-    errorMessage.value = error.data?.message || error.message
   }
 }
 
@@ -352,9 +343,10 @@ async function deleteChecklist(checklistId) {
   errorMessage.value = ''
   try {
     await apiRequest(`/checklists/${checklistId}`, { method: 'DELETE' }, auth.token)
+    toast.success(localizeMessage('Checklist supprimee avec succes.', settings.language))
     await loadChecklists(pagination.current_page)
   } catch (error) {
-    errorMessage.value = error.data?.message || error.message
+    errorMessage.value = localizeError(error, 'error_generic', settings.language)
   }
 }
 
@@ -363,6 +355,15 @@ onMounted(async () => {
   await loadChecklists()
   await loadAvailableItems()
   openCreateChecklistFormFromQuery()
+})
+
+watch(successMessage, (message) => {
+  if (!message) {
+    return
+  }
+
+  toast.success(message)
+  successMessage.value = ''
 })
 
 watch(
@@ -384,7 +385,7 @@ watch(
 
       <div class="dashboard-command-actions">
         <button
-          v-if="auth.canManageChecklists && projectId"
+          v-if="auth.canManageChecklists"
           class="btn btn-primary create-project-btn"
           type="button"
           @click="openCreateChecklistForm"
@@ -396,7 +397,7 @@ watch(
     </div>
 
     <div v-if="auth.canManageChecklists && !projectId" class="card">
-      <p class="muted">Sélectionnez d’abord un projet assigné pour créer une checklist d’exécution. Vous pouvez aussi ouvrir cette page avec un paramètre `projectId`.</p>
+      <p class="muted">Vous pouvez creer ici une checklist systeme reutilisable, sans association directe a une User Story. Pour creer une checklist d execution projet, ouvrez cette page depuis un projet assigne.</p>
     </div>
 
     <div class="story-detail-metrics">
@@ -461,11 +462,11 @@ watch(
 
     <div v-if="auth.canManageChecklists && showChecklistForm" class="card stack">
       <h2>{{ form.id ? `Modifier la checklist #${form.id}` : 'Créer une checklist' }}</h2>
-      <p class="muted">Contexte projet : {{ projectId || form.project_id || 'Indisponible' }}</p>
+      <p class="muted">
+        {{ projectId || form.project_id ? `Contexte projet : ${projectId || form.project_id}` : 'Contexte : checklist systeme reutilisable, non attachee a une User Story.' }}
+      </p>
 
       <p v-if="errorMessage" class="error" data-testid="checklists-msg-error">{{ errorMessage }}</p>
-      <p v-if="successMessage" class="success" data-testid="checklists-msg-success">{{ successMessage }}</p>
-
       <form class="stack" @submit.prevent="submitChecklist" data-testid="checklists-form">
         <div class="grid">
           <div class="field">
@@ -620,10 +621,10 @@ watch(
             <tr v-for="checklist in filteredChecklists" :key="checklist.id">
               <td>{{ checklist.id }}</td>
               <td>
-                <RouterLink :to="{ name: 'checklist-detail', params: { id: checklist.id } }" class="project-title-link">
-                  {{ checklist.name }}
+                <RouterLink :to="{ name: 'checklist-detail', params: { id: checklist.id } }" class="checklist-row-link">
+                  <strong class="checklist-row-title">{{ checklist.name }}</strong>
+                  <div class="muted">{{ checklist.description || '-' }}</div>
                 </RouterLink>
-                <div class="muted">{{ checklist.description || '-' }}</div>
               </td>
               <td>{{ checklist.category || '-' }}</td>
               <td>
@@ -633,10 +634,8 @@ watch(
               </td>
               <td>{{ checklist.items?.length || 0 }}</td>
               <td>
-                <div class="actions">
-                  <RouterLink class="btn btn-secondary btn-sm" :to="{ name: 'checklist-detail', params: { id: checklist.id } }">Consulter</RouterLink>
+                <div class="checklist-actions">
                   <button v-if="auth.canManageChecklists" class="btn btn-secondary btn-sm" @click="editChecklist(checklist)">Modifier</button>
-                  <button v-if="auth.canManageChecklists" class="btn btn-secondary btn-sm" @click="toggleChecklist(checklist)">Changer le statut</button>
                   <button v-if="auth.canManageChecklists" class="btn btn-danger btn-sm" @click="deleteChecklist(checklist.id)">Archiver</button>
                 </div>
               </td>
@@ -702,6 +701,35 @@ watch(
   margin: 0.45rem 0 0;
 }
 
+.checklist-row-link {
+  display: grid;
+  gap: 0.35rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.checklist-row-title {
+  color: #1f2937;
+  transition: color 0.18s ease;
+}
+
+.checklist-row-link:hover .checklist-row-title {
+  color: #1d4ed8;
+}
+
+.checklist-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.checklist-actions .btn {
+  min-width: 7.25rem;
+  justify-content: center;
+}
+
 .dark .story-detail-metric {
   background: rgba(15, 23, 42, 0.92);
   border-color: rgba(51, 65, 85, 0.9);
@@ -714,4 +742,13 @@ watch(
 .dark .story-detail-metric strong {
   color: #f8fafc;
 }
+
+.dark .checklist-row-title {
+  color: #f8fafc;
+}
+
+.dark .checklist-row-link:hover .checklist-row-title {
+  color: #93c5fd;
+}
 </style>
+

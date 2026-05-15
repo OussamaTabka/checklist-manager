@@ -1,9 +1,15 @@
 <script setup>
-import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { localizeError, localizeMessage } from '@/lib/localization'
 import { useAuthStore } from '@/stores/auth'
+import { useSettingsStore } from '@/stores/settings'
+import { useToastStore } from '@/stores/toast'
 
 const auth = useAuthStore()
+const settings = useSettingsStore()
+const toast = useToastStore()
+const route = useRoute()
 const router = useRouter()
 
 const form = reactive({
@@ -13,6 +19,23 @@ const form = reactive({
 
 const errorMessage = ref('')
 const isSubmitting = ref(false)
+const infoMessage = computed(() => (typeof route.query.message === 'string' ? route.query.message : ''))
+
+watch(
+  infoMessage,
+  async (message) => {
+    if (!message) {
+      return
+    }
+
+    toast.success(localizeMessage(message, settings.language))
+
+    const nextQuery = { ...route.query }
+    delete nextQuery.message
+    await router.replace({ query: nextQuery })
+  },
+  { immediate: true },
+)
 
 async function onSubmit() {
   errorMessage.value = ''
@@ -22,7 +45,7 @@ async function onSubmit() {
     await auth.login({ ...form })
     await router.push({ name: 'dashboard' })
   } catch (error) {
-    errorMessage.value = error.data?.message || error.message
+    errorMessage.value = localizeError(error, 'error_generic', settings.language)
   } finally {
     isSubmitting.value = false
   }
@@ -38,7 +61,6 @@ async function onSubmit() {
       </div>
 
       <p v-if="errorMessage" class="error" data-testid="login-msg-error">{{ errorMessage }}</p>
-
       <form class="stack" @submit.prevent="onSubmit">
         <div class="field">
           <label>Email</label>

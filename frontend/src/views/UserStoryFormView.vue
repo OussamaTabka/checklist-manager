@@ -76,7 +76,6 @@ const priorityOptions = [
   { value: 'critical', label: 'Critique', hint: 'Bloquant', tone: 'rose' },
 ]
 
-const selectedStatus = computed(() => statusOptions.find((option) => option.value === form.value.status))
 const selectedPriority = computed(() => priorityOptions.find((option) => option.value === form.value.priority))
 
 const projectStoriesCount = computed(() => storiesStore.stories.length)
@@ -204,7 +203,7 @@ function applyTemplate() {
   }
   if (!form.value.business_rules.trim()) {
     form.value.business_rules = [
-      'La regle metier 1 s applique avant validation',
+      'La régle metier 1 s applique avant validation',
       'L action ne doit pas etre autorisee si les prerequis sont absents',
     ].join('\n')
   }
@@ -249,7 +248,7 @@ async function submit() {
 
 function goBack() {
   if (projectId.value) {
-    router.push({ name: 'stories', query: { projectId: projectId.value } })
+    router.push({ name: 'project-detail', params: { id: projectId.value } })
     return
   }
 
@@ -402,23 +401,6 @@ onMounted(async () => {
           </div>
 
           <div class="story-option-block">
-            <span class="story-option-label">Statut</span>
-            <div class="story-status-grid">
-              <button
-                v-for="option in statusOptions"
-                :key="option.value"
-                type="button"
-                :class="['story-choice-card', { active: form.status === option.value }]"
-                @click="form.status = option.value"
-              >
-                <component :is="option.icon" :size="18" />
-                <strong>{{ option.label }}</strong>
-                <small>{{ option.hint }}</small>
-              </button>
-            </div>
-          </div>
-
-          <div class="story-option-block">
             <span class="story-option-label">Priorité</span>
             <div class="story-priority-grid">
               <button
@@ -441,7 +423,7 @@ onMounted(async () => {
           </button>
           <button type="submit" :disabled="submitting" class="story-primary-button">
             <BadgeCheck :size="18" />
-            {{ submitting ? 'Enregistrement...' : isEditing ? 'Mettre à jour et ouvrir' : 'Créer et ouvrir' }}
+            {{ submitting ? 'Enregistrement...' : isEditing ? 'Mettre à jour' : 'Créer' }}
           </button>
         </div>
       </form>
@@ -499,7 +481,6 @@ onMounted(async () => {
           <span class="story-eyebrow">Résumé</span>
           <h3>{{ form.title || 'Titre à définir' }}</h3>
           <div class="story-summary-meta">
-            <span>{{ selectedStatus?.label }}</span>
             <span>{{ selectedPriority?.label }}</span>
           </div>
         </section>
@@ -724,38 +705,15 @@ onMounted(async () => {
   margin-bottom: 20px;
 }
 
-.story-status-grid,
 .story-priority-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
-.story-choice-card {
-  min-height: 92px;
-  display: grid;
-  gap: 5px;
-  justify-items: start;
-  align-content: center;
-  padding: 14px;
-  color: #344054;
-  background: #f8fafc;
-  border: 1px solid #d8e0ec;
-  border-radius: 8px;
-  text-align: left;
-}
-
-.story-choice-card small,
 .story-priority-pill small {
   color: #697586;
   font-weight: 700;
-}
-
-.story-choice-card.active {
-  color: #1740b8;
-  background: #eef4ff;
-  border-color: #356dff;
-  box-shadow: inset 0 0 0 1px #356dff;
 }
 
 .story-priority-pill {
@@ -967,7 +925,6 @@ onMounted(async () => {
   }
 
   .story-two-columns,
-  .story-status-grid,
   .story-priority-grid {
     grid-template-columns: 1fr;
   }

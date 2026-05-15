@@ -4,12 +4,15 @@ import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useUserStoriesStore } from '@/stores/userStories'
 import { useAuthStore } from '@/stores/auth'
 import { apiRequest } from '@/lib/api'
+import { localizeError, tr } from '@/lib/localization'
+import { useSettingsStore } from '@/stores/settings'
 import { ArrowRight, FolderKanban, Plus, Sparkles, Trash2, Zap } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
 const storiesStore = useUserStoriesStore()
 const auth = useAuthStore()
+const settings = useSettingsStore()
 
 const projectId = ref(route.query.projectId || null)
 const projects = ref([])
@@ -157,7 +160,7 @@ async function loadStories() {
 
 async function deleteStory(storyId, event) {
   event.stopPropagation()
-  if (!confirm('Voulez-vous vraiment supprimer cette User Story ?')) return
+  if (!confirm(tr('confirm_delete_story', {}, settings.language))) return
 
   try {
     if (!projectId.value) {
@@ -166,7 +169,7 @@ async function deleteStory(storyId, event) {
 
     await storiesStore.deleteStory(projectId.value, storyId)
   } catch (err) {
-    alert(`Erreur : ${err.message}`)
+    alert(`${tr('error_prefix', {}, settings.language)}: ${localizeError(err, 'error_generic', settings.language)}`)
   }
 }
 
