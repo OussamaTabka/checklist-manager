@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (!Schema::hasTable('checklist_items')) {
+            return;
+        }
+
         Schema::table('checklist_items', function (Blueprint $table) {
             // Add test execution tracking columns if they don't exist
             if (!Schema::hasColumn('checklist_items', 'status')) {
@@ -54,6 +58,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (!Schema::hasTable('checklist_items')) {
+            return;
+        }
+
         Schema::table('checklist_items', function (Blueprint $table) {
             // Drop columns in reverse order
             if (Schema::hasColumn('checklist_items', 'run_count')) {

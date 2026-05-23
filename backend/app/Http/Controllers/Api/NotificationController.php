@@ -140,6 +140,7 @@ class NotificationController extends Controller
             'message' => $notification->message,
             'priority' => $notification->priority,
             'link' => $notification->link,
+            'data' => $notification->data,
             'target_type' => $notification->target_type,
             'target_id' => $notification->target_id,
             'project_id' => $notification->project_id,

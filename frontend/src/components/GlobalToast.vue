@@ -62,6 +62,13 @@ const visibleMessage = computed(() => localizeMessage(toast.message))
   border-color: #fda4af;
 }
 
+.global-toast-info {
+  color: #0b3b66;
+  background: rgba(219, 234, 254, 0.98);
+  border-color: #60a5fa;
+  font-weight: 600;
+}
+
 @media (max-width: 960px) {
   .global-toast {
     left: 1rem;

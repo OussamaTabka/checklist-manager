@@ -11,12 +11,16 @@ use App\Services\ChecklistGenerationAgentService;
 use App\Services\ChecklistGenerationTextService;
 use App\Services\ChecklistRecommendationService;
 use App\Services\ChecklistSuggestionReviewService;
+use App\Services\NotificationService;
 use App\Services\TestCaseGenerationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class UserStoryController extends Controller
 {
+    private const DUPLICATE_STORY_REFERENCE_MESSAGE = 'Cette référence existe déjà dans ce projet.';
+
     public function __construct(
         private TestCaseGenerationService $testCaseGenerator,
         private ChecklistRecommendationService $checklistRecommendations,
@@ -24,6 +28,7 @@ class UserStoryController extends Controller
         private ChecklistSuggestionReviewService $checklistSuggestionReview,
         private ChecklistAdaptationService $checklistAdaptation,
         private ChecklistGenerationTextService $generationText,
+        private NotificationService $notificationService,
     ) {
     }
 
@@ -64,10 +69,18 @@ class UserStoryController extends Controller
             'story_id' => 'nullable|string',
         ]);
 
+        $this->ensureUniqueStoryReference($project, $validated['story_id'] ?? null);
+
         $validated['project_id'] = $project->id;
         $validated['created_by'] = Auth::id();
 
         $userStory = UserStory::create($validated);
+        $this->notificationService->notifyUserStoryChanged(
+            'user_story_created',
+            $project,
+            $userStory,
+            $request->user()
+        );
 
         return response()->json($userStory->load(['creator', 'checklists']), 201);
     }
@@ -111,7 +124,15 @@ class UserStoryController extends Controller
             'story_id' => 'nullable|string',
         ]);
 
+        $this->ensureUniqueStoryReference($project, $validated['story_id'] ?? null, $userStory);
+
         $userStory->update($validated);
+        $this->notificationService->notifyUserStoryChanged(
+            'user_story_updated',
+            $project,
+            $userStory->fresh(),
+            $request->user()
+        );
 
         return response()->json($userStory->load(['creator', 'checklists']));
     }
@@ -124,7 +145,16 @@ class UserStoryController extends Controller
             return response()->json(['error' => 'User story not found in this project'], 404);
         }
 
+        $storySnapshot = $userStory->replicate();
+        $storySnapshot->id = $userStory->id;
         $userStory->delete();
+        $this->notificationService->notifyUserStoryChanged(
+            'user_story_deleted',
+            $project,
+            $storySnapshot,
+            Auth::user(),
+            ['story_title' => $userStory->title]
+        );
 
         return response()->json(null, 204);
     }
@@ -379,5 +409,50 @@ class UserStoryController extends Controller
             403,
             'Only assigned testers can generate or attach execution checklists.'
         );
+    }
+
+    private function ensureUniqueStoryReference(Project $project, ?string $reference, ?UserStory $ignoredStory = null): void
+    {
+        $normalizedReference = $this->normalizeStoryReference($reference);
+
+        if ($normalizedReference === null) {
+            return;
+        }
+
+        $duplicateExists = UserStory::query()
+            ->where('project_id', $project->id)
+            ->when(
+                $ignoredStory,
+                fn ($query) => $query->where('id', '!=', $ignoredStory->id)
+            )
+            ->whereNotNull('story_id')
+            ->get(['id', 'story_id'])
+            ->contains(fn (UserStory $story) => $this->normalizeStoryReference($story->story_id) === $normalizedReference);
+
+        if ($duplicateExists) {
+            $exception = ValidationException::withMessages([
+                'story_id' => [self::DUPLICATE_STORY_REFERENCE_MESSAGE],
+            ]);
+
+            $exception->response = response()->json([
+                'message' => self::DUPLICATE_STORY_REFERENCE_MESSAGE,
+                'errors' => [
+                    'story_id' => [self::DUPLICATE_STORY_REFERENCE_MESSAGE],
+                ],
+            ], 422);
+
+            throw $exception;
+        }
+    }
+
+    private function normalizeStoryReference(?string $reference): ?string
+    {
+        $trimmedReference = trim((string) $reference);
+
+        if ($trimmedReference === '') {
+            return null;
+        }
+
+        return mb_strtolower($trimmedReference);
     }
 }

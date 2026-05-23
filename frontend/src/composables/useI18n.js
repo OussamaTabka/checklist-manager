@@ -9,7 +9,7 @@ export function useI18n() {
 
   const translate = (key) => t(key, currentLanguage.value)
 
-  const isRTL = computed(() => settingsStore.language === 'ar')
+  const isRTL = computed(() => false)
 
   return {
     currentLanguage,

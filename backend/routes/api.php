@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\VersionItemController;
 use App\Http\Controllers\Api\ProjectVersionController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\ExportController;
+use App\Http\Controllers\Api\ProjectReportController;
 use App\Http\Controllers\Api\TestRunController;
 use App\Http\Controllers\Api\TestCaseRunController;
 use App\Http\Controllers\Api\ChecklistItemExecutionController;
@@ -63,6 +64,7 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
             Route::delete('/users/{user}', [UserController::class, 'destroy']);
             Route::post('/users/{user}/restore', [UserController::class, 'restore']);
             Route::delete('/users/{user}/permanent', [UserController::class, 'permanentDestroy']);
+            Route::get('/available-project-managers', [UserController::class, 'getAvailableProjectManagers']);
             Route::post('/users/{user}/invitations/resend', [UserInvitationController::class, 'resend'])->middleware('throttle:invitation-send');
             Route::post('/users/{user}/invitations/revoke', [UserInvitationController::class, 'revoke'])->middleware('throttle:invitation-send');
         });
@@ -96,6 +98,8 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
             Route::put('/checklists/{checklist}', [ChecklistController::class, 'update']);
             Route::delete('/checklists/{checklist}', [ChecklistController::class, 'destroy']);
             Route::patch('/checklists/{checklist}/toggle', [ChecklistController::class, 'toggle']);
+            Route::post('/checklists/{checklist}/restore', [ChecklistController::class, 'restore']);
+            Route::delete('/checklists/{checklist}/permanent', [ChecklistController::class, 'permanentDestroy']);
         });
 
         // ==========================================
@@ -149,6 +153,8 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
             Route::post('/projects/{project}/assign-testers', [ProjectController::class, 'assignTesters']);
             Route::get('/projects/{project}/export/{format?}', [ExportController::class, 'exportProject']);
         });
+
+        Route::get('/projects/{project}/reports/export', [ProjectReportController::class, 'export']);
 
         // ==========================================
         // VUE PROJETS GÉNÉRALE (TOUS LES RÔLES)

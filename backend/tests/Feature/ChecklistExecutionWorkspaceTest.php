@@ -7,6 +7,8 @@ use App\Models\Checklist;
 use App\Models\ChecklistItem;
 use App\Models\ChecklistItemHistory;
 use App\Models\Project;
+use App\Models\TestResult;
+use App\Models\TestRun;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -42,7 +44,7 @@ class ChecklistExecutionWorkspaceTest extends TestCase
             'qa_comment' => 'Le message de confirmation est affiche correctement.',
         ]);
 
-        $this->assertDatabaseHas('checklist_item_history', [
+        $this->assertDatabaseHas('checklist_item_histories', [
             'checklist_item_id' => $item->id,
             'change_type' => 'comment_added',
             'field_name' => 'qa_comment',
@@ -86,7 +88,7 @@ class ChecklistExecutionWorkspaceTest extends TestCase
             ->assertJsonPath('comment', 'Commentaire mis a jour')
             ->assertJsonPath('updated_by.id', $tester->id);
 
-        $this->assertDatabaseHas('checklist_item_history', [
+        $this->assertDatabaseHas('checklist_item_histories', [
             'checklist_item_id' => $item->id,
             'change_type' => 'comment_updated',
             'old_value' => 'Ancien commentaire',
@@ -117,7 +119,7 @@ class ChecklistExecutionWorkspaceTest extends TestCase
 
         Queue::assertPushed(ExecuteSingleTestCaseRun::class, 1);
 
-        $this->assertDatabaseHas('checklist_item_history', [
+        $this->assertDatabaseHas('checklist_item_histories', [
             'checklist_item_id' => $item->id,
             'change_type' => 'automated_test_started',
             'field_name' => 'execution',
@@ -166,6 +168,190 @@ class ChecklistExecutionWorkspaceTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('id', $checklist->id);
+    }
+
+    public function test_execution_endpoint_returns_live_trace_for_running_run(): void
+    {
+        $this->ensureRoles();
+
+        $tester = User::factory()->create();
+        $tester->assignRole('testeur');
+
+        [$checklist, $item] = $this->createChecklistItem($tester);
+
+        $run = TestRun::create([
+            'run_id' => '33333333-3333-4333-8333-333333333333',
+            'project_version_id' => null,
+            'checklist_id' => $checklist->id,
+            'schema_version' => '1.0',
+            'base_url' => 'http://example.test',
+            'mode' => 'single-test-case',
+            'status' => 'running',
+            'requested_by' => $tester->id,
+            'summary_total' => 1,
+            'request_payload' => [
+                'target_type' => 'checklist_item',
+                'test_case_id' => $item->id,
+                'base_url' => 'http://example.test',
+            ],
+            'started_at' => now(),
+        ]);
+
+        $workspaceRoot = realpath(base_path('..'));
+        $this->assertNotFalse($workspaceRoot);
+
+        $runDirectory = $workspaceRoot . DIRECTORY_SEPARATOR . 'runs' . DIRECTORY_SEPARATOR . $run->run_id;
+        if (!is_dir($runDirectory)) {
+            mkdir($runDirectory, 0777, true);
+        }
+
+        file_put_contents($runDirectory . DIRECTORY_SEPARATOR . 'live-trace.json', json_encode([
+            'schema_version' => '1.0',
+            'run_id' => $run->run_id,
+            'status' => 'running',
+            'cases' => [
+                [
+                    'external_id' => $item->id,
+                    'title' => $item->title,
+                    'status' => 'running',
+                    'execution_trace' => [
+                        'Planning: browser context starting',
+                        'Step 1: goto /login -> ok',
+                    ],
+                ],
+            ],
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        Sanctum::actingAs($tester);
+
+        $response = $this->getJson("/api/checklists/{$checklist->id}/items/{$item->id}/execution");
+
+        $response->assertOk()
+            ->assertJsonPath('execution_state', 'running')
+            ->assertJsonPath('tested_base_url', 'http://example.test')
+            ->assertJsonPath('execution_trace.0', 'Planning: browser context starting')
+            ->assertJsonPath('execution_trace.1', 'Step 1: goto /login -> ok');
+    }
+
+    public function test_execution_endpoint_returns_artifact_lists_for_completed_run(): void
+    {
+        $this->ensureRoles();
+
+        $tester = User::factory()->create();
+        $tester->assignRole('testeur');
+
+        [$checklist, $item] = $this->createChecklistItem($tester);
+
+        $run = TestRun::create([
+            'run_id' => '44444444-4444-4444-8444-444444444444',
+            'project_version_id' => null,
+            'checklist_id' => $checklist->id,
+            'schema_version' => '1.0',
+            'base_url' => 'http://example.test',
+            'mode' => 'single-test-case',
+            'status' => 'completed',
+            'requested_by' => $tester->id,
+            'summary_total' => 1,
+            'request_payload' => [
+                'target_type' => 'checklist_item',
+                'test_case_id' => $item->id,
+                'base_url' => 'http://example.test',
+            ],
+            'started_at' => now()->subMinute(),
+            'finished_at' => now(),
+        ]);
+
+        TestResult::create([
+            'test_run_id' => $run->id,
+            'checklist_item_id' => $item->id,
+            'status' => 'failed',
+            'error_type' => 'selector_not_found',
+            'error_message' => 'A required button, field, or selector was not found on the page.',
+            'duration_ms' => 2400,
+            'artifacts' => [
+                'trace' => ['runs/' . $run->run_id . '/artifacts/' . $item->id . '/trace.zip'],
+                'screenshot' => ['runs/' . $run->run_id . '/artifacts/' . $item->id . '/fail.png'],
+                'video' => [],
+                'raw_paths' => [
+                    'trace_path' => 'runs/' . $run->run_id . '/artifacts/' . $item->id . '/trace.zip',
+                    'screenshot_path' => 'runs/' . $run->run_id . '/artifacts/' . $item->id . '/fail.png',
+                    'video_path' => null,
+                ],
+            ],
+            'result_payload' => [
+                'external_id' => $item->id,
+                'status' => 'failed',
+                'generated_plan' => [
+                    'steps' => [
+                        ['action' => 'goto', 'url' => 'http://example.test'],
+                    ],
+                    'asserts' => [],
+                ],
+                'failure_source' => [
+                    'phase' => 'step',
+                    'reference' => 'click button[type="submit"]',
+                    'message' => 'selector missing',
+                ],
+            ],
+            'executed_at' => now(),
+        ]);
+
+        Sanctum::actingAs($tester);
+
+        $response = $this->getJson("/api/checklists/{$checklist->id}/items/{$item->id}/execution");
+
+        $response->assertOk()
+            ->assertJsonPath('tested_base_url', 'http://example.test')
+            ->assertJsonPath('artifacts.trace.0', 'runs/' . $run->run_id . '/artifacts/' . $item->id . '/trace.zip')
+            ->assertJsonPath('artifacts.all.1', 'runs/' . $run->run_id . '/artifacts/' . $item->id . '/fail.png')
+            ->assertJsonPath('failure_source.phase', 'step');
+    }
+
+    public function test_unassigned_tester_cannot_update_project_checklist_comment(): void
+    {
+        $this->ensureRoles();
+
+        $chef = User::factory()->create();
+        $chef->assignRole('chef');
+
+        $assignedTester = User::factory()->create();
+        $assignedTester->assignRole('testeur');
+
+        $otherTester = User::factory()->create();
+        $otherTester->assignRole('testeur');
+
+        $project = Project::create([
+            'name' => 'Restricted checklist project',
+            'description' => 'Only assigned testers should access checklist execution endpoints',
+            'created_by' => $chef->id,
+        ]);
+        $project->testers()->attach($assignedTester->id);
+
+        $checklist = Checklist::create([
+            'name' => 'Restricted execution checklist',
+            'description' => 'Project checklist',
+            'project_id' => $project->id,
+            'created_by' => $assignedTester->id,
+            'is_active' => true,
+        ]);
+
+        $item = ChecklistItem::create([
+            'checklist_id' => $checklist->id,
+            'title' => 'Scenario 1',
+            'description' => 'Validate access control',
+            'priority' => 'High',
+            'criticality' => 'Major',
+            'status' => 'pending',
+            'order' => 0,
+        ]);
+
+        Sanctum::actingAs($otherTester);
+
+        $response = $this->patchJson("/api/checklists/{$checklist->id}/items/{$item->id}/comment", [
+            'comment' => 'Je ne devrais pas pouvoir modifier ce commentaire.',
+        ]);
+
+        $response->assertForbidden();
     }
 
     private function ensureRoles(): void

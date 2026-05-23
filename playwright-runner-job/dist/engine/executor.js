@@ -210,11 +210,11 @@ function resolveRequiredInputValue(runCase, inputKey) {
     const requiredInputs = runCase.execution_profile?.required_inputs ?? [];
     const matched = requiredInputs.find((entry) => entry.key === inputKey);
     if (!matched) {
-        throw new results_1.InputDataMissingError(`Required input '${inputKey}' is not defined in the generated execution profile.`);
+        throw new results_1.InputDataMissingError(`Le champ requis '${inputKey}' n'est pas defini dans le profil d'execution genere.`);
     }
     const value = matched.value;
     if (matched.required && (value === undefined || value === null || String(value).trim() === '')) {
-        throw new results_1.InputDataMissingError(`Required input '${matched.label}' (${matched.key}) is missing a value.`);
+        throw new results_1.InputDataMissingError(`Le champ '${matched.label}' est requis mais aucune valeur n'a ete fournie.`);
     }
     return typeof value === 'string' ? value : '';
 }
@@ -613,6 +613,8 @@ async function executeCase(browser, runCase, request, options, storageStatePath,
         const normalized = (0, results_1.normalizeError)(error);
         if (normalized.error_type === 'missing_env_var' ||
             normalized.error_type === 'selector_not_found' ||
+            normalized.error_type === 'url_unreachable' ||
+            normalized.error_type === 'authentication_failed' ||
             normalized.error_type === 'precondition_failed' ||
             normalized.error_type === 'unsupported_test_case' ||
             normalized.error_type === 'input_data_missing' ||

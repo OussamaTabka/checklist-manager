@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "2861edf0-e9d9-4bb3-973e-7b690ce5a7f6",
+  "status": "done",
+  "updated_at": "2026-05-07T10:53:54.906Z",
+  "cases": [
+    {
+      "external_id": 100,
+      "title": "Critere 02 : Given a patient selects an available slot and provides required inf...",
+      "status": "passed",
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://www.apple.com/tn -> ok (2893ms)",
+        "[chrome] Assert 1: expect_visible css=body -> ok (39ms)",
+        "[chrome] Assert 2: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

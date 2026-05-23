@@ -7,6 +7,7 @@ use App\Jobs\ExecuteSingleTestCaseRun;
 use App\Models\Checklist;
 use App\Models\ChecklistItem;
 use App\Models\ChecklistItemHistory;
+use App\Models\Project;
 use App\Models\TestResult;
 use App\Models\TestRun;
 use App\Services\ExecutionProfileService;
@@ -25,6 +26,7 @@ class ChecklistItemExecutionController extends Controller
     public function show(Checklist $checklist, ChecklistItem $item)
     {
         $this->ensureChecklistOwnership($checklist, $item);
+        $this->ensureChecklistAccess($checklist);
 
         $latestResult = TestResult::with('testRun')
             ->where('checklist_item_id', $item->id)
@@ -56,6 +58,10 @@ class ChecklistItemExecutionController extends Controller
             ));
         }
 
+        if ($latestRun && in_array($latestRun->status, ['created', 'running'], true)) {
+            $executionTrace = $this->readLiveExecutionTrace($latestRun->run_id, $item->id);
+        }
+
         $lastErrorMessage = $latestRun && in_array($latestRun->status, ['created', 'running'], true)
             ? null
             : $latestResult?->error_message;
@@ -72,6 +78,12 @@ class ChecklistItemExecutionController extends Controller
             ? $resultPayload['generated_plan']
             : (is_array($executionProfile['last_generated_plan'] ?? null) ? $executionProfile['last_generated_plan'] : null);
         $failureSource = is_array($resultPayload['failure_source'] ?? null) ? $resultPayload['failure_source'] : null;
+        $testedBaseUrl = $latestRun?->base_url;
+        if ((!is_string($testedBaseUrl) || trim($testedBaseUrl) === '') && is_array($latestRun?->request_payload)) {
+            $candidateBaseUrl = $latestRun->request_payload['base_url'] ?? null;
+            $testedBaseUrl = is_string($candidateBaseUrl) ? $candidateBaseUrl : null;
+        }
+        $artifactPaths = $this->extractArtifactPaths($artifactPayload);
 
         return response()->json([
             'id' => $item->id,
@@ -89,12 +101,15 @@ class ChecklistItemExecutionController extends Controller
             'last_run_status' => $latestRun ? $this->mapRunStatus($latestRun->status) : null,
             'last_run_started_at' => optional($latestRun?->started_at)->toISOString(),
             'last_run_finished_at' => optional($latestRun?->finished_at)->toISOString(),
+            'tested_base_url' => $testedBaseUrl,
             'last_error_message' => $lastErrorMessage,
             'execution_trace' => $executionTrace,
             'artifacts' => [
                 'trace' => is_array($artifactPayload['trace'] ?? null) ? $artifactPayload['trace'] : [],
                 'screenshot' => is_array($artifactPayload['screenshot'] ?? null) ? $artifactPayload['screenshot'] : [],
                 'video' => is_array($artifactPayload['video'] ?? null) ? $artifactPayload['video'] : [],
+                'all' => $artifactPaths,
+                'raw_paths' => is_array($artifactPayload['raw_paths'] ?? null) ? $artifactPayload['raw_paths'] : [],
             ],
         ]);
     }
@@ -102,6 +117,7 @@ class ChecklistItemExecutionController extends Controller
     public function run(Request $request, Checklist $checklist, ChecklistItem $item)
     {
         $this->ensureChecklistOwnership($checklist, $item);
+        $this->ensureChecklistAccess($checklist);
 
         $data = $request->validate([
             'base_url' => ['required', 'url', 'max:2048'],
@@ -169,6 +185,32 @@ class ChecklistItemExecutionController extends Controller
     private function ensureChecklistOwnership(Checklist $checklist, ChecklistItem $item): void
     {
         abort_unless((int) $item->checklist_id === (int) $checklist->id, 422, 'Checklist item does not belong to this checklist.');
+    }
+
+    private function ensureChecklistAccess(Checklist $checklist): void
+    {
+        $user = Auth::user();
+
+        if (!$checklist->project_id) {
+            abort_unless(
+                $user && (int) $checklist->created_by === (int) $user->id,
+                403,
+                'Only the creator can access this system checklist.'
+            );
+            return;
+        }
+
+        $project = Project::findOrFail($checklist->project_id);
+
+        abort_unless(
+            $user && (
+                $user->hasRole('admin') ||
+                $user->hasRole('chef') ||
+                ($user->hasRole('testeur') && $project->testers()->where('users.id', $user->id)->exists())
+            ),
+            403,
+            'Only assigned testers, project managers, or admins can access this execution checklist.'
+        );
     }
 
     private function pickLatestRun(?TestRun $a, ?TestRun $b): ?TestRun
@@ -242,6 +284,61 @@ class ChecklistItemExecutionController extends Controller
             'Passed', 'Failed', 'Blocked' => $status,
             default => 'Not Tested',
         };
+    }
+
+    private function readLiveExecutionTrace(string $runId, int $itemId): array
+    {
+        $workspaceRoot = realpath(base_path('..'));
+        if (!$workspaceRoot) {
+            return [];
+        }
+
+        $liveTracePath = $workspaceRoot . DIRECTORY_SEPARATOR . 'runs' . DIRECTORY_SEPARATOR . $runId . DIRECTORY_SEPARATOR . 'live-trace.json';
+        if (!is_file($liveTracePath)) {
+            return [];
+        }
+
+        $payload = json_decode((string) file_get_contents($liveTracePath), true);
+        if (!is_array($payload) || !is_array($payload['cases'] ?? null)) {
+            return [];
+        }
+
+        foreach ($payload['cases'] as $caseEntry) {
+            if (!is_array($caseEntry)) {
+                continue;
+            }
+
+            $externalId = (int) ($caseEntry['external_id'] ?? 0);
+            if ($externalId !== $itemId) {
+                continue;
+            }
+
+            $lines = $caseEntry['execution_trace'] ?? [];
+            if (!is_array($lines)) {
+                return [];
+            }
+
+            return array_values(array_filter(
+                $lines,
+                static fn ($entry) => is_string($entry) && trim($entry) !== '',
+            ));
+        }
+
+        return [];
+    }
+
+    private function extractArtifactPaths(array $artifactPayload): array
+    {
+        $paths = [];
+        foreach (['trace', 'screenshot', 'video'] as $key) {
+            foreach (($artifactPayload[$key] ?? []) as $value) {
+                if (is_string($value) && trim($value) !== '') {
+                    $paths[] = $value;
+                }
+            }
+        }
+
+        return array_values(array_unique($paths));
     }
 
     /**

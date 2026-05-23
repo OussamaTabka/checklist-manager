@@ -29,9 +29,19 @@ class ChecklistController extends Controller
 
     public function index(Request $request)
     {
-        $query = Checklist::with('items')
-            ->where('is_active', true)
-            ->orderByDesc('id');
+        $status = $request->string('status')->toString();
+        $query = Checklist::with('items');
+
+        if ($status === 'archived') {
+            $query
+                ->onlyTrashed()
+                ->orderByDesc('deleted_at')
+                ->orderByDesc('id');
+        } else {
+            $query
+                ->where('is_active', true)
+                ->orderByDesc('id');
+        }
 
         $projectId = $request->integer('project_id');
 
@@ -286,6 +296,43 @@ class ChecklistController extends Controller
         return response()->json(['message' => 'Checklist deleted']);
     }
 
+    public function restore(int $checklist)
+    {
+        $checklist = Checklist::withTrashed()->findOrFail($checklist);
+        $this->authorizeChecklistDesign($checklist);
+
+        if (!$checklist->trashed()) {
+            return response()->json(['message' => 'Cette checklist n\'est pas archivee.'], 422);
+        }
+
+        $checklist->restore();
+        $checklist->update([
+            'is_active' => true,
+            'lifecycle_status' => $checklist->lifecycle_status === 'archived' ? 'approved' : $checklist->lifecycle_status,
+        ]);
+
+        return response()->json([
+            'message' => 'Checklist restauree avec succes.',
+            'checklist' => $checklist->fresh()->load('items'),
+        ]);
+    }
+
+    public function permanentDestroy(int $checklist)
+    {
+        $checklist = Checklist::withTrashed()->findOrFail($checklist);
+        $this->authorizeChecklistDesign($checklist);
+
+        if (!$checklist->trashed()) {
+            return response()->json(['message' => 'La checklist doit d\'abord etre archivee avant suppression definitive.'], 422);
+        }
+
+        $checklist->forceDelete();
+
+        return response()->json([
+            'message' => 'Checklist supprimee definitivement avec succes.',
+        ]);
+    }
+
     public function exportJson($id = null)
     {
         if ($id) {
@@ -486,6 +533,7 @@ class ChecklistController extends Controller
     public function updateItemStatus(Request $request, Checklist $checklist, ChecklistItem $item)
     {
         $this->ensureChecklistItemBelongsToChecklist($checklist, $item);
+        $this->ensureChecklistAccess($checklist);
 
         $data = $request->validate([
             'status' => ['required', 'in:Not Tested,Passed,Failed,Blocked'],
@@ -526,6 +574,7 @@ class ChecklistController extends Controller
     public function getItemHistory(Checklist $checklist, ChecklistItem $item)
     {
         $this->ensureChecklistItemBelongsToChecklist($checklist, $item);
+        $this->ensureChecklistAccess($checklist);
 
         return response()->json($this->formatChecklistItemHistoryCollection($item));
     }
@@ -533,6 +582,7 @@ class ChecklistController extends Controller
     public function getItemComment(Checklist $checklist, ChecklistItem $item)
     {
         $this->ensureChecklistItemBelongsToChecklist($checklist, $item);
+        $this->ensureChecklistAccess($checklist);
 
         $latestCommentHistory = $item->history()
             ->whereIn('change_type', ['comment_added', 'comment_updated'])
@@ -552,6 +602,7 @@ class ChecklistController extends Controller
     public function updateItemComment(Request $request, Checklist $checklist, ChecklistItem $item)
     {
         $this->ensureChecklistItemBelongsToChecklist($checklist, $item);
+        $this->ensureChecklistAccess($checklist);
 
         $data = $request->validate([
             'comment' => ['required', 'string', 'min:1', 'max:2000'],
@@ -627,6 +678,20 @@ class ChecklistController extends Controller
         if ((int) $item->checklist_id !== (int) $checklist->id) {
             abort(422, 'Checklist item does not belong to this checklist.');
         }
+    }
+
+    private function ensureChecklistAccess(Checklist $checklist): void
+    {
+        if ($checklist->project_id) {
+            $this->ensureChecklistAccessible(Project::findOrFail($checklist->project_id));
+            return;
+        }
+
+        abort_unless(
+            Auth::id() && (int) $checklist->created_by === (int) Auth::id(),
+            403,
+            'Only the creator can access this system checklist.'
+        );
     }
 
     private function formatChecklistItemHistoryCollection(ChecklistItem $item)

@@ -81,6 +81,11 @@ class User extends Authenticatable
         return $this->hasMany(UserAccountEvent::class);
     }
 
+    public function ownedProjects(): HasMany
+    {
+        return $this->hasMany(Project::class, 'created_by');
+    }
+
     public function roleNotifications(): HasMany
     {
         return $this->hasMany(Notification::class)->latest();

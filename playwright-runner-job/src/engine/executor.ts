@@ -317,12 +317,12 @@ function resolveRequiredInputValue(runCase: RunCaseDsl, inputKey: string): strin
   const matched = requiredInputs.find((entry) => entry.key === inputKey)
 
   if (!matched) {
-    throw new InputDataMissingError(`Required input '${inputKey}' is not defined in the generated execution profile.`)
+    throw new InputDataMissingError(`Le champ requis '${inputKey}' n'est pas defini dans le profil d'execution genere.`)
   }
 
   const value = matched.value
   if (matched.required && (value === undefined || value === null || String(value).trim() === '')) {
-    throw new InputDataMissingError(`Required input '${matched.label}' (${matched.key}) is missing a value.`)
+    throw new InputDataMissingError(`Le champ '${matched.label}' est requis mais aucune valeur n'a ete fournie.`)
   }
 
   return typeof value === 'string' ? value : ''
@@ -829,6 +829,8 @@ async function executeCase(
     if (
       normalized.error_type === 'missing_env_var' ||
       normalized.error_type === 'selector_not_found' ||
+      normalized.error_type === 'url_unreachable' ||
+      normalized.error_type === 'authentication_failed' ||
       normalized.error_type === 'precondition_failed' ||
       normalized.error_type === 'unsupported_test_case' ||
       normalized.error_type === 'input_data_missing' ||

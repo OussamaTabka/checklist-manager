@@ -91,28 +91,39 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
             $this->ensureDirectory(dirname($dslPath));
 
             $planner = app(ExecutionProfileService::class);
-            $generated = $item instanceof VersionItem
-                ? $planner->generateForVersionItem($item, $run->base_url, [
-                    'run_id' => $run->run_id,
-                    'use_auth' => (bool) ($payload['use_auth'] ?? true),
-                    'environment_name' => $environmentName,
-                    'notes' => $notes,
-                    'priority' => $priority,
-                    'criticality' => $criticality,
-                    'current_status' => $currentStatus,
-                    'project_version_id' => $projectVersionId,
-                    'target_type' => $targetType,
-                ])
-                : $planner->generateForChecklistItem($item, $run->base_url, [
-                    'run_id' => $run->run_id,
-                    'use_auth' => (bool) ($payload['use_auth'] ?? true),
-                    'environment_name' => $environmentName,
-                    'notes' => $notes,
-                    'priority' => $priority,
-                    'criticality' => $criticality,
-                    'current_status' => $currentStatus,
-                    'target_type' => $targetType,
-                ]);
+
+            try {
+                $generated = $item instanceof VersionItem
+                    ? $planner->generateForVersionItem($item, $run->base_url, [
+                        'run_id' => $run->run_id,
+                        'use_auth' => (bool) ($payload['use_auth'] ?? true),
+                        'environment_name' => $environmentName,
+                        'notes' => $notes,
+                        'priority' => $priority,
+                        'criticality' => $criticality,
+                        'current_status' => $currentStatus,
+                        'project_version_id' => $projectVersionId,
+                        'target_type' => $targetType,
+                    ])
+                    : $planner->generateForChecklistItem($item, $run->base_url, [
+                        'run_id' => $run->run_id,
+                        'use_auth' => (bool) ($payload['use_auth'] ?? true),
+                        'environment_name' => $environmentName,
+                        'notes' => $notes,
+                        'priority' => $priority,
+                        'criticality' => $criticality,
+                        'current_status' => $currentStatus,
+                        'target_type' => $targetType,
+                    ]);
+            } catch (\Throwable $error) {
+                $this->markBlocked(
+                    $run->fresh(),
+                    $item->fresh(),
+                    'script_generation_failed',
+                    $this->buildScriptGenerationErrorMessage($error),
+                );
+                return;
+            }
 
             $runSpec = $generated['run_spec'];
 
@@ -645,6 +656,16 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
         }
 
         return preg_replace('/[^\x09\x0A\x0D\x20-\x7E]/', '?', $message) ?? $message;
+    }
+
+    private function buildScriptGenerationErrorMessage(\Throwable $error): string
+    {
+        $message = trim($this->sanitizeUtf8($error->getMessage()));
+        if ($message === '') {
+            return 'The Playwright script could not be generated for this test case.';
+        }
+
+        return 'The Playwright script could not be generated for this test case. Details: ' . $message;
     }
 
     private function isDockerInfraErrorResult(array $resultPayload): bool

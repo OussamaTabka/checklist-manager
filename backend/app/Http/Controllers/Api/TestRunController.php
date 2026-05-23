@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\ItemChange;
 use App\Models\ProjectVersion;
+use App\Models\Project;
 use App\Models\TestResult;
 use App\Models\TestRun;
 use App\Models\VersionItem;
@@ -38,6 +39,7 @@ class TestRunController extends Controller
         ]);
 
         $projectVersion = ProjectVersion::with('items:id,project_version_id')->findOrFail($data['project_version_id']);
+        $this->authorizeProjectVersionAccess($projectVersion);
 
         if (!empty($data['cases'])) {
             $allowedIds = $projectVersion->items->pluck('id')->all();
@@ -88,6 +90,7 @@ class TestRunController extends Controller
     public function storeResults(Request $request, string $run_id)
     {
         $testRun = $this->resolveRun($run_id);
+        $this->authorizeTestRunAccess($testRun);
 
         $data = $request->validate([
             'results' => ['required', 'array', 'min:1'],
@@ -201,6 +204,7 @@ class TestRunController extends Controller
     public function show(string $run_id)
     {
         $testRun = $this->resolveRun($run_id);
+        $this->authorizeTestRunAccess($testRun);
 
         return response()->json($this->buildRunResponse($testRun->load(['results.versionItem:id,title'])));
     }
@@ -249,5 +253,23 @@ class TestRunController extends Controller
                 ];
             })->values(),
         ];
+    }
+
+    private function authorizeProjectVersionAccess(ProjectVersion $projectVersion): void
+    {
+        $projectVersion->loadMissing('project');
+        $project = $projectVersion->project;
+        abort_unless($project instanceof Project, 404, 'Project not found for this version.');
+
+        $this->authorize('view', $project);
+    }
+
+    private function authorizeTestRunAccess(TestRun $testRun): void
+    {
+        $testRun->loadMissing('projectVersion.project');
+        $projectVersion = $testRun->projectVersion;
+        abort_unless($projectVersion instanceof ProjectVersion, 404, 'Project version not found for this run.');
+
+        $this->authorizeProjectVersionAccess($projectVersion);
     }
 }

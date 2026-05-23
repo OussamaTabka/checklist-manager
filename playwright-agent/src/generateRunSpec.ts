@@ -266,17 +266,43 @@ function dedupeRequiredInputs(inputs: RequiredInput[]): RequiredInput[] {
   return Array.from(seen.values())
 }
 
+function mentionsAny(text: string, patterns: RegExp[]): boolean {
+  return patterns.some((pattern) => pattern.test(text))
+}
+
+function quotedPhrasesFromText(text: string): string[] {
+  return Array.from(text.matchAll(/["'“”‘’]([^"'“”‘’]{3,80})["'“”‘’]/g))
+    .map((match) => match[1]?.trim() ?? '')
+    .filter((value) => value.length >= 3)
+}
+
+function extractExpectedFeedbackText(input: GeneratorInput): string | null {
+  const text = normalizeText(input)
+  if (!mentionsAny(text, [/\bmessage\b/, /\btoast\b/, /\balert\b/, /\berror\b/, /\bsuccess\b/, /\bconfirmation\b/])) {
+    return null
+  }
+
+  const candidates = quotedPhrasesFromText([
+    input.test_case_title,
+    input.test_case_text,
+    input.test_case_description,
+    input.notes,
+  ].filter(Boolean).join('\n'))
+
+  return candidates[0] ?? null
+}
+
 function extractRequiredInputs(input: GeneratorInput, coverageType: CoverageType): RequiredInput[] {
   const text = normalizeText(input)
   const inputs: RequiredInput[] = []
 
   if (coverageType === 'auth_login') {
-    inputs.push(requiredInput('email', 'Email or username', 'email', true, 'Credential used to authenticate the user.', 'qa.user@example.com'))
-    inputs.push(requiredInput('password', 'Password', 'password', true, 'Password used to authenticate the user.', 'Password123!'))
+    inputs.push(requiredInput('email', 'Email or username', 'email', true, 'Credential used to authenticate the user.'))
+    inputs.push(requiredInput('password', 'Password', 'password', true, 'Password used to authenticate the user.'))
   }
 
   if (coverageType === 'search_filter') {
-    inputs.push(requiredInput('search_query', 'Search query', 'search', true, 'Value used to exercise search or filtering.', 'sample'))
+    inputs.push(requiredInput('search_query', 'Search query', 'search', true, 'Value used to exercise search or filtering.'))
   }
 
   if (coverageType === 'upload') {
@@ -284,23 +310,77 @@ function extractRequiredInputs(input: GeneratorInput, coverageType: CoverageType
   }
 
   if (coverageType === 'form_interaction' || coverageType === 'validation') {
-    if (/\bname\b|\bfull name\b/.test(text)) {
-      inputs.push(requiredInput('full_name', 'Full name', 'text', coverageType === 'form_interaction', 'Representative value for the name field.', 'QA Tester'))
+    if (/\bfull name\b|\bdisplay name\b|\bnom complet\b/.test(text)) {
+      inputs.push(requiredInput('full_name', 'Full name', 'text', true, 'Value expected for the full name field.'))
+    }
+    if (/\bfirst name\b|\bprenom\b/.test(text)) {
+      inputs.push(requiredInput('first_name', 'First name', 'text', true, 'Value expected for the first name field.'))
+    }
+    if (/\blast name\b|\bsurname\b|\bnom de famille\b/.test(text)) {
+      inputs.push(requiredInput('last_name', 'Last name', 'text', true, 'Value expected for the last name field.'))
+    }
+    if (/\busername\b|\buser name\b|\bidentifiant\b/.test(text)) {
+      inputs.push(requiredInput('username', 'Username', 'text', true, 'Value expected for the username field.'))
+    }
+    if (/\bname\b|\bnom\b/.test(text) && inputs.every((entry) => entry.key !== 'full_name' && entry.key !== 'first_name' && entry.key !== 'last_name')) {
+      inputs.push(requiredInput('full_name', 'Full name', 'text', true, 'Value expected for the name field.'))
     }
     if (/\bemail\b/.test(text)) {
-      inputs.push(requiredInput('email', 'Email', 'email', coverageType === 'form_interaction', 'Representative value for the email field.', 'qa.user@example.com'))
+      inputs.push(requiredInput('email', 'Email', 'email', true, 'Value expected for the email field.'))
     }
-    if (/\bpassword\b/.test(text)) {
-      inputs.push(requiredInput('password', 'Password', 'password', false, 'Representative password value.', 'Password123!'))
+    if (/\bpassword\b|\bmot de passe\b/.test(text)) {
+      inputs.push(requiredInput('password', 'Password', 'password', true, 'Value expected for the password field.'))
     }
-    if (/\bphone\b|\bmobile\b/.test(text)) {
-      inputs.push(requiredInput('phone', 'Phone number', 'text', false, 'Representative phone number value.', '+21620000111'))
+    if (/\bconfirm password\b|\bpassword confirmation\b|\bconfirm your password\b|\bconfirmation du mot de passe\b/.test(text)) {
+      inputs.push(requiredInput('confirm_password', 'Confirm password', 'password', true, 'Confirmation value expected for the password confirmation field.'))
     }
-    if (/\bmessage\b|\bcomment\b|\bdescription\b/.test(text)) {
-      inputs.push(requiredInput('message', 'Message', 'textarea', false, 'Representative long-form text value.', 'Automated test submission'))
+    if (/\bphone\b|\bmobile\b|\btel\b|\btelephone\b/.test(text)) {
+      inputs.push(requiredInput('phone', 'Phone number', 'text', true, 'Value expected for the phone field.'))
+    }
+    if (/\bsearch\b|\brecherche\b/.test(text) && !inputs.some((entry) => entry.key === 'search_query')) {
+      inputs.push(requiredInput('search_query', 'Search query', 'search', true, 'Value expected for the search field.'))
+    }
+    if (/\bmessage\b|\bcomment\b|\bdescription\b|\bnotes?\b/.test(text)) {
+      inputs.push(requiredInput('message', 'Message', 'textarea', true, 'Value expected for the long-form text field.'))
+    }
+    if (/\baddress\b|\badresse\b/.test(text)) {
+      inputs.push(requiredInput('address', 'Address', 'text', true, 'Value expected for the address field.'))
+    }
+    if (/\bcity\b|\bville\b/.test(text)) {
+      inputs.push(requiredInput('city', 'City', 'text', true, 'Value expected for the city field.'))
+    }
+    if (/\bzip\b|\bpostal\b|\bpostcode\b|\bcode postal\b/.test(text)) {
+      inputs.push(requiredInput('postal_code', 'Postal code', 'text', true, 'Value expected for the postal code field.'))
+    }
+    if (/\bcompany\b|\bsociete\b|\borganisation\b/.test(text)) {
+      inputs.push(requiredInput('company', 'Company', 'text', true, 'Value expected for the company field.'))
+    }
+    if (/\bprofile\b|\bprofil\b/.test(text) && /\bname\b|\bnom\b/.test(text)) {
+      inputs.push(requiredInput('profile_name', 'Profile name', 'text', true, 'Value expected for the profile name field.'))
+    }
+    if (/\breservation\b|\bbooking\b|\breserver\b|\bbook\b/.test(text)) {
+      inputs.push(requiredInput('reservation_name', 'Reservation name', 'text', true, 'Value expected for the reservation name or booking field.'))
+      if (/\bdate\b|\bcheck[-\s]?in\b|\barrival\b|\bstart date\b/.test(text)) {
+        inputs.push(requiredInput('start_date', 'Start date', 'text', true, 'Value expected for the reservation start date field.'))
+      }
+      if (/\bcheck[-\s]?out\b|\bdeparture\b|\bend date\b/.test(text)) {
+        inputs.push(requiredInput('end_date', 'End date', 'text', true, 'Value expected for the reservation end date field.'))
+      }
+    }
+    if (/\bpayment\b|\bcard\b|\bcheckout\b|\bpaiement\b/.test(text)) {
+      inputs.push(requiredInput('card_number', 'Card number', 'text', true, 'Value expected for the card number field.'))
+      if (/\bexpiry\b|\bexpiration\b|\bexpire\b/.test(text)) {
+        inputs.push(requiredInput('card_expiry', 'Card expiry', 'text', true, 'Value expected for the card expiry field.'))
+      }
+      if (/\bcvv\b|\bcvc\b|\bsecurity code\b/.test(text)) {
+        inputs.push(requiredInput('card_cvv', 'Card security code', 'text', true, 'Value expected for the card security code field.'))
+      }
+    }
+    if (/\bupload\b|\battach\b|\bpi[eè]ce jointe\b/.test(text)) {
+      inputs.push(requiredInput('upload_file', 'File to upload', 'file', true, 'Absolute path to the file that should be uploaded.'))
     }
     if (inputs.length === 0 && coverageType === 'form_interaction') {
-      inputs.push(requiredInput('generic_text', 'Form value', 'text', true, 'Representative value used when the form field names are ambiguous.', 'Sample value'))
+      inputs.push(requiredInput('generic_text', 'Form value', 'text', true, 'Value used when the form field names are ambiguous.'))
     }
   }
 
@@ -424,6 +504,55 @@ function cssSelector(kind: string): Selector {
   }
 }
 
+function selectorForInput(input: RequiredInput): Selector {
+  switch (input.key) {
+    case 'email':
+      return cssSelector('email')
+    case 'password':
+    case 'confirm_password':
+      return cssSelector('password')
+    case 'search_query':
+      return cssSelector('search')
+    case 'upload_file':
+      return cssSelector('file')
+    case 'message':
+      return { by: 'css', value: 'textarea[name*="message" i], textarea[name*="comment" i], textarea[name*="description" i], textarea, [contenteditable="true"]' }
+    case 'full_name':
+    case 'profile_name':
+      return { by: 'css', value: 'input[name*="full" i], input[id*="full" i], input[name*="name" i], input[id*="name" i]' }
+    case 'first_name':
+      return { by: 'css', value: 'input[name*="first" i], input[id*="first" i], input[name*="prenom" i], input[id*="prenom" i]' }
+    case 'last_name':
+      return { by: 'css', value: 'input[name*="last" i], input[id*="last" i], input[name*="surname" i], input[id*="surname" i], input[name*="family" i], input[id*="family" i]' }
+    case 'username':
+      return { by: 'css', value: 'input[name*="username" i], input[id*="username" i], input[name*="login" i], input[id*="login" i], input[name*="user" i], input[id*="user" i]' }
+    case 'phone':
+      return { by: 'css', value: 'input[type="tel"], input[name*="phone" i], input[id*="phone" i], input[name*="mobile" i], input[id*="mobile" i], input[name*="tel" i], input[id*="tel" i]' }
+    case 'address':
+      return { by: 'css', value: 'input[name*="address" i], input[id*="address" i], textarea[name*="address" i], textarea[id*="address" i]' }
+    case 'city':
+      return { by: 'css', value: 'input[name*="city" i], input[id*="city" i], input[name*="ville" i], input[id*="ville" i]' }
+    case 'postal_code':
+      return { by: 'css', value: 'input[name*="zip" i], input[id*="zip" i], input[name*="postal" i], input[id*="postal" i], input[name*="postcode" i], input[id*="postcode" i]' }
+    case 'company':
+      return { by: 'css', value: 'input[name*="company" i], input[id*="company" i], input[name*="organisation" i], input[id*="organisation" i]' }
+    case 'reservation_name':
+      return { by: 'css', value: 'input[name*="reservation" i], input[id*="reservation" i], input[name*="booking" i], input[id*="booking" i], input[name*="guest" i], input[id*="guest" i]' }
+    case 'start_date':
+      return { by: 'css', value: 'input[type="date"], input[name*="start" i], input[id*="start" i], input[name*="checkin" i], input[id*="checkin" i], input[name*="arrival" i], input[id*="arrival" i]' }
+    case 'end_date':
+      return { by: 'css', value: 'input[type="date"], input[name*="end" i], input[id*="end" i], input[name*="checkout" i], input[id*="checkout" i], input[name*="departure" i], input[id*="departure" i]' }
+    case 'card_number':
+      return { by: 'css', value: 'input[name*="card" i], input[id*="card" i], input[name*="number" i], input[id*="number" i], input[inputmode="numeric"]' }
+    case 'card_expiry':
+      return { by: 'css', value: 'input[name*="expiry" i], input[id*="expiry" i], input[name*="expiration" i], input[id*="expiration" i], input[placeholder*="MM" i]' }
+    case 'card_cvv':
+      return { by: 'css', value: 'input[name*="cvv" i], input[id*="cvv" i], input[name*="cvc" i], input[id*="cvc" i], input[name*="security" i], input[id*="security" i]' }
+    default:
+      return cssSelector(input.kind)
+  }
+}
+
 function primaryActionSelector(coverageType: CoverageType): Selector {
   switch (coverageType) {
     case 'auth_login':
@@ -435,6 +564,35 @@ function primaryActionSelector(coverageType: CoverageType): Selector {
     default:
       return { by: 'css', value: 'button[type="submit"], input[type="submit"], button:has-text("Submit"), button:has-text("Save"), button:has-text("Send"), button:has-text("Continue")' }
   }
+}
+
+function actionSelectorForInput(input: GeneratorInput, coverageType: CoverageType): Selector {
+  const text = normalizeText(input)
+
+  if (coverageType === 'auth_login') {
+    return { by: 'css', value: 'button[type="submit"], input[type="submit"], button:has-text("Login"), button:has-text("Sign in"), button:has-text("Log in"), [role="button"]:has-text("Login"), [role="button"]:has-text("Sign in")' }
+  }
+
+  if (/\bregister\b|\bsign up\b|\bcreate account\b|\binscription\b/.test(text)) {
+    return { by: 'css', value: 'button[type="submit"], input[type="submit"], button:has-text("Register"), button:has-text("Sign up"), button:has-text("Create account"), [role="button"]:has-text("Register")' }
+  }
+  if (/\bpayment\b|\bpay\b|\bcheckout\b|\bpaiement\b/.test(text)) {
+    return { by: 'css', value: 'button[type="submit"], input[type="submit"], button:has-text("Pay"), button:has-text("Checkout"), button:has-text("Place order"), [role="button"]:has-text("Pay")' }
+  }
+  if (/\bbooking\b|\breservation\b|\bbook\b|\breserver\b/.test(text)) {
+    return { by: 'css', value: 'button[type="submit"], input[type="submit"], button:has-text("Book"), button:has-text("Reserve"), button:has-text("Confirm"), [role="button"]:has-text("Book")' }
+  }
+  if (/\bsearch\b|\bfilter\b|\brecherche\b/.test(text)) {
+    return { by: 'css', value: 'button[type="submit"], input[type="submit"], button:has-text("Search"), button:has-text("Filter"), button:has-text("Apply"), [role="button"]:has-text("Search")' }
+  }
+  if (/\bupload\b|\battach\b|\bimport\b/.test(text)) {
+    return { by: 'css', value: 'button[type="submit"], input[type="submit"], button:has-text("Upload"), button:has-text("Import"), button:has-text("Attach"), [role="button"]:has-text("Upload")' }
+  }
+  if (/\bsave\b|\bupdate\b|\bsubmit\b|\bsend\b|\bpublish\b|\bcomment\b|\bprofil\b|\bprofile\b/.test(text)) {
+    return { by: 'css', value: 'button[type="submit"], input[type="submit"], button:has-text("Save"), button:has-text("Update"), button:has-text("Submit"), button:has-text("Send"), button:has-text("Publish"), [role="button"]:has-text("Save")' }
+  }
+
+  return primaryActionSelector(coverageType)
 }
 
 function defaultDestinationForScenario(scenario: Scenario): string {
@@ -516,6 +674,24 @@ function buildPreflightChecks(coverageType: CoverageType, requiredInputs: Requir
         selector: { by: 'css', value: 'form, [role="form"]' },
         failure_message: 'The test case expects form interaction, but no visible form was found on the target page.',
       })
+      for (const input of requiredInputs) {
+        checks.push({
+          id: `field-${input.key}-visible`,
+          kind: 'element_visible',
+          label: `Field '${input.label}' is visible`,
+          required: input.required,
+          selector: selectorForInput(input),
+          failure_message: `The target page does not expose the field '${input.label}' required by this test case.`,
+        })
+      }
+      checks.push({
+        id: 'form-submit-visible',
+        kind: 'element_visible',
+        label: 'A submit or primary action is visible',
+        required: false,
+        selector: { by: 'css', value: 'button[type="submit"], input[type="submit"], button, [role="button"]' },
+        failure_message: 'The target page does not expose a visible action button for the expected form flow.',
+      })
       break
     case 'table_listing':
       checks.push({
@@ -535,6 +711,14 @@ function buildPreflightChecks(coverageType: CoverageType, requiredInputs: Requir
         required: true,
         selector: cssSelector('search'),
         failure_message: 'The test case expects a search or filter input, but none was visible on the target page.',
+      })
+      checks.push({
+        id: 'search-results-area-visible',
+        kind: 'element_attached',
+        label: 'A result container is attached',
+        required: false,
+        selector: { by: 'css', value: 'table, [role="table"], [role="grid"], ul, ol, main, section, body' },
+        failure_message: 'No result container was detected for the search flow.',
       })
       break
     case 'upload':
@@ -579,72 +763,121 @@ function buildStepsAndAsserts(input: GeneratorInput, coverageType: CoverageType,
   const normalizedBaseUrl = normalizeBaseUrl(input.base_url)
   const requiredInputs = extractRequiredInputs(input, coverageType)
   const negativeCase = /invalid|wrong|incorrect|negative|unsuccessful|error/.test(normalizeText(input))
+  const expectedFeedbackText = extractExpectedFeedbackText(input)
   const destination = internalTarget && scenario !== 'unknown' && coverageType === 'generic_ui'
     ? defaultDestinationForScenario(scenario)
-    : normalizedBaseUrl
+    : internalTarget && coverageType === 'auth_login'
+      ? defaultDestinationForScenario('login')
+      : normalizedBaseUrl
 
   const steps: Step[] = [{ action: 'goto', url: destination }]
   const asserts: Assert[] = []
+  const alertSelector: Selector = { by: 'css', value: '[role="alert"], .error, .alert, .invalid-feedback, .field-error, .toast, .notification, .success' }
+  const successSelector: Selector = { by: 'css', value: '[role="alert"], .success, .toast, .notification, [data-testid*="success"], [data-testid*="toast"]' }
+  const listSelector: Selector = { by: 'css', value: 'table, [role="table"], [role="grid"], ul, ol, [data-testid*="list"], [data-testid*="table"]' }
 
   switch (coverageType) {
     case 'auth_login':
-      steps.push({ action: 'fill', selector: cssSelector('email'), input_key: 'email' })
-      steps.push({ action: 'fill', selector: cssSelector('password'), input_key: 'password' })
-      steps.push({ action: 'click', selector: primaryActionSelector('auth_login') })
+      steps.push({ action: 'wait_for_selector', selector: cssSelector('email'), state: 'visible', timeout_ms: 20000 })
+      steps.push({ action: 'fill', selector: selectorForInput(requiredInputs.find((entry) => entry.key === 'email') ?? requiredInput('email', 'Email', 'email', true, '')) , input_key: 'email' })
+      steps.push({ action: 'fill', selector: selectorForInput(requiredInputs.find((entry) => entry.key === 'password') ?? requiredInput('password', 'Password', 'password', true, '')), input_key: 'password' })
+      steps.push({ action: 'click', selector: actionSelectorForInput(input, 'auth_login') })
       if (!negativeCase) {
         steps.push({ action: 'wait_for_url', contains: internalTarget ? '/dashboard' : new URL(normalizedBaseUrl).hostname, timeout_ms: 20000 })
+        steps.push({ action: 'screenshot', name: 'post-login' })
         asserts.push({ type: 'expect_url_contains', value: internalTarget ? '/dashboard' : new URL(normalizedBaseUrl).hostname })
       } else {
-        asserts.push({ type: 'expect_visible', selector: { by: 'css', value: '[role="alert"], .error, .alert, .invalid-feedback, [data-testid*="error"]' } })
+        steps.push({ action: 'wait_for_selector', selector: alertSelector, state: 'visible', timeout_ms: 20000 })
+        steps.push({ action: 'screenshot', name: 'login-error-state' })
+        asserts.push({ type: 'expect_visible', selector: alertSelector })
+        if (expectedFeedbackText) {
+          asserts.push({ type: 'expect_text', selector: alertSelector, text: expectedFeedbackText })
+        }
       }
       break
     case 'form_interaction':
       for (const requiredInput of requiredInputs) {
+        steps.push({ action: 'wait_for_selector', selector: selectorForInput(requiredInput), state: 'visible', timeout_ms: 15000 })
         if (requiredInput.kind === 'file') {
-          steps.push({ action: 'set_file', selector: cssSelector(requiredInput.kind), input_key: requiredInput.key })
+          steps.push({ action: 'set_file', selector: selectorForInput(requiredInput), input_key: requiredInput.key })
         } else {
-          steps.push({ action: 'fill', selector: cssSelector(requiredInput.kind), input_key: requiredInput.key })
+          steps.push({ action: 'fill', selector: selectorForInput(requiredInput), input_key: requiredInput.key })
         }
       }
-      steps.push({ action: 'click', selector: primaryActionSelector('form_interaction') })
-      asserts.push({ type: 'expect_visible', selector: { by: 'css', value: '[role="alert"], .success, .toast, .notification, body' } })
+      steps.push({ action: 'click', selector: actionSelectorForInput(input, 'form_interaction') })
+      steps.push({ action: 'wait_for_selector', selector: successSelector, state: 'visible', timeout_ms: 15000 })
+      steps.push({ action: 'screenshot', name: 'form-submission-result' })
+      asserts.push({ type: 'expect_visible', selector: successSelector })
+      if (expectedFeedbackText) {
+        asserts.push({ type: 'expect_text', selector: successSelector, text: expectedFeedbackText })
+      }
       break
     case 'validation':
-      steps.push({ action: 'click', selector: primaryActionSelector('validation') })
+      steps.push({ action: 'wait_for_selector', selector: { by: 'css', value: 'form, [role="form"]' }, state: 'visible', timeout_ms: 15000 })
+      steps.push({ action: 'click', selector: actionSelectorForInput(input, 'validation') })
+      steps.push({ action: 'wait_for_selector', selector: { by: 'css', value: '[role="alert"], .error, .invalid-feedback, .field-error, [aria-invalid="true"]' }, state: 'visible', timeout_ms: 15000 })
+      steps.push({ action: 'screenshot', name: 'validation-feedback' })
       asserts.push({ type: 'expect_visible', selector: { by: 'css', value: '[role="alert"], .error, .invalid-feedback, .field-error, [aria-invalid="true"]' } })
+      if (expectedFeedbackText) {
+        asserts.push({ type: 'expect_text', selector: alertSelector, text: expectedFeedbackText })
+      }
       break
     case 'search_filter':
-      steps.push({ action: 'fill', selector: cssSelector('search'), input_key: 'search_query' })
+      steps.push({ action: 'wait_for_selector', selector: cssSelector('search'), state: 'visible', timeout_ms: 15000 })
+      steps.push({ action: 'fill', selector: selectorForInput(requiredInputs.find((entry) => entry.key === 'search_query') ?? requiredInput('search_query', 'Search query', 'search', true, '')), input_key: 'search_query' })
       steps.push({ action: 'press', selector: cssSelector('search'), key: 'Enter' })
-      asserts.push({ type: 'expect_visible', selector: { by: 'css', value: 'body' } })
+      steps.push({ action: 'wait_for_selector', selector: listSelector, state: 'attached', timeout_ms: 15000 })
+      steps.push({ action: 'screenshot', name: 'search-results' })
+      asserts.push({ type: 'expect_visible', selector: listSelector })
       break
     case 'table_listing':
-      asserts.push({ type: 'expect_visible', selector: { by: 'css', value: 'table, [role="table"], [role="grid"], ul, ol' } })
+      steps.push({ action: 'wait_for_selector', selector: listSelector, state: 'visible', timeout_ms: 15000 })
+      steps.push({ action: 'screenshot', name: 'table-listing' })
+      asserts.push({ type: 'expect_visible', selector: listSelector })
       break
     case 'upload':
+      steps.push({ action: 'wait_for_selector', selector: cssSelector('file'), state: 'visible', timeout_ms: 15000 })
       steps.push({ action: 'set_file', selector: cssSelector('file'), input_key: 'upload_file' })
-      steps.push({ action: 'click', selector: primaryActionSelector('upload') })
-      asserts.push({ type: 'expect_visible', selector: { by: 'css', value: '[role="alert"], .success, .uploaded, body' } })
+      steps.push({ action: 'click', selector: actionSelectorForInput(input, 'upload') })
+      steps.push({ action: 'wait_for_selector', selector: successSelector, state: 'visible', timeout_ms: 15000 })
+      steps.push({ action: 'screenshot', name: 'upload-result' })
+      asserts.push({ type: 'expect_visible', selector: successSelector })
+      if (expectedFeedbackText) {
+        asserts.push({ type: 'expect_text', selector: successSelector, text: expectedFeedbackText })
+      }
       break
     case 'modal_dialog':
-      steps.push({ action: 'click', selector: primaryActionSelector('modal_dialog') })
+      steps.push({ action: 'click', selector: actionSelectorForInput(input, 'modal_dialog') })
+      steps.push({ action: 'wait_for_selector', selector: { by: 'css', value: '[role="dialog"], .modal, .dialog, [aria-modal="true"]' }, state: 'visible', timeout_ms: 15000 })
+      steps.push({ action: 'screenshot', name: 'modal-dialog' })
       asserts.push({ type: 'expect_visible', selector: { by: 'css', value: '[role="dialog"], .modal, .dialog, [aria-modal="true"]' } })
       break
     case 'navigation':
       steps.push({ action: 'click', selector: { by: 'css', value: 'nav a[href], header a[href], a[href]' } })
+      steps.push({ action: 'wait_for_selector', selector: { by: 'css', value: 'body' }, state: 'visible', timeout_ms: 15000 })
+      steps.push({ action: 'screenshot', name: 'navigation-result' })
       asserts.push({ type: 'expect_visible', selector: { by: 'css', value: 'body' } })
       break
     case 'button_action':
-      steps.push({ action: 'click', selector: { by: 'css', value: 'button, [role="button"], input[type="button"], input[type="submit"]' } })
-      asserts.push({ type: 'expect_visible', selector: { by: 'css', value: 'body' } })
+      steps.push({ action: 'click', selector: actionSelectorForInput(input, 'button_action') })
+      steps.push({ action: 'wait_for_selector', selector: { by: 'css', value: '[role="alert"], .toast, .notification, body' }, state: 'visible', timeout_ms: 15000 })
+      steps.push({ action: 'screenshot', name: 'button-action-result' })
+      asserts.push({ type: 'expect_visible', selector: { by: 'css', value: '[role="alert"], .toast, .notification, body' } })
       break
     case 'redirection':
       steps.push({ action: 'click', selector: { by: 'css', value: 'a[href], button, [role="button"]' } })
+      steps.push({ action: 'wait_for_url', contains: new URL(normalizedBaseUrl).hostname, timeout_ms: 20000 })
+      steps.push({ action: 'screenshot', name: 'redirection-result' })
       asserts.push({ type: 'expect_url_contains', value: new URL(normalizedBaseUrl).hostname })
       break
     case 'feedback_message':
-      steps.push({ action: 'click', selector: primaryActionSelector('feedback_message') })
-      asserts.push({ type: 'expect_visible', selector: { by: 'css', value: '[role="alert"], .toast, .notification, .success, .error' } })
+      steps.push({ action: 'click', selector: actionSelectorForInput(input, 'feedback_message') })
+      steps.push({ action: 'wait_for_selector', selector: alertSelector, state: 'visible', timeout_ms: 15000 })
+      steps.push({ action: 'screenshot', name: 'feedback-message' })
+      asserts.push({ type: 'expect_visible', selector: alertSelector })
+      if (expectedFeedbackText) {
+        asserts.push({ type: 'expect_text', selector: alertSelector, text: expectedFeedbackText })
+      }
       break
     case 'generic_ui':
       steps.push({ action: 'wait_for_selector', selector: { by: 'css', value: 'body' }, state: 'visible', timeout_ms: 20000 })

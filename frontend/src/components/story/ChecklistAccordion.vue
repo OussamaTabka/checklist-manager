@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { Ellipsis, ExternalLink, Trash2 } from 'lucide-vue-next'
+import { Ellipsis, ExternalLink, Pencil, Trash2 } from 'lucide-vue-next'
 
 const props = defineProps({
   checklist: {
@@ -9,6 +9,10 @@ const props = defineProps({
     required: true,
   },
   executionTo: {
+    type: Object,
+    default: null,
+  },
+  editTo: {
     type: Object,
     default: null,
   },
@@ -95,6 +99,15 @@ function requestDetach() {
             <button type="button" class="story-action" @click="toggleExpanded(); menuOpen = false">
               <span>{{ expanded ? 'Masquer' : 'Voir' }}</span>
             </button>
+            <RouterLink
+              v-if="canManage && editTo"
+              :to="editTo"
+              class="story-action"
+              @click="menuOpen = false"
+            >
+              <Pencil :size="14" />
+              <span>Modifier</span>
+            </RouterLink>
             <RouterLink
               v-if="canExecute && executionTo"
               :to="executionTo"

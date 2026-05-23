@@ -24,7 +24,18 @@ return new class extends Migration
             $table->enum('criticality', ['Minor', 'Major', 'Critical'])
                   ->default('Minor');
 
+            $table->enum('status', ['pending', 'passed', 'failed'])
+                  ->default('pending');
+
+            $table->timestamp('last_run_at')->nullable();
+
+            $table->unsignedInteger('run_count')->default(0);
+
             $table->integer('order')->default(0);
+
+            $table->index('status', 'idx_checklist_items_status');
+            $table->index('last_run_at', 'idx_checklist_items_last_run');
+            $table->index('checklist_id', 'idx_checklist_items_checklist');
 
             $table->timestamps();
         });

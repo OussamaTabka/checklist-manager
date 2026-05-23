@@ -10,11 +10,8 @@ import { useToastStore } from '@/stores/toast'
 import {
   AlertCircle,
   ArrowLeft,
-  BookOpen,
   CheckCircle,
   CheckSquare,
-  ChevronDown,
-  ChevronUp,
   Clock,
   FileText,
   Grid3x3,
@@ -33,13 +30,11 @@ const toast = useToastStore()
 
 const checklistId = computed(() => route.params.id)
 const projectContextId = computed(() => route.query.projectId || null)
-const expandedItems = ref({})
 const showItemHistory = ref({})
 const historyLoadingByItemId = ref({})
 const commentEditorOpenByItemId = ref({})
 const commentDraftByItemId = ref({})
 const commentBusyByItemId = ref({})
-const technicalDetailsOpen = ref(false)
 const runModalOpen = ref(false)
 const runSubmitBusy = ref(false)
 const runModalError = ref('')
@@ -72,10 +67,10 @@ const runForm = reactive({
 })
 
 const statusIcons = {
-  'Not Tested': { icon: Square, color: 'text-slate-500', label: 'Non teste' },
-  Passed: { icon: CheckCircle, color: 'text-emerald-600', label: 'Reussi' },
-  Failed: { icon: TriangleAlert, color: 'text-rose-600', label: 'Echoue' },
-  Blocked: { icon: AlertCircle, color: 'text-amber-600', label: 'Bloque' },
+  'Not Tested': { icon: Square, color: 'text-slate-500', label: 'Non testé' },
+  Passed: { icon: CheckCircle, color: 'text-emerald-600', label: 'Réussi' },
+  Failed: { icon: TriangleAlert, color: 'text-rose-600', label: 'Échec' },
+  Blocked: { icon: AlertCircle, color: 'text-amber-600', label: 'Bloqué' },
 }
 
 const criticalityColors = {
@@ -87,7 +82,7 @@ const criticalityColors = {
   Minor: 'bg-slate-100 text-slate-700',
 }
 
-const fallbackItemStatus = { icon: Square, color: 'text-slate-500', label: 'Non teste' }
+const fallbackItemStatus = { icon: Square, color: 'text-slate-500', label: 'Non testé' }
 
 const checklist = computed(() => checklistsStore.currentChecklist)
 const relatedChecklistOptions = computed(() => {
@@ -133,22 +128,58 @@ const currentRunProfile = computed(() => {
 
 const publicChecklistDescription = computed(() => splitTechnicalText(checklist.value?.description || '').visible)
 const publicAcceptanceCriteria = computed(() => splitTechnicalText(checklist.value?.acceptance_criteria || '').visible)
-const technicalDetailsSections = computed(() => {
-  const sections = []
-  const description = splitTechnicalText(checklist.value?.description || '')
-  const acceptanceCriteria = splitTechnicalText(checklist.value?.acceptance_criteria || '')
+const acceptanceCriteriaItems = computed(() => {
+  const source = publicAcceptanceCriteria.value
+  if (!source) return []
 
-  if (description.technical) {
-    sections.push({ title: 'Description technique', content: description.technical })
-  }
-
-  if (acceptanceCriteria.technical) {
-    sections.push({ title: 'Criteres techniques', content: acceptanceCriteria.technical })
-  }
-
-  return sections
+  return source
+    .split(/\r?\n/)
+    .map((entry) => entry.replace(/^[-*\d.)\s]+/, '').trim())
+    .filter(Boolean)
 })
 
+const checklistGeneratedAt = computed(() => {
+  return checklist.value?.generated_at || checklist.value?.created_at || null
+})
+
+const checklistReuseScore = computed(() => {
+  const candidates = [
+    checklist.value?.reuse_score,
+    checklist.value?.reuse_summary?.score,
+    checklist.value?.score,
+  ]
+  const resolved = candidates.find((value) => value !== null && value !== undefined && value !== '')
+  if (resolved === undefined) return null
+  const numeric = Number(resolved)
+  return Number.isNaN(numeric) ? String(resolved) : `${numeric} / 100`
+})
+
+const checklistSourceLabel = computed(() => {
+  if (checklist.value?.source_checklist_name) {
+    return `Réutilisée depuis la checklist : ${checklist.value.source_checklist_name}`
+  }
+
+  if (projectContextName.value) {
+    return `Générée pour le projet : ${projectContextName.value}`
+  }
+
+  if (checklist.value?.generated_from) {
+    return `Source : ${String(checklist.value.generated_from)}`
+  }
+
+  return 'Créée dans l’espace d’exécution QA'
+})
+
+const checklistStoryDescription = computed(() => {
+  const parts = [
+    checklist.value?.as_a ? `En tant que ${checklist.value.as_a}` : '',
+    checklist.value?.i_want_that ? `je veux ${checklist.value.i_want_that}` : '',
+    checklist.value?.so_that ? `afin de ${checklist.value.so_that}` : '',
+  ].filter(Boolean)
+
+  if (parts.length) return `${parts.join(', ')}.`
+  return publicChecklistDescription.value || ''
+})
 function displayStatus(status) {
   return ['Passed', 'Failed', 'Blocked'].includes(status) ? status : 'Not Tested'
 }
@@ -169,25 +200,25 @@ function getItemPriorityClass(priority) {
 }
 
 function formatChecklistPriority(priority) {
-  if (!priority) return 'Non definie'
+  if (!priority) return 'Non définie'
   const value = String(priority)
   return value.charAt(0).toUpperCase() + value.slice(1)
 }
 
 function formatChecklistStatus(status) {
-  if (!status) return 'Non defini'
+  if (!status) return 'Non défini'
   const labels = {
     backlog: 'Backlog',
     in_progress: 'En cours',
-    ready_for_test: 'Pret pour test',
-    completed: 'Terminee',
+    ready_for_test: 'Prêt pour test',
+    completed: 'Terminée',
     pending: 'En attente',
-    passed: 'Reussi',
-    failed: 'Echoue',
-    blocked: 'Bloque',
+    passed: 'Réussi',
+    failed: 'Échec',
+    blocked: 'Bloqué',
     draft: 'Brouillon',
-    approved: 'Approuvee',
-    archived: 'Archivee',
+    approved: 'Approuvée',
+    archived: 'Archivée',
   }
   return labels[String(status)] || String(status).replaceAll('_', ' ')
 }
@@ -213,13 +244,13 @@ function executionStateLabel(state) {
     case 'queued':
       return 'En file'
     case 'running':
-      return 'Execution en cours'
+      return 'Exécution en cours'
     case 'passed':
-      return 'Execution reussie'
+      return 'Exécution réussie'
     case 'failed':
-      return 'Execution echouee'
+      return 'Exécution en échec'
     case 'blocked':
-      return 'Execution bloquee'
+      return 'Exécution bloquée'
     default:
       return 'En attente'
   }
@@ -234,9 +265,12 @@ function createRuntimeState(status = 'Not Tested') {
     execution_state: mapStatusToExecutionState(displayStatus(status)),
     last_run_id: null,
     last_run_status: null,
+    last_run_started_at: null,
+    last_run_finished_at: null,
+    tested_base_url: null,
     last_error_message: null,
     execution_trace: [],
-    artifacts: { trace: [], screenshot: [], video: [] },
+    artifacts: { trace: [], screenshot: [], video: [], all: [], raw_paths: {} },
     execution_profile: null,
     generated_plan: null,
     failure_source: null,
@@ -273,13 +307,7 @@ function runButtonLabel(item) {
 }
 
 function getArtifactUrl(item) {
-  const runtime = stateForItem(item)
-  const candidates = [
-    ...(Array.isArray(runtime.artifacts?.trace) ? runtime.artifacts.trace : []),
-    ...(Array.isArray(runtime.artifacts?.screenshot) ? runtime.artifacts.screenshot : []),
-    ...(Array.isArray(runtime.artifacts?.video) ? runtime.artifacts.video : []),
-  ]
-  return candidates.find((value) => typeof value === 'string' && /^https?:\/\//.test(value)) || null
+  return artifactEntries(item).find((entry) => entry.href)?.href || null
 }
 
 function normalizeBaseUrl(url) {
@@ -324,9 +352,20 @@ async function loadChecklist() {
   try {
     await checklistsStore.fetchChecklist(checklistId.value)
     seedRuntimeStateFromChecklist()
+    await preloadItemHistories()
   } catch (error) {
     console.error('Failed to load checklist:', error)
   }
+}
+
+async function preloadItemHistories() {
+  const items = Array.isArray(checklist.value?.items) ? checklist.value.items : []
+  await Promise.allSettled(
+    items.map(async (item) => {
+      if (Array.isArray(item.history) && item.history.length > 0) return
+      await reloadItemHistory(item.id)
+    }),
+  )
 }
 
 async function loadExecutionContext() {
@@ -433,12 +472,17 @@ async function refreshExecutionState(itemId) {
         execution_state: data.execution_state || 'idle',
         last_run_id: data.last_run_id || null,
         last_run_status: data.last_run_status || null,
+        last_run_started_at: data.last_run_started_at || null,
+        last_run_finished_at: data.last_run_finished_at || null,
+        tested_base_url: data.tested_base_url || null,
         last_error_message: data.last_error_message || null,
         execution_trace: Array.isArray(data.execution_trace) ? data.execution_trace : [],
         artifacts: {
           trace: Array.isArray(data.artifacts?.trace) ? data.artifacts.trace : [],
           screenshot: Array.isArray(data.artifacts?.screenshot) ? data.artifacts.screenshot : [],
           video: Array.isArray(data.artifacts?.video) ? data.artifacts.video : [],
+          all: Array.isArray(data.artifacts?.all) ? data.artifacts.all : [],
+          raw_paths: data.artifacts?.raw_paths || {},
         },
         execution_profile: data.execution_profile || null,
         generated_plan: data.generated_plan || null,
@@ -571,6 +615,9 @@ async function submitRunModal() {
         execution_state: response.status === 'started' ? 'running' : 'queued',
         last_run_id: response.run_id || null,
         last_run_status: response.status || 'queued',
+        last_run_started_at: null,
+        last_run_finished_at: null,
+        tested_base_url: normalizedBaseUrl,
         last_error_message: null,
         execution_trace: [],
       },
@@ -596,9 +643,154 @@ function inputTypeForKind(kind) {
       return 'email'
     case 'password':
       return 'password'
+    case 'file':
+      return 'text'
     default:
       return 'text'
   }
+}
+
+function formatRunStatus(status) {
+  switch (status) {
+    case 'queued':
+      return 'En file'
+    case 'started':
+    case 'running':
+      return 'En cours'
+    case 'completed':
+      return 'Terminee'
+    case 'failed':
+      return 'Echec'
+    default:
+      return 'Inconnue'
+  }
+}
+
+function selectorLabel(selector) {
+  if (!selector) return 'selector inconnu'
+  if (selector.by === 'css') return selector.value
+  if (selector.by === 'text') return `texte "${selector.text}"`
+  if (selector.by === 'label') return `label "${selector.text}"`
+  if (selector.by === 'testid') return `testid "${selector.id}"`
+  if (selector.by === 'role') return `${selector.role} "${selector.name}"`
+  return 'selector inconnu'
+}
+
+function summarizePlanStep(step) {
+  if (!step) return ''
+  switch (step.action) {
+    case 'goto':
+      return `Ouvrir ${step.url}`
+    case 'fill':
+      return `Remplir ${selectorLabel(step.selector)}${step.input_key ? ` avec ${step.input_key}` : ''}`
+    case 'set_file':
+      return `Joindre un fichier dans ${selectorLabel(step.selector)}${step.input_key ? ` via ${step.input_key}` : ''}`
+    case 'click':
+      return `Cliquer sur ${selectorLabel(step.selector)}`
+    case 'press':
+      return `Appuyer sur ${step.key} dans ${selectorLabel(step.selector)}`
+    case 'wait_for_selector':
+      return `Attendre ${selectorLabel(step.selector)} (${step.state})`
+    case 'wait_for_url':
+      return `Attendre une URL contenant "${step.contains}"`
+    case 'screenshot':
+      return `Capturer une preuve (${step.name})`
+    default:
+      return step.action || 'Action'
+  }
+}
+
+function summarizePlanAssert(assertion) {
+  if (!assertion) return ''
+  switch (assertion.type) {
+    case 'expect_visible':
+      return `Verifier que ${selectorLabel(assertion.selector)} est visible`
+    case 'expect_hidden':
+      return `Verifier que ${selectorLabel(assertion.selector)} est masque`
+    case 'expect_text':
+      return `Verifier le texte "${assertion.text}" dans ${selectorLabel(assertion.selector)}`
+    case 'expect_url_contains':
+      return `Verifier que l'URL contient "${assertion.value}"`
+    case 'expect_title':
+      return `Verifier le titre "${assertion.value}"`
+    default:
+      return assertion.type || 'Verification'
+  }
+}
+
+function failureSourceLabel(source) {
+  switch (source?.phase) {
+    case 'planning':
+      return 'Planification'
+    case 'preflight':
+      return 'Pre-verification'
+    case 'step':
+      return 'Action'
+    case 'assert':
+      return 'Verification'
+    case 'runtime':
+      return 'Execution'
+    default:
+      return 'Analyse'
+  }
+}
+
+function artifactEntries(item) {
+  const runtime = stateForItem(item)
+  const ordered = [
+    ...((runtime.artifacts?.trace || []).map((value) => ({ kind: 'Trace', path: value }))),
+    ...((runtime.artifacts?.screenshot || []).map((value) => ({ kind: 'Screenshot', path: value }))),
+    ...((runtime.artifacts?.video || []).map((value) => ({ kind: 'Video', path: value }))),
+  ]
+
+  const deduped = []
+  const seen = new Set()
+  for (const entry of ordered) {
+    if (typeof entry.path !== 'string' || !entry.path.trim() || seen.has(entry.path)) continue
+    seen.add(entry.path)
+    deduped.push({
+      ...entry,
+      href: /^https?:\/\//.test(entry.path) ? entry.path : null,
+      label: entry.path.split('/').pop() || entry.path,
+    })
+  }
+  return deduped
+}
+
+function visibleExecutionInputs(item) {
+  const profileInputs = stateForItem(item).execution_profile?.required_inputs
+  if (!Array.isArray(profileInputs)) return []
+  return profileInputs.filter((input) => typeof input?.value === 'string' && input.value.trim() !== '')
+}
+
+function maskExecutionInputValue(input) {
+  const value = typeof input?.value === 'string' ? input.value : ''
+  if (!value) return 'Non renseigne'
+  if (input.kind === 'password' || /password|secret|token|cvv/i.test(input.key || '')) {
+    return '••••••••'
+  }
+  if (input.kind === 'file') {
+    return value.split(/[\\/]/).pop() || value
+  }
+  return value
+}
+
+function executionTracePreview(item) {
+  const lines = Array.isArray(stateForItem(item).execution_trace) ? stateForItem(item).execution_trace : []
+  return lines.slice(-10)
+}
+
+function hasExecutionDetails(item) {
+  const runtime = stateForItem(item)
+  return Boolean(
+    runtime.last_run_id ||
+    runtime.tested_base_url ||
+    runtime.last_error_message ||
+    runtime.failure_source ||
+    (Array.isArray(runtime.execution_trace) && runtime.execution_trace.length) ||
+    artifactEntries(item).length ||
+    runtime.generated_plan,
+  )
 }
 
 function goBack() {
@@ -620,10 +812,6 @@ function selectChecklistForExecution(targetChecklistId) {
     params: { id: targetChecklistId },
     query: projectContextId.value ? { projectId: projectContextId.value } : {},
   })
-}
-
-function toggleItem(itemId) {
-  expandedItems.value[itemId] = !expandedItems.value[itemId]
 }
 
 function openCommentEditor(item) {
@@ -703,18 +891,11 @@ function splitTechnicalText(text) {
 function parseItemDescription(description) {
   const raw = String(description || '').trim()
   if (!raw) {
-    return { summary: '', details: '', expected: '' }
+    return { summary: '' }
   }
 
-  const match = raw.match(/(?:Resultat attendu|Resultat attendu|Expected result)\s*:\s*([\s\S]+)/i)
-  const details = match ? raw.slice(0, match.index).trim() : raw
-  const expected = match ? match[1].trim() : ''
-  const summarySource = details || raw
-
   return {
-    summary: truncateText(summarySource, 150),
-    details,
-    expected,
+    summary: truncateText(raw, 150),
   }
 }
 
@@ -735,7 +916,13 @@ function itemStatusLabel(status) {
 function formatTimestamp(value) {
   if (!value) return ''
   try {
-    return new Date(value).toLocaleString()
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(value)).replace(',', ' a')
   } catch {
     return ''
   }
@@ -748,42 +935,7 @@ function itemLastUpdate(item) {
   if (testerName && testedAt) return `${testerName} - ${testedAt}`
   if (testerName) return testerName
   if (testedAt) return testedAt
-  return 'Aucune execution recente'
-}
-
-function itemExpectedObservations(item) {
-  const profile = stateForItem(item).execution_profile
-  const expectedFromProfile = Array.isArray(profile?.expected_observations) ? profile.expected_observations : []
-  if (expectedFromProfile.length) {
-    return expectedFromProfile
-  }
-
-  const expectedText = parseItemDescription(item.description).expected
-  return expectedText ? [expectedText] : []
-}
-
-function historySummary(change) {
-  const actor = change.changed_by?.name || 'Utilisateur inconnu'
-  const oldStatus = itemStatusLabel(change.old_value)
-  const newStatus = itemStatusLabel(change.new_value)
-
-  switch (change.change_type) {
-    case 'status_changed':
-      return `${actor} a change le statut de ${oldStatus} a ${newStatus}.`
-    case 'comment_added':
-      return `${actor} a ajoute un commentaire.`
-    case 'comment_updated':
-      return `${actor} a modifie le commentaire.`
-    case 'automated_test_started':
-      return `${actor} a lance le test automatique.`
-    case 'automated_test_finished':
-      return `${actor} a termine le test automatique. Resultat : ${newStatus}.`
-    default:
-      if (change.old_value || change.new_value) {
-        return `${actor} a mis a jour ${change.field_name} de ${change.old_value || '-'} a ${change.new_value || '-'}.`
-      }
-      return `${actor} a mis a jour ${change.field_name}.`
-  }
+  return 'Aucune exécution récente'
 }
 
 function historyDetail(change) {
@@ -794,8 +946,44 @@ function historyDetail(change) {
   return change.notes || ''
 }
 
-function statusButtonClass(item, status) {
-  return displayStatus(item.status) === status ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'
+function historyActionTitle(change) {
+  switch (change.change_type) {
+    case 'status_changed':
+      return 'Statut modifie'
+    case 'comment_added':
+      return 'Commentaire ajouté'
+    case 'comment_updated':
+      return 'Commentaire mis à jour'
+    case 'automated_test_started':
+      return 'Exécution automatique lancée'
+    case 'automated_test_finished':
+      return 'Exécution automatique terminée'
+    default:
+      return 'Mise a jour'
+  }
+}
+
+function historyActor(change) {
+  return change.changed_by?.name || 'Systeme'
+}
+
+function historyStatusPills(change) {
+  const pills = []
+
+  if (change.old_value) {
+    pills.push({ key: `old-${change.id}`, label: itemStatusLabel(change.old_value), tone: 'muted' })
+  }
+
+  if (change.new_value) {
+    pills.push({ key: `new-${change.id}`, label: itemStatusLabel(change.new_value), tone: change.change_type === 'status_changed' ? 'active' : 'neutral' })
+  }
+
+  return pills
+}
+
+function visibleHistory(item) {
+  const history = Array.isArray(item.history) ? item.history : []
+  return showItemHistory.value[item.id] ? history : history.slice(0, 3)
 }
 
 onMounted(() => {
@@ -828,30 +1016,30 @@ onBeforeUnmount(() => {
 <template>
   <section class="page stack">
     <div class="project-execution-hero">
-      <div class="project-execution-copy">
-        <div class="flex items-center gap-4">
-          <button @click="goBack" class="story-detail-back">
-            <ArrowLeft :size="20" />
+      <div class="project-execution-copy compact">
+        <div class="flex items-start gap-3">
+          <button @click="goBack" class="story-detail-back compact">
+            <ArrowLeft :size="18" />
           </button>
-          <div>
-            <p class="project-execution-kicker">Espace d'execution QA</p>
+          <div class="min-w-0">
+            <p class="project-execution-kicker">Espace d’exécution QA</p>
             <p v-if="projectContextName" class="project-context-label">{{ projectContextName }}</p>
-            <h1>{{ checklist?.name || 'Chargement...' }}</h1>
-            <p class="project-execution-subtitle">
-              Executez chaque test case, lancez l'agent automatique, ajustez le statut final et gardez une trace claire de chaque changement.
+            <h1 class="project-execution-title">{{ checklist?.name || 'Chargement...' }}</h1>
+            <p class="project-execution-subtitle compact">
+              Exécutez les scénarios, lancez l’agent automatique et suivez les résultats de validation.
             </p>
           </div>
         </div>
       </div>
 
-      <div class="project-execution-side">
-        <div class="project-execution-app-card">
-          <span class="project-execution-side-label">Execution</span>
-          <p class="muted">Le runner, l'orchestrateur et le polling existants restent actifs. Cette vue se concentre uniquement sur le travail du testeur.</p>
+      <div class="project-execution-side compact">
+        <div class="project-execution-app-card compact">
+          <span class="project-execution-side-label">Exécution active</span>
+          <p class="muted">Le runner, l’orchestrateur et le polling restent actifs pour cette checklist.</p>
         </div>
 
-        <label v-if="projectContextId" class="execution-checklist-selector">
-          <span class="project-execution-side-label">Selectionner la checklist a tester</span>
+        <label v-if="projectContextId" class="execution-checklist-selector compact">
+          <span class="project-execution-side-label">Checklist en cours</span>
           <select
             :disabled="executionContextLoading || relatedChecklistOptions.length === 0"
             :value="String(checklistId)"
@@ -867,12 +1055,6 @@ onBeforeUnmount(() => {
           </select>
         </label>
 
-        <div class="project-execution-hero-actions">
-          <button class="btn btn-secondary" :disabled="!auth.canTest || !nextRunnableItem" @click="runNextSuggestedItem">
-            <PlayCircle :size="16" />
-            <span>Tester le prochain scenario</span>
-          </button>
-        </div>
       </div>
     </div>
 
@@ -881,110 +1063,75 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-else-if="checklist" class="stack">
-      <div class="story-detail-metrics">
-        <article class="story-detail-metric">
-          <span>Total</span>
-          <strong>{{ scenariosStats.total }}</strong>
-        </article>
-        <article class="story-detail-metric">
-          <span>Reussis</span>
-          <strong>{{ scenariosStats.passed }}</strong>
-        </article>
-        <article class="story-detail-metric">
-          <span>Echoues</span>
-          <strong>{{ scenariosStats.failed }}</strong>
-        </article>
-        <article class="story-detail-metric">
-          <span>Bloques</span>
-          <strong>{{ scenariosStats.blocked }}</strong>
-        </article>
-        <article class="story-detail-metric">
-          <span>Non testes</span>
-          <strong>{{ scenariosStats.notTested }}</strong>
-        </article>
-      </div>
-
-      <div class="card stack">
-        <div class="flex items-center gap-3 pb-4 border-b border-gray-200 mb-4">
+      <div class="card stack compact-info-card">
+        <div class="flex items-center gap-3 pb-3 border-b border-gray-200 mb-4">
           <FileText :size="20" class="text-blue-600" />
-          <h2>Informations generales</h2>
+          <h2>Informations générales</h2>
         </div>
 
-        <div class="grid grid-cols-[1fr_1fr_1fr] gap-4">
-          <div>
-            <p class="muted mb-1">Priorite</p>
+        <div class="info-stat-grid">
+          <div class="info-stat-chip">
+            <p class="info-stat-label">Priorité</p>
             <span :class="['tag', getChecklistPriorityTagClass(checklist.priority)]">
               {{ formatChecklistPriority(checklist.priority) }}
             </span>
           </div>
 
-          <div>
-            <p class="muted mb-1">Statut</p>
+          <div class="info-stat-chip">
+            <p class="info-stat-label">Statut</p>
             <span class="tag text-blue-900 border-blue-300 bg-blue-100">
               {{ formatChecklistStatus(checklist.status) }}
             </span>
           </div>
 
-          <div>
-            <p class="muted mb-1">Scenarios</p>
+          <div class="info-stat-chip">
+            <p class="info-stat-label">Scénarios</p>
             <span class="tag text-slate-900 border-slate-300 bg-slate-100">
               {{ scenariosStats.total }} au total
             </span>
           </div>
-        </div>
 
-        <div v-if="publicChecklistDescription" class="mt-4">
-          <p class="muted mb-2">Description</p>
-          <p class="text-gray-700 whitespace-pre-wrap">{{ publicChecklistDescription }}</p>
-        </div>
+          <div v-if="checklistReuseScore" class="info-stat-chip">
+            <p class="info-stat-label">Score de réutilisation</p>
+            <span class="tag text-emerald-900 border-emerald-300 bg-emerald-100">
+              {{ checklistReuseScore }}
+            </span>
+          </div>
 
-        <div v-if="technicalDetailsSections.length" class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <button class="w-full flex items-center justify-between text-left" @click="technicalDetailsOpen = !technicalDetailsOpen">
-            <span class="font-semibold text-slate-900">Details techniques</span>
-            <component :is="technicalDetailsOpen ? ChevronUp : ChevronDown" :size="18" class="text-slate-500" />
-          </button>
-
-          <div v-if="technicalDetailsOpen" class="mt-4 space-y-3">
-            <div v-for="section in technicalDetailsSections" :key="section.title">
-              <p class="text-xs font-bold uppercase tracking-wider text-slate-600">{{ section.title }}</p>
-              <pre class="mt-2 whitespace-pre-wrap rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-700">{{ section.content }}</pre>
-            </div>
+          <div v-if="checklistGeneratedAt" class="info-stat-chip">
+            <p class="info-stat-label">Date de génération</p>
+            <span class="tag text-slate-900 border-slate-300 bg-slate-100">
+              {{ formatTimestamp(checklistGeneratedAt) }}
+            </span>
           </div>
         </div>
-      </div>
 
-      <div v-if="checklist.as_a || checklist.i_want_that || checklist.so_that || publicAcceptanceCriteria" class="card stack">
-        <div class="flex items-center gap-3 pb-4 border-b border-gray-200 mb-4">
-          <BookOpen :size="20" class="text-emerald-600" />
-          <h2>User story associee</h2>
-        </div>
+        <div class="info-sections-grid">
+          <section class="info-section">
+            <p class="info-section-title">Source</p>
+            <p class="info-section-content">{{ checklistSourceLabel }}</p>
+          </section>
 
-        <div class="space-y-3">
-          <div v-if="checklist.as_a">
-            <p class="muted mb-1">En tant que</p>
-            <p class="text-gray-700">{{ checklist.as_a }}</p>
-          </div>
-          <div v-if="checklist.i_want_that">
-            <p class="muted mb-1">Je veux</p>
-            <p class="text-gray-700 whitespace-pre-wrap">{{ checklist.i_want_that }}</p>
-          </div>
-          <div v-if="checklist.so_that">
-            <p class="muted mb-1">Afin de</p>
-            <p class="text-gray-700 whitespace-pre-wrap">{{ checklist.so_that }}</p>
-          </div>
-          <div v-if="publicAcceptanceCriteria" class="mt-4 pt-4 border-t border-gray-200">
-            <p class="muted mb-2">Criteres d'acceptation</p>
-            <div class="bg-gray-50 border border-gray-200 p-3 rounded whitespace-pre-wrap text-sm text-gray-700">
-              {{ publicAcceptanceCriteria }}
-            </div>
-          </div>
+          <section v-if="checklistStoryDescription" class="info-section">
+            <p class="info-section-title">Description User Story</p>
+            <p class="info-section-content whitespace-pre-wrap">{{ checklistStoryDescription }}</p>
+          </section>
+
+          <section v-if="acceptanceCriteriaItems.length" class="info-section">
+            <p class="info-section-title">Critères d’acceptation</p>
+            <ol class="info-list">
+              <li v-for="(criterion, index) in acceptanceCriteriaItems" :key="`${index}-${criterion}`">
+                {{ criterion }}
+              </li>
+            </ol>
+          </section>
         </div>
       </div>
 
       <div v-if="checklist.business_rules && checklist.business_rules.length > 0" class="card stack">
-        <div class="flex items-center gap-3 pb-4 border-b border-gray-200 mb-4">
+        <div class="flex items-center gap-3 pb-3 border-b border-gray-200 mb-4">
           <Grid3x3 :size="20" class="text-violet-600" />
-          <h2>Regles metier</h2>
+          <h2>Règles métier</h2>
         </div>
 
         <ul class="space-y-2">
@@ -996,259 +1143,286 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="card">
-        <div class="pb-6 border-b border-gray-200 mb-6">
-          <div class="flex items-center justify-between gap-3 mb-4">
+        <div class="pb-4 border-b border-gray-200 mb-4">
+          <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div class="flex items-center gap-3">
               <CheckSquare :size="20" class="text-orange-600" />
-              <h2>Test cases executables</h2>
+              <h2>Test cases exécutables</h2>
               <span class="tag text-blue-900 border-blue-300 bg-blue-100">{{ scenariosStats.total }}</span>
             </div>
-            <p class="muted">Chaque card garde l'execution automatique, le statut manuel, le commentaire QA et l'historique.</p>
+            <p class="muted test-case-section-note">Lancez les tests, ajustez le statut final et consultez rapidement l’historique et les observations QA.</p>
           </div>
 
-          <div class="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-3 text-sm">
-            <div class="bg-white border border-gray-200 rounded p-2 text-center">
-              <p class="muted text-xs mb-1">Total</p>
-              <p class="font-bold text-slate-900">{{ scenariosStats.total }}</p>
-            </div>
-            <div class="bg-emerald-50 border border-emerald-200 rounded p-2 text-center">
-              <p class="text-emerald-700 text-xs font-medium mb-1">Reussis</p>
-              <p class="font-bold text-emerald-900">{{ scenariosStats.passed }}</p>
-            </div>
-            <div class="bg-rose-50 border border-rose-200 rounded p-2 text-center">
-              <p class="text-rose-700 text-xs font-medium mb-1">Echoues</p>
-              <p class="font-bold text-rose-900">{{ scenariosStats.failed }}</p>
-            </div>
-            <div class="bg-amber-50 border border-amber-200 rounded p-2 text-center">
-              <p class="text-amber-700 text-xs font-medium mb-1">Bloques</p>
-              <p class="font-bold text-amber-900">{{ scenariosStats.blocked }}</p>
-            </div>
-            <div class="bg-slate-50 border border-slate-200 rounded p-2 text-center">
-              <p class="muted text-xs mb-1">Non testes</p>
-              <p class="font-bold text-slate-900">{{ scenariosStats.notTested }}</p>
-            </div>
-          </div>
         </div>
 
         <div v-if="checklist.items && checklist.items.length > 0" class="space-y-4">
           <article
             v-for="item in checklist.items"
             :key="item.id"
-            class="rounded-2xl border border-slate-200 bg-slate-50/70 overflow-hidden"
+            class="rounded-[24px] border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.05)] overflow-hidden"
           >
-            <div class="p-5">
-              <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div class="min-w-0 flex-1">
-                  <div class="flex flex-wrap items-center gap-2 mb-3">
-                    <span class="item-case-badge">{{ itemReference(item) }}</span>
-                    <span :class="['tag text-xs', getItemCriticalityClass(item.criticality)]">{{ item.criticality || 'N/A' }}</span>
-                    <span :class="['tag text-xs', getItemPriorityClass(item.priority)]">{{ item.priority || 'N/A' }}</span>
-                    <span :class="['tag text-xs', getScenarioStatusTagClass(item.status)]">{{ itemStatusLabel(item.status) }}</span>
-                    <span :class="executionStateClass(stateForItem(item).execution_state)">{{ executionStateLabel(stateForItem(item).execution_state) }}</span>
+            <div class="p-4 sm:p-5">
+              <div class="rounded-[20px] border border-slate-200/90 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] px-4 py-3.5 sm:px-4.5">
+                <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:gap-4">
+                  <div class="min-w-0 flex-1">
+                    <div class="flex min-w-0 flex-wrap items-center gap-2.5">
+                      <span :class="executionStateClass(stateForItem(item).execution_state)">{{ executionStateLabel(stateForItem(item).execution_state) }}</span>
+                      <span class="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">
+                        {{ itemReference(item) }}
+                      </span>
+                      <h3 class="qa-case-title text-lg font-semibold leading-tight text-slate-950">{{ item.title }}</h3>
+                    </div>
+                    <p v-if="parseItemDescription(item.description).summary" class="qa-case-description mt-1.5 text-sm leading-5 text-slate-600">
+                      {{ parseItemDescription(item.description).summary }}
+                    </p>
                   </div>
 
-                  <h3 class="text-lg font-semibold text-slate-950">{{ item.title }}</h3>
-                  <p v-if="parseItemDescription(item.description).summary" class="mt-2 text-sm text-slate-600">
-                    {{ parseItemDescription(item.description).summary }}
-                  </p>
-
-                  <div class="mt-4 grid gap-3 md:grid-cols-2">
-                    <div class="rounded-xl border border-white/80 bg-white p-3">
-                      <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Dernier commentaire</p>
-                      <p class="mt-1 text-sm text-slate-700">
-                        {{ item.qa_comment || 'Aucun commentaire pour le moment.' }}
-                      </p>
-                    </div>
-                    <div class="rounded-xl border border-white/80 bg-white p-3">
-                      <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Derniere mise a jour</p>
-                      <p class="mt-1 text-sm text-slate-700">{{ itemLastUpdate(item) }}</p>
-                    </div>
+                  <div class="flex flex-col gap-2.5 xl:min-w-[500px] xl:flex-row xl:items-center xl:justify-end">
+                    <span :class="['inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold', getItemCriticalityClass(item.criticality)]">
+                      Criticité : {{ item.criticality || 'N/A' }}
+                    </span>
+                    <label class="qa-card-status-field">
+                      <select
+                        class="qa-status-select"
+                        :disabled="!auth.canTest"
+                        :value="displayStatus(item.status)"
+                        @change="updateItemStatus(item, $event.target.value)"
+                      >
+                        <option v-for="status in STATUS_OPTIONS" :key="status" :value="status">
+                          {{ statusIcons[status]?.label || status }}
+                        </option>
+                      </select>
+                    </label>
+                    <button class="btn btn-primary qa-run-button" :disabled="!auth.canTest || isRunInFlight(item)" @click="openRunModal(item)">
+                      <PlayCircle :size="16" />
+                      <span>{{ runButtonLabel(item) }}</span>
+                    </button>
                   </div>
-                </div>
-
-                <div class="flex shrink-0 flex-wrap items-center gap-2">
-                  <button class="btn btn-primary btn-sm" :disabled="!auth.canTest || isRunInFlight(item)" @click="openRunModal(item)">
-                    <PlayCircle :size="14" />
-                    <span>{{ runButtonLabel(item) }}</span>
-                  </button>
-                  <button class="btn btn-secondary btn-sm" @click="toggleItem(item.id)">
-                    <span>{{ expandedItems[item.id] ? 'Masquer les details' : 'Details' }}</span>
-                    <component :is="expandedItems[item.id] ? ChevronUp : ChevronDown" :size="14" />
-                  </button>
                 </div>
               </div>
-            </div>
 
-            <div v-if="expandedItems[item.id]" class="border-t border-slate-200 bg-white px-5 py-5 space-y-5">
-              <div class="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-                <div class="space-y-4">
-                  <section class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Description complete</p>
-                    <p class="mt-2 whitespace-pre-wrap text-sm text-slate-700">
-                      {{ parseItemDescription(item.description).details || item.description || 'Aucune description detaillee.' }}
-                    </p>
-                  </section>
-
-                  <section v-if="itemExpectedObservations(item).length" class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                    <p class="text-xs font-bold uppercase tracking-wider text-emerald-700">Resultat attendu</p>
-                    <ul class="mt-2 space-y-2 text-sm text-emerald-900">
-                      <li v-for="(observation, index) in itemExpectedObservations(item)" :key="`${item.id}-expected-${index}`">
-                        {{ observation }}
-                      </li>
-                    </ul>
-                  </section>
-
-                  <section class="rounded-2xl border border-slate-200 bg-white p-4">
-                    <div class="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Execution automatique</p>
-                        <p class="mt-1 text-sm text-slate-600">Le testeur peut toujours corriger manuellement le statut apres le retour de l'agent.</p>
+              <div class="mt-4 rounded-[20px] border border-slate-200 bg-slate-50/65 overflow-hidden">
+                <div class="grid gap-0 lg:grid-cols-[0.45fr_0.55fr]">
+                <section class="p-4 sm:p-5 lg:border-r lg:border-slate-200">
+                  <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                      <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+                        <Clock :size="16" />
                       </div>
-                      <div class="flex flex-wrap items-center gap-2">
-                        <button class="btn btn-primary btn-sm" :disabled="!auth.canTest || isRunInFlight(item)" @click="openRunModal(item)">
-                          <PlayCircle :size="14" />
-                          <span>{{ runButtonLabel(item) }}</span>
-                        </button>
-                        <a
-                          v-if="getArtifactUrl(item)"
-                          :href="getArtifactUrl(item)"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          class="btn btn-secondary btn-sm"
-                        >
-                          Consulter les artefacts
-                        </a>
+                      <div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Historique</p>
+                        <p class="text-sm text-slate-600">Statut, execution automatique et changements recents.</p>
                       </div>
                     </div>
+                  </div>
 
-                    <div class="mt-4 grid gap-3 md:grid-cols-2">
-                      <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Etat agent</p>
-                        <div class="mt-2 flex flex-wrap items-center gap-2">
-                          <span :class="executionStateClass(stateForItem(item).execution_state)">{{ executionStateLabel(stateForItem(item).execution_state) }}</span>
-                          <span v-if="stateForItem(item).last_run_id" class="text-xs text-slate-500">Run {{ stateForItem(item).last_run_id }}</span>
+                  <div v-if="historyLoadingByItemId[item.id]" class="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-500">
+                    Chargement de l’historique...
+                  </div>
+
+                  <div v-else-if="visibleHistory(item).length" class="mt-4 space-y-3">
+                    <div
+                      v-for="change in visibleHistory(item)"
+                      :key="change.id"
+                      class="rounded-2xl border border-slate-200 bg-white p-3.5"
+                    >
+                      <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p class="text-sm font-semibold text-slate-900">{{ historyActionTitle(change) }}</p>
+                          <div v-if="historyStatusPills(change).length" class="mt-2 flex flex-wrap items-center gap-2">
+                            <span
+                              v-for="pill in historyStatusPills(change)"
+                              :key="pill.key"
+                              :class="pill.tone === 'active'
+                                ? 'inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700'
+                                : pill.tone === 'neutral'
+                                  ? 'inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700'
+                                  : 'inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600'"
+                            >
+                              {{ pill.label }}
+                            </span>
+                          </div>
+                          <p v-if="historyDetail(change)" class="mt-2 whitespace-pre-wrap text-sm leading-5 text-slate-600">{{ historyDetail(change) }}</p>
+                        </div>
+
+                        <div class="text-right text-xs text-slate-500">
+                          <p class="font-semibold text-slate-700">{{ historyActor(change) }}</p>
+                          <p class="mt-1">{{ formatTimestamp(change.created_at) }}</p>
                         </div>
                       </div>
-                      <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Statut final actuel</p>
-                        <p class="mt-2 text-sm font-semibold text-slate-900">{{ itemStatusLabel(item.status) }}</p>
+                    </div>
+                  </div>
+
+                  <div v-else class="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-6 text-center">
+                    <p class="text-sm font-medium text-slate-700">Aucun historique disponible pour ce test case.</p>
+                    <p class="mt-2 text-sm text-slate-500">Les changements de statut et d’exécution apparaîtront ici.</p>
+                  </div>
+
+                  <button class="btn btn-secondary btn-sm mt-4" @click="toggleItemHistory(item.id)">
+                    {{ showItemHistory[item.id] ? 'Réduire l’historique' : 'Afficher tout l’historique' }}
+                  </button>
+                </section>
+
+                <section class="border-t border-slate-200 p-4 sm:p-5 lg:border-t-0">
+                  <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                      <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+                        <MessageSquare :size="16" />
+                      </div>
+                      <div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Commentaires QA</p>
+                        <p class="text-sm text-slate-600">Ajoutez une observation utile sans bloquer l'execution automatique.</p>
                       </div>
                     </div>
 
-                    <p v-if="stateForItem(item).last_error_message" class="error mt-4">
-                      {{ stateForItem(item).last_error_message }}
-                    </p>
+                    <button class="btn btn-secondary btn-sm" :disabled="!auth.canTest" @click="openCommentEditor(item)">
+                      <MessageSquare :size="14" />
+                      <span>{{ item.qa_comment ? 'Modifier le commentaire' : 'Ajouter un commentaire' }}</span>
+                    </button>
+                  </div>
 
-                    <details v-if="stateForItem(item).execution_trace?.length" class="trace-details mt-4">
-                      <summary class="muted trace-summary">Trace d'execution ({{ stateForItem(item).execution_trace.length }})</summary>
-                      <ol class="trace-list">
-                        <li v-for="(line, index) in stateForItem(item).execution_trace" :key="`${item.id}-trace-${index}`" class="trace-item">
-                          {{ line }}
+                  <div v-if="hasExecutionDetails(item)" class="mt-4 rounded-2xl border border-slate-200 bg-white p-4 space-y-4">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Derniere execution automatique</p>
+                        <p class="mt-1 text-sm font-semibold text-slate-900">{{ executionStateLabel(stateForItem(item).execution_state) }}</p>
+                      </div>
+                      <span v-if="stateForItem(item).last_run_id" class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                        Run {{ stateForItem(item).last_run_id }}
+                      </span>
+                    </div>
+
+                    <div class="grid gap-3 sm:grid-cols-2">
+                      <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+                        <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">URL testee</p>
+                        <p class="mt-2 break-all text-sm text-slate-700">{{ stateForItem(item).tested_base_url || 'Non disponible' }}</p>
+                      </div>
+                      <div class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+                        <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Statut du run</p>
+                        <p class="mt-2 text-sm text-slate-700">{{ formatRunStatus(stateForItem(item).last_run_status) }}</p>
+                        <p v-if="stateForItem(item).last_run_started_at" class="mt-1 text-xs text-slate-500">Debut : {{ formatTimestamp(stateForItem(item).last_run_started_at) }}</p>
+                        <p v-if="stateForItem(item).last_run_finished_at" class="mt-1 text-xs text-slate-500">Fin : {{ formatTimestamp(stateForItem(item).last_run_finished_at) }}</p>
+                      </div>
+                    </div>
+
+                    <div v-if="visibleExecutionInputs(item).length">
+                      <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Champs fournis au run</p>
+                      <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                        <div v-for="input in visibleExecutionInputs(item)" :key="input.key" class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+                          <p class="text-xs font-semibold text-slate-700">{{ input.label }}</p>
+                          <p class="mt-1 break-all text-sm text-slate-600">{{ maskExecutionInputValue(input) }}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div v-if="stateForItem(item).generated_plan?.steps?.length">
+                      <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Actions executees par l'agent</p>
+                      <ol class="mt-2 space-y-2 text-sm text-slate-700">
+                        <li v-for="(step, index) in stateForItem(item).generated_plan.steps" :key="`${item.id}-step-${index}`" class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                          {{ index + 1 }}. {{ summarizePlanStep(step) }}
                         </li>
                       </ol>
-                    </details>
-
-                    <div v-if="stateForItem(item).failure_source" class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                      <strong>Failure source:</strong> {{ stateForItem(item).failure_source.phase }} / {{ stateForItem(item).failure_source.reference }}<br />
-                      {{ stateForItem(item).failure_source.message }}
-                    </div>
-                  </section>
-                </div>
-
-                <div class="space-y-4">
-                  <section class="rounded-2xl border border-slate-200 bg-white p-4">
-                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Mettre a jour le statut</p>
-                    <div class="mt-3 flex flex-wrap gap-2">
-                      <button
-                        v-for="status in STATUS_OPTIONS"
-                        :key="status"
-                        :class="statusButtonClass(item, status)"
-                        :disabled="!auth.canTest"
-                        @click="updateItemStatus(item, status)"
-                      >
-                        {{ statusIcons[status]?.label || status }}
-                      </button>
                     </div>
 
-                    <p v-if="item.tested_at" class="mt-3 text-xs text-slate-500">
-                      <Clock :size="14" class="inline mr-1" />
-                      Dernier test : {{ formatTimestamp(item.tested_at) }}
-                    </p>
-                  </section>
-
-                  <section class="rounded-2xl border border-slate-200 bg-white p-4">
-                    <div class="flex items-center justify-between gap-3">
-                      <div>
-                        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Commentaire QA</p>
-                        <p class="mt-1 text-sm text-slate-600">Ajoutez une observation utile sans bloquer l'execution automatique.</p>
-                      </div>
-                      <button class="btn btn-secondary btn-sm" :disabled="!auth.canTest" @click="openCommentEditor(item)">
-                        <MessageSquare :size="14" />
-                        <span>{{ item.qa_comment ? 'Modifier le commentaire' : 'Ajouter un commentaire' }}</span>
-                      </button>
+                    <div v-if="stateForItem(item).generated_plan?.asserts?.length">
+                      <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Verifications attendues</p>
+                      <ul class="mt-2 space-y-2 text-sm text-slate-700">
+                        <li v-for="(assertion, index) in stateForItem(item).generated_plan.asserts" :key="`${item.id}-assert-${index}`" class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                          {{ summarizePlanAssert(assertion) }}
+                        </li>
+                      </ul>
                     </div>
 
-                    <div v-if="commentEditorOpenByItemId[item.id]" class="mt-4 space-y-3">
-                      <textarea
-                        v-model="commentDraftByItemId[item.id]"
-                        rows="4"
-                        class="w-full"
-                        :placeholder="COMMENT_PLACEHOLDER"
-                        :disabled="commentBusyByItemId[item.id]"
-                      />
-                      <div class="flex flex-wrap gap-2">
-                        <button class="btn btn-primary btn-sm" :disabled="commentBusyByItemId[item.id]" @click="saveItemComment(item)">
-                          {{ commentBusyByItemId[item.id] ? 'Enregistrement...' : 'Enregistrer' }}
-                        </button>
-                        <button class="btn btn-secondary btn-sm" :disabled="commentBusyByItemId[item.id]" @click="closeCommentEditor(item.id)">
-                          Annuler
-                        </button>
+                    <div v-if="stateForItem(item).failure_source || stateForItem(item).last_error_message" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
+                      <p class="text-xs font-bold uppercase tracking-wider text-rose-700">Cause probable</p>
+                      <p class="mt-2 text-sm font-semibold text-rose-900">
+                        {{ failureSourceLabel(stateForItem(item).failure_source) }}
+                        <span v-if="stateForItem(item).failure_source?.reference">- {{ stateForItem(item).failure_source.reference }}</span>
+                      </p>
+                      <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-rose-800">
+                        {{ stateForItem(item).last_error_message || stateForItem(item).failure_source?.message }}
+                      </p>
+                    </div>
+
+                    <div v-if="executionTracePreview(item).length">
+                      <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Trace d'execution</p>
+                      <div class="mt-2 rounded-2xl border border-slate-200 bg-slate-950 px-3 py-3 text-xs text-slate-100">
+                        <p v-for="(line, index) in executionTracePreview(item)" :key="`${item.id}-trace-${index}`" class="break-words leading-5">
+                          {{ line }}
+                        </p>
                       </div>
                     </div>
 
-                    <div v-else class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-                      {{ item.qa_comment || 'Aucun commentaire enregistre pour ce test case.' }}
+                    <div v-if="artifactEntries(item).length">
+                      <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Artefacts disponibles</p>
+                      <div class="mt-2 space-y-2">
+                        <div v-for="entry in artifactEntries(item)" :key="`${item.id}-${entry.kind}-${entry.path}`" class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+                          <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{{ entry.kind }}</p>
+                          <a
+                            v-if="entry.href"
+                            :href="entry.href"
+                            target="_blank"
+                            rel="noreferrer"
+                            class="mt-1 inline-flex break-all text-sm font-semibold text-blue-700 hover:text-blue-800"
+                          >
+                            {{ entry.label }}
+                          </a>
+                          <p v-else class="mt-1 break-all font-mono text-xs text-slate-700">{{ entry.path }}</p>
+                        </div>
+                      </div>
+                      <p v-if="!getArtifactUrl(item)" class="text-xs text-slate-500">
+                        Les artefacts sont stockes dans le workspace du runner. Aucun lien HTTP securise n'est expose pour ce run.
+                      </p>
                     </div>
-                  </section>
+                  </div>
+
+                  <div v-if="commentEditorOpenByItemId[item.id]" class="mt-4 rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+                    <textarea
+                      v-model="commentDraftByItemId[item.id]"
+                      rows="4"
+                      class="w-full"
+                      :placeholder="COMMENT_PLACEHOLDER"
+                      :disabled="commentBusyByItemId[item.id]"
+                    />
+                    <div class="flex flex-wrap gap-2">
+                      <button class="btn btn-primary btn-sm" :disabled="commentBusyByItemId[item.id]" @click="saveItemComment(item)">
+                        {{ commentBusyByItemId[item.id] ? 'Enregistrement...' : 'Enregistrer' }}
+                      </button>
+                      <button class="btn btn-secondary btn-sm" :disabled="commentBusyByItemId[item.id]" @click="closeCommentEditor(item.id)">
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+
+                  <div v-else-if="item.qa_comment" class="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                      <p class="text-sm font-semibold text-slate-900">{{ item.tester?.name || item.tested_by?.name || 'Observation QA' }}</p>
+                      <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                        {{ item.tested_at ? formatTimestamp(item.tested_at) : 'Commentaire enregistré' }}
+                      </span>
+                    </div>
+                    <p class="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{{ item.qa_comment }}</p>
+                  </div>
+
+                  <div v-else class="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-6 text-center">
+                    <p class="text-sm font-semibold text-slate-700">Aucun commentaire enregistré pour ce test case.</p>
+                    <p class="mt-2 text-sm text-slate-500">Soyez le premier à ajouter une observation.</p>
+                  </div>
+
+                  <div v-if="getArtifactUrl(item)" class="mt-4 rounded-2xl border border-blue-200 bg-blue-50/80 p-4">
+                    <p class="text-xs font-bold uppercase tracking-wider text-blue-700">Artefacts d execution</p>
+                    <a
+                      :href="getArtifactUrl(item)"
+                      target="_blank"
+                      rel="noreferrer"
+                      class="mt-2 inline-flex items-center text-sm font-semibold text-blue-700 hover:text-blue-800"
+                    >
+                      Consulter la derniere preuve d execution
+                    </a>
+                  </div>
+                </section>
                 </div>
               </div>
-
-              <section class="rounded-2xl border border-slate-200 bg-white p-4">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                  <div class="flex items-center gap-2">
-                    <Clock :size="16" class="text-blue-600" />
-                    <div>
-                      <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Historique</p>
-                      <p class="text-sm text-slate-600">Statut, commentaire et execution automatique par test case.</p>
-                    </div>
-                  </div>
-
-                  <button class="btn btn-secondary btn-sm" @click="toggleItemHistory(item.id)">
-                    {{ showItemHistory[item.id] ? 'Masquer l historique' : 'Afficher l historique' }}
-                  </button>
-                </div>
-
-                <div v-if="historyLoadingByItemId[item.id]" class="mt-4 text-sm text-slate-500">
-                  Chargement de l'historique...
-                </div>
-
-                <div v-else-if="showItemHistory[item.id]" class="mt-4 space-y-3">
-                  <div v-if="item.history?.length" class="space-y-3">
-                    <div
-                      v-for="change in item.history"
-                      :key="change.id"
-                      class="rounded-xl border border-slate-200 bg-slate-50 p-4"
-                    >
-                      <div class="flex flex-wrap items-start justify-between gap-2">
-                        <p class="text-sm font-semibold text-slate-900">{{ historySummary(change) }}</p>
-                        <span class="text-xs text-slate-500">{{ formatTimestamp(change.created_at) }}</span>
-                      </div>
-                      <p v-if="historyDetail(change)" class="mt-2 text-sm text-slate-600 whitespace-pre-wrap">{{ historyDetail(change) }}</p>
-                    </div>
-                  </div>
-                  <p v-else class="text-sm text-slate-500">Aucun historique disponible pour ce test case.</p>
-                </div>
-              </section>
             </div>
           </article>
         </div>
@@ -1313,6 +1487,24 @@ onBeforeUnmount(() => {
                 <p v-if="input.description" class="muted text-xs mt-1">{{ input.description }}</p>
               </div>
             </div>
+
+            <div v-if="currentRunProfile.last_generated_plan?.steps?.length">
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-600">Actions prevues</p>
+              <ol class="mt-2 space-y-2 text-sm text-slate-700">
+                <li v-for="(step, index) in currentRunProfile.last_generated_plan.steps" :key="`modal-step-${index}`" class="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                  {{ index + 1 }}. {{ summarizePlanStep(step) }}
+                </li>
+              </ol>
+            </div>
+
+            <div v-if="currentRunProfile.last_generated_plan?.asserts?.length">
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-600">Verifications prevues</p>
+              <ul class="mt-2 space-y-2 text-sm text-slate-700">
+                <li v-for="(assertion, index) in currentRunProfile.last_generated_plan.asserts" :key="`modal-assert-${index}`" class="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                  {{ summarizePlanAssert(assertion) }}
+                </li>
+              </ul>
+            </div>
           </div>
 
           <div class="grid">
@@ -1356,10 +1548,210 @@ onBeforeUnmount(() => {
 </template>
 
 <style>
+.compact-info-card {
+  gap: 1rem;
+}
+
+.info-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.info-stat-chip {
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 1rem;
+  background: #f8fafc;
+  padding: 0.85rem 0.95rem;
+}
+
+.info-stat-label {
+  margin-bottom: 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.info-sections-grid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.info-section {
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 1rem;
+  background: #ffffff;
+  padding: 0.95rem 1rem;
+}
+
+.info-section-title {
+  margin-bottom: 0.4rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.info-section-content {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: #334155;
+}
+
+.info-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: #334155;
+}
+
+.info-list li + li {
+  margin-top: 0.45rem;
+}
+
+.qa-card-status-field {
+  min-width: min(100%, 180px);
+}
+
+.qa-status-select {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  color: #0f172a;
+  padding: 0.68rem 2.4rem 0.68rem 0.95rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.2;
+  min-height: 2.7rem;
+}
+
+.qa-status-select:focus {
+  outline: none;
+  border-color: rgba(37, 99, 235, 0.5);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.14);
+}
+
+.qa-case-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.qa-case-description {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.qa-run-button {
+  min-height: 2.7rem;
+  justify-content: center;
+  padding-inline: 1rem;
+  min-width: 220px;
+  white-space: nowrap;
+}
+
+.run-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(15, 23, 42, 0.38);
+  backdrop-filter: blur(6px);
+}
+
+.run-modal-card {
+  width: min(100%, 780px);
+  max-height: calc(100vh - 3rem);
+  overflow: auto;
+}
+
+.project-execution-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.78fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.project-execution-copy {
+  min-width: 0;
+}
+
+.project-execution-copy.compact {
+  padding: 0.1rem 0;
+}
+
+.project-execution-title {
+  display: -webkit-box;
+  margin-top: 0.15rem;
+  max-width: 26ch;
+  font-size: clamp(1.25rem, 2vw, 1.7rem);
+  font-weight: 700;
+  line-height: 1.1;
+  color: #0f172a;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.project-execution-side {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.project-execution-side.compact {
+  gap: 0.65rem;
+}
+
+.project-execution-app-card {
+  width: 100%;
+}
+
+.project-execution-app-card.compact {
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 1rem;
+  background: #ffffff;
+  padding: 0.9rem 1rem;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+}
+
+.project-execution-app-card .muted {
+  margin-top: 0.3rem;
+  line-height: 1.45;
+}
+
 .project-context-label {
   margin: 0 0 0.35rem;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 700;
+  color: #475569;
+}
+
+.project-execution-kicker {
+  margin: 0 0 0.25rem;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #2563eb;
+}
+
+.project-execution-subtitle.compact {
+  margin-top: 0.45rem;
+  max-width: 62ch;
+  font-size: 0.95rem;
+  line-height: 1.5;
   color: #475569;
 }
 
@@ -1369,6 +1761,10 @@ onBeforeUnmount(() => {
   margin-bottom: 0.9rem;
 }
 
+.execution-checklist-selector.compact {
+  margin-bottom: 0;
+}
+
 .execution-checklist-selector select {
   width: 100%;
   border: 1px solid rgba(148, 163, 184, 0.3);
@@ -1376,5 +1772,35 @@ onBeforeUnmount(() => {
   background: #ffffff;
   color: #0f172a;
   padding: 0.7rem 0.85rem;
+}
+
+.test-case-section-note {
+  max-width: 58ch;
+  text-align: left;
+}
+
+@media (max-width: 1100px) {
+  .project-execution-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .project-execution-title {
+    max-width: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .qa-card-status-field {
+    min-width: 100%;
+  }
+
+  .qa-run-button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .info-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 </style>

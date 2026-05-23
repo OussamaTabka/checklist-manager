@@ -21,6 +21,16 @@ const errorMessage = ref('')
 const deliveryNotice = ref('')
 const selectedRole = ref('')
 const openUserMenuId = ref(null)
+const showUserForm = ref(false)
+const availableProjectManagers = ref([])
+const loadingProjectManagers = ref(false)
+const deleteModalError = ref('')
+const deleteModal = reactive({
+  open: false,
+  loading: false,
+  user: null,
+  replacementOwnerId: '',
+})
 
 const form = reactive({
   id: null,
@@ -72,6 +82,33 @@ function resetForm() {
   form.name = ''
   form.email = ''
   form.role = 'testeur'
+  showUserForm.value = false
+}
+
+function closeDeleteModal() {
+  deleteModal.open = false
+  deleteModal.loading = false
+  deleteModal.user = null
+  deleteModal.replacementOwnerId = ''
+  deleteModalError.value = ''
+}
+
+function userOwnedProjectsCount(user) {
+  return Number(user?.owned_projects_count || 0)
+}
+
+async function loadAvailableProjectManagers() {
+  loadingProjectManagers.value = true
+
+  try {
+    const data = await apiRequest('/available-project-managers', {}, auth.token)
+    availableProjectManagers.value = Array.isArray(data?.data) ? data.data : []
+  } catch (error) {
+    availableProjectManagers.value = []
+    deleteModalError.value = localizeError(error, 'error_generic', settings.language)
+  } finally {
+    loadingProjectManagers.value = false
+  }
 }
 
 function buildUsersQuery(page, status) {
@@ -119,6 +156,7 @@ async function loadUserLists(activePage = activePagination.current_page || 1, ar
 
 function editUser(user) {
   closeUserMenu()
+  showUserForm.value = true
   form.id = user.id
   form.name = user.name
   form.email = user.email
@@ -249,7 +287,7 @@ function formatBlockingResources(data) {
     .join(', ')
 }
 
-async function permanentlyDeleteUser(user) {
+async function openPermanentDeleteModal(user) {
   closeUserMenu()
   errorMessage.value = ''
   deliveryNotice.value = ''
@@ -258,20 +296,63 @@ async function permanentlyDeleteUser(user) {
     return
   }
 
+  deleteModal.user = user
+  deleteModal.open = true
+  deleteModal.replacementOwnerId = ''
+  deleteModalError.value = ''
+
+  if (userOwnedProjectsCount(user) > 0 && availableProjectManagers.value.length === 0) {
+    await loadAvailableProjectManagers()
+  }
+}
+
+async function permanentlyDeleteUser() {
+  const user = deleteModal.user
+
+  if (!user) {
+    return
+  }
+
+  if (userOwnedProjectsCount(user) > 0 && !deleteModal.replacementOwnerId) {
+    deleteModalError.value = tr('user_delete_reassign_projects_required', {}, settings.language)
+    return
+  }
+
+  deleteModal.loading = true
+  deleteModalError.value = ''
+
   try {
-    await apiRequest(`/users/${user.id}/permanent`, { method: 'DELETE' }, auth.token)
+    await apiRequest(
+      `/users/${user.id}/permanent`,
+      {
+        method: 'DELETE',
+        body: {
+          replacement_owner_id: deleteModal.replacementOwnerId ? Number(deleteModal.replacementOwnerId) : null,
+        },
+      },
+      auth.token
+    )
+
     toast.success(tr('user_deleted_success', {}, settings.language))
+    closeDeleteModal()
     await loadUserLists(activePagination.current_page, archivedPagination.current_page)
   } catch (error) {
+    if (error.status === 422 && error.data?.requires_replacement_owner) {
+      deleteModalError.value = tr('user_delete_reassign_projects_required', {}, settings.language)
+      return
+    }
+
     if (error.status === 422 && error.data?.ownership_counts) {
       const details = formatBlockingResources(error.data)
-      errorMessage.value = details
+      deleteModalError.value = details
         ? tr('user_delete_blocked', { details }, settings.language)
         : localizeError(error, 'error_generic', settings.language)
       return
     }
 
-    errorMessage.value = localizeError(error, 'error_generic', settings.language)
+    deleteModalError.value = localizeError(error, 'error_generic', settings.language)
+  } finally {
+    deleteModal.loading = false
   }
 }
 
@@ -296,12 +377,24 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="card stack">
-      <h2>{{ form.id ? `Modifier le role de l'utilisateur #${form.id}` : 'Créer un utilisateur' }}</h2>
+      <h2 v-if="showUserForm || form.id">{{ form.id ? `Modifier le role de l'utilisateur #${form.id}` : 'Creer un utilisateur' }}</h2>
+
+      <div class="users-form-header">
+        <button
+          v-if="!showUserForm && !form.id"
+          class="btn btn-primary"
+          type="button"
+          @click="showUserForm = true"
+          data-testid="users-btn-open-create"
+        >
+          Créer utilisateur
+        </button>
+      </div>
 
       <p v-if="errorMessage" class="error" data-testid="users-msg-error">{{ errorMessage }}</p>
       <p v-if="deliveryNotice" class="muted">{{ deliveryNotice }}</p>
 
-      <form class="stack" @submit.prevent="submitUser" data-testid="users-form">
+      <form v-if="showUserForm || form.id" class="stack" @submit.prevent="submitUser" data-testid="users-form">
         <div class="grid">
           <div class="field">
             <label>Nom complet</label>
@@ -328,9 +421,13 @@ onBeforeUnmount(() => {
           <button class="btn btn-primary" type="submit" data-testid="users-btn-submit">
             {{ form.id ? 'Enregistrer le role' : "Creer l'utilisateur" }}
           </button>
-          <button class="btn btn-secondary" type="button" @click="resetForm">Reinitialiser</button>
+          <button class="btn btn-secondary" type="button" @click="resetForm">
+            {{ form.id ? 'Annuler' : 'Reinitialiser' }}
+          </button>
         </div>
       </form>
+
+      
     </div>
 
     <div class="card stack">
@@ -437,7 +534,7 @@ onBeforeUnmount(() => {
 
     <div class="card stack">
       <h2>Utilisateurs archives</h2>
-      <p class="muted">Les utilisateurs archives peuvent etre restaures ou supprimes definitivement s'ils ne possedent plus de donnees metier protegees.</p>
+      <p class="muted">Les utilisateurs archives peuvent etre restaures ou supprimes definitivement. Les projets encore possedes doivent etre reassignes avant suppression.</p>
       <p v-if="loadingArchived" class="muted">Chargement des utilisateurs archives...</p>
 
       <div v-if="!loadingArchived" class="table-wrap">
@@ -475,7 +572,7 @@ onBeforeUnmount(() => {
                       <RotateCcw :size="16" />
                       <span>Restaurer</span>
                     </button>
-                    <button type="button" class="user-row-menu-item danger" @click="permanentlyDeleteUser(user)">
+                    <button type="button" class="user-row-menu-item danger" @click="openPermanentDeleteModal(user)">
                       <Trash2 :size="16" />
                       <span>Supprimer definitivement</span>
                     </button>
@@ -509,10 +606,80 @@ onBeforeUnmount(() => {
         </button>
       </div>
     </div>
+
+    <div v-if="deleteModal.open" class="user-delete-modal-overlay" @click.self="closeDeleteModal">
+      <div class="card stack user-delete-modal-card" aria-modal="true" role="dialog">
+        <div class="stack stack-xs">
+          <h3>{{ tr('user_delete_reassign_projects_title', {}, settings.language) }}</h3>
+          <p class="muted">
+            {{ tr('confirm_delete_user_permanent', { name: deleteModal.user?.name || '' }, settings.language) }}
+          </p>
+          <p v-if="userOwnedProjectsCount(deleteModal.user) > 0" class="muted">
+            {{ tr('user_delete_reassign_projects_intro', { count: userOwnedProjectsCount(deleteModal.user) }, settings.language) }}
+          </p>
+        </div>
+
+        <div v-if="userOwnedProjectsCount(deleteModal.user) > 0" class="stack stack-sm">
+          <div class="field">
+            <label>{{ tr('user_delete_reassign_projects_select', {}, settings.language) }}</label>
+            <select
+              v-model="deleteModal.replacementOwnerId"
+              :disabled="loadingProjectManagers || deleteModal.loading"
+              data-testid="users-select-replacement-owner"
+            >
+              <option value="">{{ tr('user_delete_reassign_projects_placeholder', {}, settings.language) }}</option>
+              <option v-for="manager in availableProjectManagers" :key="manager.id" :value="String(manager.id)">
+                {{ manager.name }} - {{ manager.email }}
+              </option>
+            </select>
+          </div>
+
+          <p v-if="loadingProjectManagers" class="muted">Chargement des chefs de projet...</p>
+          <p v-else-if="availableProjectManagers.length === 0" class="error">
+            {{ tr('user_delete_reassign_projects_none', {}, settings.language) }}
+          </p>
+          <p class="muted">{{ tr('user_delete_reassign_projects_hint', {}, settings.language) }}</p>
+        </div>
+
+        <p v-if="deleteModalError" class="error">{{ deleteModalError }}</p>
+
+        <div class="actions">
+          <button
+            class="btn btn-danger"
+            type="button"
+            :disabled="deleteModal.loading || loadingProjectManagers || (userOwnedProjectsCount(deleteModal.user) > 0 && availableProjectManagers.length === 0)"
+            @click="permanentlyDeleteUser"
+          >
+            {{ deleteModal.loading ? 'Suppression...' : 'Confirmer la suppression' }}
+          </button>
+          <button class="btn btn-secondary" type="button" :disabled="deleteModal.loading" @click="closeDeleteModal">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
   </section>
 </template>
 
 <style scoped>
+.users-form-header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.users-form-empty {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 92px;
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.55);
+  text-align: center;
+  padding: 1.25rem;
+}
+
 .user-row-actions {
   position: relative;
   display: flex;
@@ -552,6 +719,21 @@ onBeforeUnmount(() => {
 
 .users-actions-cell {
   width: 110px;
+}
+
+.user-delete-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(15, 23, 42, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.user-delete-modal-card {
+  width: min(100%, 34rem);
 }
 
 .user-row-menu-item {
@@ -601,5 +783,24 @@ onBeforeUnmount(() => {
 
 .dark .user-row-menu-item.danger {
   color: #fca5a5;
+}
+
+.dark .user-delete-modal-card {
+  background: rgba(15, 23, 42, 0.96);
+}
+
+@media (max-width: 640px) {
+  .users-form-header {
+    justify-content: stretch;
+  }
+
+  .users-form-header .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .user-delete-modal-card {
+    width: 100%;
+  }
 }
 </style>

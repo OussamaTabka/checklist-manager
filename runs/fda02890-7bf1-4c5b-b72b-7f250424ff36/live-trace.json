@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "run_id": "fda02890-7bf1-4c5b-b72b-7f250424ff36",
+  "status": "done",
+  "updated_at": "2026-04-29T13:26:12.571Z",
+  "cases": [
+    {
+      "external_id": 85,
+      "title": "Session expires after inactivity",
+      "status": "passed",
+      "execution_trace": [
+        "[chrome] Browser context started",
+        "[chrome] Step 1: goto https://www.apple.com/tn -> ok (2155ms)",
+        "[chrome] Assert 1: expect_visible css=body -> ok (83ms)",
+        "[chrome] Assert 2: expect_url_contains 'www.apple.com' -> ok (0ms)",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

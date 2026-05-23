@@ -18,6 +18,8 @@ class VersionItemController extends Controller
 
     public function updateStatus(Request $request, VersionItem $versionItem)
     {
+        $this->authorizeVersionItemAccess($versionItem);
+
         $data = $request->validate([
             'status' => ['required', 'in:Not Tested,Passed,Failed,Blocked'],
         ]);
@@ -65,6 +67,8 @@ class VersionItemController extends Controller
      */
     public function getHistory(VersionItem $versionItem)
     {
+        $this->authorizeVersionItemAccess($versionItem);
+
         // Get all changes with user info
         $changes = $versionItem->changes()
             ->with('changedBy:id,name,email')
@@ -203,5 +207,14 @@ class VersionItemController extends Controller
             'tested_at' => $versionItem->tested_at,
             'current_status' => $versionItem->status,
         ]);
+    }
+
+    private function authorizeVersionItemAccess(VersionItem $versionItem): void
+    {
+        $versionItem->loadMissing('version.project');
+        $project = $versionItem->version?->project;
+        abort_unless($project, 404, 'Project not found for this version item.');
+
+        $this->authorize('view', $project);
     }
 }

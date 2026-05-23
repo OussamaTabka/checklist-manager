@@ -1,0 +1,16 @@
+{
+    "run_id": "2861edf0-e9d9-4bb3-973e-7b690ce5a7f6",
+    "external_id": 100,
+    "test_case_title": "Critere 02 : Given a patient selects an available slot and provides required inf...",
+    "test_case_description": "Given a patient selects an available slot and provides required information, When the booking is confirmed, Then the appointment is created and a confirmation message is shown.\n\nResultat attendu : Le critere est respecte.",
+    "test_case_text": "Critere 02 : Given a patient selects an available slot and provides required inf...\nGiven a patient selects an available slot and provides required information, When the booking is confirmed, Then the appointment is created and a confirmation message is shown.\n\nResultat attendu : Le critere est respecte.",
+    "base_url": "https://www.apple.com/tn",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "High",
+    "criticality": "Critical",
+    "current_status": "Not Tested",
+    "project_version_id": 21,
+    "target_type": "version_item"
+}

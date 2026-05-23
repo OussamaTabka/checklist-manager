@@ -5,6 +5,7 @@ import { localizeError, localizeMessage } from '@/lib/localization'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
 import { useToastStore } from '@/stores/toast'
+import LogoHeader from '@/components/LogoHeader.vue'
 
 const auth = useAuthStore()
 const settings = useSettingsStore()
@@ -54,6 +55,10 @@ async function onSubmit() {
 
 <template>
   <section class="page page-auth-sm">
+    <div class="login-brand-row">
+      <LogoHeader />
+    </div>
+
     <div class="card stack">
       <div>
         <h1>Connexion</h1>
@@ -100,3 +105,12 @@ async function onSubmit() {
     </div>
   </section>
 </template>
+
+<style scoped>
+.login-brand-row {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 1rem;
+}
+</style>

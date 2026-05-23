@@ -7,8 +7,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ChecklistItemHistory extends Model
 {
-    protected $table = 'checklist_item_history';
-
     protected $fillable = [
         'checklist_item_id',
         'changed_by',

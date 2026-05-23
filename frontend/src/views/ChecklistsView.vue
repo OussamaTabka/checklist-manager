@@ -1,6 +1,6 @@
 <script setup>
-import { onMounted, reactive, ref, computed, watch } from 'vue'
-import { CirclePlus, Filter, Search, X } from 'lucide-vue-next'
+import { onBeforeUnmount, onMounted, reactive, ref, computed, watch } from 'vue'
+import { Archive, CirclePlus, Ellipsis, Filter, Pencil, Search, X } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import { apiRequest, withQuery } from '@/lib/api'
 import { localizeError, localizeMessage } from '@/lib/localization'
@@ -16,8 +16,11 @@ const router = useRouter()
 const projectId = computed(() => String(route.query.projectId || '').trim())
 
 const checklists = ref([])
+const archivedChecklists = ref([])
 const pagination = reactive({ current_page: 1, last_page: 1 })
+const archivedPagination = reactive({ current_page: 1, last_page: 1 })
 const loading = ref(false)
+const loadingArchived = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const submitting = ref(false)
@@ -26,6 +29,8 @@ const selectedExistingItemId = ref('')
 const itemSearchQueries = ref({}) // Track search input for each item field
 const showChecklistForm = ref(false)
 const showAdvancedFilters = ref(false)
+const openChecklistMenuId = ref(null)
+const openArchivedChecklistMenuId = ref(null)
 
 const filters = reactive({
   name: '',
@@ -180,6 +185,7 @@ function openCreateChecklistFormFromQuery() {
 function closeChecklistForm() {
   resetForm()
   showChecklistForm.value = false
+  openChecklistMenuId.value = null
 }
 
 function clearAllFilters() {
@@ -211,6 +217,7 @@ function removeFilter(key) {
 }
 
 function editChecklist(checklist) {
+  openChecklistMenuId.value = null
   showChecklistForm.value = true
   form.id = checklist.id
   form.name = checklist.name
@@ -290,7 +297,31 @@ async function loadChecklists(page = 1) {
   }
 }
 
-async function loadAvailableItems() {
+async function loadArchivedChecklists(page = 1) {
+  loadingArchived.value = true
+  errorMessage.value = ''
+
+  try {
+    const data = await apiRequest(
+      withQuery('/checklists', { page, status: 'archived', ...(projectId.value ? { project_id: projectId.value } : {}) }),
+      {},
+      auth.token,
+    )
+    archivedChecklists.value = data.data || []
+    archivedPagination.current_page = data.current_page
+    archivedPagination.last_page = data.last_page
+  } catch (error) {
+    errorMessage.value = localizeError(error, 'error_generic', settings.language)
+  } finally {
+    loadingArchived.value = false
+  }
+}
+
+async function loadAvailableItems(force = false) {
+  if (!force && availableItems.value.length > 0) {
+    return
+  }
+
   try {
     const data = await apiRequest('/checklists/items/available', {}, auth.token)
     availableItems.value = data || []
@@ -332,6 +363,7 @@ async function submitChecklist() {
     resetForm()
     showChecklistForm.value = false
     await loadChecklists()
+    await loadArchivedChecklists(archivedPagination.current_page)
   } catch (error) {
     errorMessage.value = localizeError(error, 'error_generic', settings.language)
   } finally {
@@ -342,19 +374,71 @@ async function submitChecklist() {
 async function deleteChecklist(checklistId) {
   errorMessage.value = ''
   try {
+    openChecklistMenuId.value = null
     await apiRequest(`/checklists/${checklistId}`, { method: 'DELETE' }, auth.token)
-    toast.success(localizeMessage('Checklist supprimee avec succes.', settings.language))
+    toast.success(localizeMessage('Checklist archivee avec succes.', settings.language))
     await loadChecklists(pagination.current_page)
+    await loadArchivedChecklists(archivedPagination.current_page)
   } catch (error) {
     errorMessage.value = localizeError(error, 'error_generic', settings.language)
   }
 }
 
+async function restoreChecklist(checklistId) {
+  errorMessage.value = ''
+  try {
+    openArchivedChecklistMenuId.value = null
+    await apiRequest(`/checklists/${checklistId}/restore`, { method: 'POST' }, auth.token)
+    toast.success(localizeMessage('Checklist restauree avec succes.', settings.language))
+    await loadChecklists(pagination.current_page)
+    await loadArchivedChecklists(archivedPagination.current_page)
+  } catch (error) {
+    errorMessage.value = localizeError(error, 'error_generic', settings.language)
+  }
+}
+
+async function permanentlyDeleteChecklist(checklistId) {
+  errorMessage.value = ''
+  try {
+    openArchivedChecklistMenuId.value = null
+    await apiRequest(`/checklists/${checklistId}/permanent`, { method: 'DELETE' }, auth.token)
+    toast.success(localizeMessage('Checklist supprimee definitivement avec succes.', settings.language))
+    await loadArchivedChecklists(archivedPagination.current_page)
+  } catch (error) {
+    errorMessage.value = localizeError(error, 'error_generic', settings.language)
+  }
+}
+
+function toggleChecklistMenu(checklistId) {
+  openChecklistMenuId.value = openChecklistMenuId.value === checklistId ? null : checklistId
+  openArchivedChecklistMenuId.value = null
+}
+
+function closeChecklistMenu() {
+  openChecklistMenuId.value = null
+  openArchivedChecklistMenuId.value = null
+}
+
+function toggleArchivedChecklistMenu(checklistId) {
+  openArchivedChecklistMenuId.value = openArchivedChecklistMenuId.value === checklistId ? null : checklistId
+  openChecklistMenuId.value = null
+}
+
+function handleWindowClick() {
+  closeChecklistMenu()
+}
+
 onMounted(async () => {
+  window.addEventListener('click', handleWindowClick)
   resetForm()
   await loadChecklists()
+  await loadArchivedChecklists()
   await loadAvailableItems()
   openCreateChecklistFormFromQuery()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('click', handleWindowClick)
 })
 
 watch(successMessage, (message) => {
@@ -391,7 +475,7 @@ watch(
           @click="openCreateChecklistForm"
         >
           <CirclePlus :size="16" />
-          <span>Créer une checklist</span>
+          <span>Créer checklist</span>
         </button>
       </div>
     </div>
@@ -590,7 +674,7 @@ watch(
 
         <div class="actions">
           <button class="btn btn-primary" type="submit" :disabled="submitting" data-testid="checklists-btn-submit">
-            {{ submitting ? 'Enregistrement...' : form.id ? 'Enregistrer les modifications' : 'Créer la checklist' }}
+            {{ submitting ? 'Enregistrement...' : form.id ? 'Enregistrer les modifications' : 'Enregistrer' }}
           </button>
           <button type="button" class="btn btn-secondary" @click="closeChecklistForm">Fermer</button>
         </div>
@@ -633,10 +717,27 @@ watch(
                 </span>
               </td>
               <td>{{ checklist.items?.length || 0 }}</td>
-              <td>
-                <div class="checklist-actions">
-                  <button v-if="auth.canManageChecklists" class="btn btn-secondary btn-sm" @click="editChecklist(checklist)">Modifier</button>
-                  <button v-if="auth.canManageChecklists" class="btn btn-danger btn-sm" @click="deleteChecklist(checklist.id)">Archiver</button>
+              <td class="checklists-actions-cell">
+                <div v-if="auth.canManageChecklists" class="checklist-actions" @click.stop>
+                  <button
+                    type="button"
+                    class="checklist-menu-trigger"
+                    aria-label="Ouvrir les actions de la checklist"
+                    @click.stop="toggleChecklistMenu(checklist.id)"
+                  >
+                    <Ellipsis :size="18" />
+                  </button>
+
+                  <div v-if="openChecklistMenuId === checklist.id" class="checklist-row-menu">
+                    <button type="button" class="checklist-row-menu-item" @click="editChecklist(checklist)">
+                      <Pencil :size="16" />
+                      <span>Modifier</span>
+                    </button>
+                    <button type="button" class="checklist-row-menu-item danger" @click="deleteChecklist(checklist.id)">
+                      <Archive :size="16" />
+                      <span>Archiver</span>
+                    </button>
+                  </div>
                 </div>
               </td>
             </tr>
@@ -659,6 +760,87 @@ watch(
           class="btn btn-secondary btn-sm"
           :disabled="pagination.current_page >= pagination.last_page"
           @click="loadChecklists(pagination.current_page + 1)"
+        >
+          Suivant
+        </button>
+      </div>
+    </div>
+
+    <div v-if="auth.canManageChecklists" class="card stack">
+      <h2>Checklists archivees</h2>
+      <p class="muted">Retrouvez ici les checklists archivees et restaurez-les si besoin, ou supprimez-les definitivement.</p>
+
+      <p v-if="loadingArchived" class="muted">Chargement des checklists archivees...</p>
+
+      <div class="table-wrap" v-if="!loadingArchived">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Titre</th>
+              <th>Categorie</th>
+              <th>Statut</th>
+              <th>Nombre d items</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="checklist in archivedChecklists" :key="`archived-${checklist.id}`">
+              <td>{{ checklist.id }}</td>
+              <td>
+                <div class="checklist-row-link">
+                  <strong class="checklist-row-title">{{ checklist.name }}</strong>
+                  <div class="muted">{{ checklist.description || '-' }}</div>
+                </div>
+              </td>
+              <td>{{ checklist.category || '-' }}</td>
+              <td>
+                <span class="tag inactive">Archivee</span>
+              </td>
+              <td>{{ checklist.items?.length || 0 }}</td>
+              <td class="checklists-actions-cell">
+                <div class="checklist-actions" @click.stop>
+                  <button
+                    type="button"
+                    class="checklist-menu-trigger"
+                    aria-label="Ouvrir les actions de la checklist archivee"
+                    @click.stop="toggleArchivedChecklistMenu(checklist.id)"
+                  >
+                    <Ellipsis :size="18" />
+                  </button>
+
+                  <div v-if="openArchivedChecklistMenuId === checklist.id" class="checklist-row-menu">
+                    <button type="button" class="checklist-row-menu-item" @click="restoreChecklist(checklist.id)">
+                      <Archive :size="16" />
+                      <span>Restaurer</span>
+                    </button>
+                    <button type="button" class="checklist-row-menu-item danger" @click="permanentlyDeleteChecklist(checklist.id)">
+                      <Archive :size="16" />
+                      <span>Supprimer definitivement</span>
+                    </button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="archivedChecklists.length === 0">
+              <td colspan="6" class="muted">Aucune checklist archivee pour le moment.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination">
+        <button
+          class="btn btn-secondary btn-sm"
+          :disabled="archivedPagination.current_page <= 1"
+          @click="loadArchivedChecklists(archivedPagination.current_page - 1)"
+        >
+          Precedent
+        </button>
+        <button
+          class="btn btn-secondary btn-sm"
+          :disabled="archivedPagination.current_page >= archivedPagination.last_page"
+          @click="loadArchivedChecklists(archivedPagination.current_page + 1)"
         >
           Suivant
         </button>
@@ -718,16 +900,73 @@ watch(
 }
 
 .checklist-actions {
+  position: relative;
   display: flex;
-  align-items: center;
   justify-content: flex-end;
-  gap: 0.6rem;
-  flex-wrap: wrap;
 }
 
-.checklist-actions .btn {
-  min-width: 7.25rem;
+.checklists-actions-cell {
+  width: 7rem;
+}
+
+.checklist-menu-trigger {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  background: #fff;
+  color: #475569;
+  transition: border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.checklist-menu-trigger:hover {
+  border-color: rgba(125, 211, 252, 1);
+  color: #0f172a;
+  box-shadow: 0 14px 24px -22px rgba(15, 23, 42, 0.45);
+}
+
+.checklist-row-menu {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  right: 0;
+  z-index: 20;
+  min-width: 12rem;
+  padding: 0.45rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(226, 232, 240, 1);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 22px 40px -28px rgba(15, 23, 42, 0.35);
+}
+
+.checklist-row-menu-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.65rem;
+  border: none;
+  background: transparent;
+  border-radius: 0.85rem;
+  padding: 0.75rem 0.85rem;
+  color: #334155;
+  text-align: left;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.checklist-row-menu-item:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.checklist-row-menu-item.danger {
+  color: #dc2626;
+}
+
+.checklist-row-menu-item.danger:hover {
+  background: #fff1f2;
+  color: #b91c1c;
 }
 
 .dark .story-detail-metric {
@@ -749,6 +988,26 @@ watch(
 
 .dark .checklist-row-link:hover .checklist-row-title {
   color: #93c5fd;
+}
+
+.dark .checklist-menu-trigger {
+  background: rgba(15, 23, 42, 0.92);
+  border-color: rgba(51, 65, 85, 0.9);
+  color: #cbd5e1;
+}
+
+.dark .checklist-row-menu {
+  background: rgba(15, 23, 42, 0.98);
+  border-color: rgba(51, 65, 85, 0.9);
+}
+
+.dark .checklist-row-menu-item {
+  color: #e2e8f0;
+}
+
+.dark .checklist-row-menu-item:hover {
+  background: rgba(30, 41, 59, 0.92);
+  color: #f8fafc;
 }
 </style>
 

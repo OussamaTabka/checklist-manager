@@ -6,10 +6,12 @@ import { formatNotificationDate, localizedNotificationFilters, notificationFilte
 import { localizeError, localizeNotifications } from '@/lib/localization'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
+import { useToastStore } from '@/stores/toast'
 import { useRoute, useRouter } from 'vue-router'
 
 const auth = useAuthStore()
 const settings = useSettingsStore()
+const toast = useToastStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -142,11 +144,20 @@ async function openNotification(item) {
     }
 
     await router.push(item.link || '/notifications')
+    maybeShowDeletedStoryToast(item)
   } catch (error) {
     pageError.value = localizeError(error, 'notification_open_failed', settings.language)
   } finally {
     actionBusyId.value = ''
   }
+}
+
+function maybeShowDeletedStoryToast(item) {
+  if (item?.type !== 'user_story_deleted') {
+    return
+  }
+
+  toast.info('La user story concernee a ete supprimee. Verifiez les checklists associees.')
 }
 
 async function archiveNotification(item) {

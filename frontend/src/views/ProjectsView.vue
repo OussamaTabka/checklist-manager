@@ -49,6 +49,7 @@ const archivedPagination = reactive({
 const users = ref([])
 const listError = ref('')
 const createError = ref('')
+const importFileError = ref('')
 const successMessage = ref('')
 const loadingProjects = ref(false)
 const loadingArchivedProjects = ref(false)
@@ -385,7 +386,10 @@ async function submitProject() {
       successMessage.value = tr('project_updated_success', {}, settings.language)
     } else {
       if (importedStoriesFile.value && !importedStoriesAnalysis.value) {
-        await analyzeSelectedUserStoriesFile()
+        const importIsValid = await analyzeSelectedUserStoriesFile()
+        if (!importIsValid) {
+          return
+        }
       }
 
       const manualStoriesPayload = buildManualStoriesPayload()
@@ -437,36 +441,48 @@ async function submitProject() {
 }
 
 async function analyzeSelectedUserStoriesFile() {
-  createError.value = ''
+  importFileError.value = ''
   importedStoriesAnalysis.value = null
 
   if (!importedStoriesFile.value) {
-    return
+    return true
   }
 
   importValidationLoading.value = true
 
   try {
     importedStoriesAnalysis.value = await analyzeImportedUserStories(importedStoriesFile.value)
+    return true
   } catch (error) {
-    createError.value = localizeError(error, 'user_story_file_read_failed', settings.language)
+    importFileError.value = localizeError(error, 'user_story_file_read_failed', settings.language)
+    return false
   } finally {
     importValidationLoading.value = false
   }
 }
 
 async function onUserStoriesFileChange(event) {
+  importFileError.value = ''
   importedStoriesFile.value = event.target.files?.[0] || null
   importedStoriesAnalysis.value = null
 
   if (importedStoriesFile.value) {
-    await analyzeSelectedUserStoriesFile()
+    const importIsValid = await analyzeSelectedUserStoriesFile()
+
+    if (!importIsValid) {
+      importedStoriesFile.value = null
+
+      if (userStoriesFileInput.value) {
+        userStoriesFileInput.value.value = ''
+      }
+    }
   }
 }
 
 function clearUserStoriesFile() {
   importedStoriesFile.value = null
   importedStoriesAnalysis.value = null
+  importFileError.value = ''
 
   if (userStoriesFileInput.value) {
     userStoriesFileInput.value.value = ''
@@ -541,6 +557,28 @@ function getHostname(url) {
   }
 }
 
+function importedStoryErrorText(error) {
+  const message = String(error?.message || '')
+
+  if (
+    message.includes('Le titre de la User Story est obligatoire.') ||
+    message.includes('La description de la User Story est obligatoire.') ||
+    message.includes('Les crit')
+  ) {
+    return 'user stories mal structurées'
+  }
+
+  return message
+}
+
+function projectNoTesterText() {
+  return 'Aucun testeur assigné'
+}
+
+function projectNoUrlText() {
+  return 'Aucune URL renseignée'
+}
+
 function openCreateForm() {
   createError.value = ''
   successMessage.value = ''
@@ -559,6 +597,16 @@ function consumeCreateQuery() {
   router.replace({ query: nextQuery })
 }
 
+function consumeEditQuery() {
+  if (!route.query.edit) {
+    return
+  }
+
+  const nextQuery = { ...route.query }
+  delete nextQuery.edit
+  router.replace({ query: nextQuery })
+}
+
 function openCreateFormFromQuery() {
   if (!auth.canManageProjects || route.query.create !== '1') {
     return
@@ -566,6 +614,22 @@ function openCreateFormFromQuery() {
 
   openCreateForm()
   consumeCreateQuery()
+}
+
+function openEditFormFromQuery() {
+  if (!auth.canManageProjects || !route.query.edit) {
+    return
+  }
+
+  const projectId = String(route.query.edit)
+  const project = projects.value.find((entry) => String(entry.id) === projectId)
+
+  if (!project) {
+    return
+  }
+
+  editProject(project)
+  consumeEditQuery()
 }
 
 function editProject(project) {
@@ -647,6 +711,7 @@ onMounted(async () => {
   window.addEventListener('click', closeProjectMenu)
   await Promise.all([loadProjectLists(1, 1), loadProjectMetadata()])
   openCreateFormFromQuery()
+  openEditFormFromQuery()
 })
 
 onBeforeUnmount(() => {
@@ -661,6 +726,13 @@ watch(
   () => route.query.create,
   () => {
     openCreateFormFromQuery()
+  },
+)
+
+watch(
+  () => route.query.edit,
+  () => {
+    openEditFormFromQuery()
   },
 )
 
@@ -698,23 +770,29 @@ watch(successMessage, (message) => {
 
 <template>
   <section class="page stack">
-    <div class="dashboard-command">
-      <div>
-        <p class="dashboard-eyebrow">{{ projectPageCopy.kicker }}</p>
-        <h1 class="page-title-icon">
-          <Rocket :size="30" :stroke-width="2.3" />
-          <span>{{ projectPageCopy.title }}</span>
-        </h1>
-        <p class="muted page-subtitle">{{ projectPageCopy.description }}</p>
-      </div>
-    </div>
+    <div class="dashboard-command projects-dashboard-command">
+      <div class="projects-hero-layout">
+        <div>
+          <p class="dashboard-eyebrow">{{ projectPageCopy.kicker }}</p>
+          <h1 class="page-title-icon">
+            <Rocket :size="30" :stroke-width="2.3" />
+            <span>{{ projectPageCopy.title }}</span>
+          </h1>
+          <p class="muted page-subtitle">{{ projectPageCopy.description }}</p>
+        </div>
 
-    <div class="story-detail-metrics">
-      <article v-for="metric in projectMetrics" :key="metric.label" class="story-detail-metric">
-        <span>{{ metric.label }}</span>
-        <strong>{{ metric.value }}</strong>
-        <p class="muted">{{ metric.caption }}</p>
-      </article>
+        <div v-if="auth.canManageProjects" class="projects-hero-actions">
+          <button
+            class="btn btn-primary create-project-btn"
+            type="button"
+            @click="openCreateForm"
+            data-testid="projects-btn-open-create"
+          >
+            <CirclePlus :size="16" :stroke-width="2" />
+            <span>Creer un projet</span>
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="card stack stack-gap-sm">
@@ -786,12 +864,12 @@ watch(successMessage, (message) => {
       </div>
     </div>
 
-    <div v-if="auth.canManageProjects && showProjectForm" class="card stack">
+    <div v-if="auth.canManageProjects && showProjectForm" class="card stack" >
       <div class="section-divider">
         <h2 class="section-heading-with-icon">
           <Pencil v-if="form.id" :size="20" :stroke-width="2.2" />
-          <CirclePlus v-else :size="20" :stroke-width="2.2" />
-          <span>{{ form.id ? 'Modifier le projet' : 'Créer un projet' }}</span>
+          <CirclePlus v-else :size="20" :stroke-width="2.2"  />
+          <span>{{ form.id ? 'Modifier le projet' : 'Créer projet' }}</span>
         </h2>
       </div>
 
@@ -973,6 +1051,7 @@ watch(successMessage, (message) => {
             <div class="field">
               <label class="field-label-strong">Fichier de User Stories</label>
               <input ref="userStoriesFileInput" type="file" accept=".csv,.xlsx,.json" @change="onUserStoriesFileChange" />
+              <p v-if="importFileError" class="error">{{ importFileError }}</p>
               <p class="muted helper-text">
                 Formats acceptés : CSV, XLSX ou JSON. Cette option est recommandée pour importer rapidement un backlog volumineux.
               </p>
@@ -995,7 +1074,7 @@ watch(successMessage, (message) => {
             <div v-if="importedStoriesAnalysis?.errors?.length" class="stack stack-gap-sm">
               <p class="muted">Lignes non importées :</p>
               <div v-for="error in importedStoriesAnalysis.errors.slice(0, 5)" :key="`${error.row}-${error.message}`" class="error-row">
-                Ligne {{ error.row }} : {{ error.message }}
+                Ligne {{ error.row }} : {{ importedStoryErrorText(error) }}
               </div>
             </div>
           </div>
@@ -1031,7 +1110,71 @@ watch(successMessage, (message) => {
       <p v-if="listError" class="error" data-testid="projects-msg-error-list">{{ listError }}</p>
       <p v-if="loadingProjects" class="muted">Chargement des projets...</p>
 
-      <div v-if="!loadingProjects && filteredProjects.length > 0" class="projects-grid" data-testid="projects-table">
+      <div v-if="!loadingProjects && filteredProjects.length > 0" class="table-wrap" data-testid="projects-table">
+        <table class="projects-lines-table">
+          <thead>
+            <tr>
+              <th>Projet</th>
+              <th>User Stories</th>
+              <th>Testeurs</th>
+              <th>URL</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="project in filteredProjects" :key="`line-${project.id}`">
+              <td>
+                <div class="project-line-main">
+                  <RouterLink :to="{ name: 'project-detail', params: { id: project.id } }" class="project-title-link">
+                    {{ project.name }}
+                  </RouterLink>
+                  <p class="muted meta-line project-line-meta">
+                    <span>#{{ project.id }}</span>
+                    <span class="project-card-dot" aria-hidden="true"></span>
+                    <span>{{ project.creator?.name || 'Chef de projet' }}</span>
+                  </p>
+                </div>
+              </td>
+              <td>{{ project.user_stories_count || 0 }}</td>
+              <td>
+                <div class="project-line-testers">
+                  <span v-for="tester in project.testers || []" :key="tester.id" class="mini-chip tester-chip">{{ tester.name }}</span>
+                  <span v-if="!project.testers || project.testers.length === 0" class="muted project-line-fallback">{{ projectNoTesterText() }}</span>
+                  <span v-if="!project.testers || project.testers.length === 0" class="muted">Aucun testeur assignÃ©</span>
+                </div>
+              </td>
+              <td>
+                <a v-if="project.app_url" :href="project.app_url" target="_blank" rel="noopener noreferrer" class="muted app-url-text">
+                  {{ getHostname(project.app_url) }}
+                </a>
+                <span v-else class="muted app-url-text project-line-fallback">{{ projectNoUrlText() }}</span>
+                <span v-if="false" class="muted app-url-text">Aucune URL renseignÃ©e</span>
+              </td>
+              <td class="projects-actions-cell">
+                <div v-if="canManageProject(project)" class="project-card-actions" @click.stop>
+                  <button
+                    type="button"
+                    class="project-menu-trigger"
+                    aria-label="Ouvrir les actions du projet"
+                    @click.stop="toggleProjectMenu(project.id)"
+                  >
+                    <Ellipsis :size="18" />
+                  </button>
+
+                  <div v-if="openProjectMenuId === project.id" class="project-row-menu">
+                    <button type="button" class="project-row-menu-item danger" @click="closeProjectMenu(); deleteProject(project.id)">
+                      <Archive :size="16" />
+                      <span>Archiver</span>
+                    </button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div v-if="false && !loadingProjects && filteredProjects.length > 0" class="projects-grid" data-testid="projects-cards-active">
         <article v-for="project in filteredProjects" :key="project.id" class="project-card">
           <div class="project-card-head">
             <div class="project-card-copy">
@@ -1136,7 +1279,66 @@ watch(successMessage, (message) => {
       <p v-if="listError" class="error">{{ listError }}</p>
       <p v-if="loadingArchivedProjects" class="muted">Chargement des projets archivés...</p>
 
-      <div v-if="!loadingArchivedProjects && archivedProjects.length > 0" class="projects-grid" data-testid="projects-table-archived">
+      <div v-if="!loadingArchivedProjects && archivedProjects.length > 0" class="table-wrap" data-testid="projects-table-archived">
+        <table class="projects-lines-table">
+          <thead>
+            <tr>
+              <th>Projet</th>
+              <th>User Stories</th>
+              <th>Testeurs</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="project in archivedProjects" :key="`archived-line-${project.id}`">
+              <td>
+                <div class="project-line-main">
+                  <h3 class="project-title-static">{{ project.name }}</h3>
+                  <p class="muted meta-line project-line-meta">
+                    <span>#{{ project.id }}</span>
+                    <span class="project-card-dot" aria-hidden="true"></span>
+                    <span>{{ project.creator?.name || 'Chef de projet' }}</span>
+                  </p>
+                </div>
+              </td>
+              <td>{{ project.user_stories_count || 0 }}</td>
+              <td>
+                <div class="project-line-testers">
+                  <span v-for="tester in project.testers || []" :key="tester.id" class="mini-chip tester-chip">{{ tester.name }}</span>
+                  <span v-if="!project.testers || project.testers.length === 0" class="muted">Aucun testeur assignÃ©</span>
+                </div>
+              </td>
+              <td><span class="muted app-url-text">Archivé</span></td>
+              <td class="projects-actions-cell">
+                <div v-if="canManageProject(project)" class="project-card-actions" @click.stop>
+                  <button
+                    type="button"
+                    class="project-menu-trigger"
+                    aria-label="Ouvrir les actions du projet archivé"
+                    @click.stop="toggleProjectMenu(`archived-${project.id}`)"
+                  >
+                    <Ellipsis :size="18" />
+                  </button>
+
+                  <div v-if="openProjectMenuId === `archived-${project.id}`" class="project-row-menu">
+                    <button type="button" class="project-row-menu-item" @click="restoreProject(project)">
+                      <RotateCcw :size="16" />
+                      <span>Restaurer</span>
+                    </button>
+                    <button type="button" class="project-row-menu-item danger" @click="permanentlyDeleteProject(project)">
+                      <Trash2 :size="16" />
+                      <span>Supprimer définitivement</span>
+                    </button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div v-if="false && !loadingArchivedProjects && archivedProjects.length > 0" class="projects-grid" data-testid="projects-cards-archived">
         <article v-for="project in archivedProjects" :key="`archived-${project.id}`" class="project-card archived-project-card">
           <div class="project-card-head">
             <div class="project-card-copy">
@@ -1265,6 +1467,67 @@ watch(successMessage, (message) => {
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
+}
+
+.projects-dashboard-command {
+  grid-template-columns: 1fr;
+}
+
+.projects-hero-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: flex-start;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.projects-hero-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.project-line-main {
+  min-width: 0;
+}
+
+.projects-lines-table {
+  table-layout: fixed;
+}
+
+.projects-lines-table th:first-child,
+.projects-lines-table td:first-child {
+  width: 44%;
+}
+
+.projects-lines-table .project-title-link,
+.projects-lines-table .project-title-static {
+  max-width: none;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.project-line-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.45rem;
+  font-size: 0.76rem;
+}
+
+.project-line-testers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.project-line-fallback + .muted {
+  display: none;
+}
+
+.projects-actions-cell {
+  width: 92px;
 }
 
 .manual-story-card,
@@ -1470,6 +1733,15 @@ watch(successMessage, (message) => {
 }
 
 @media (max-width: 720px) {
+  .projects-hero-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .projects-hero-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
   .story-source-summary,
   .manual-story-card-head {
     flex-direction: column;

@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.0",
+  "run_id": "995e3fea-65ff-4cc2-895d-b86419689707",
+  "runner_run_id": "runner-1779496013950",
+  "base_url_used": "http://localhost:5173",
+  "status": "done",
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 81,
+      "status": "passed",
+      "attempt": 1,
+      "duration_ms": 14240,
+      "error_type": null,
+      "error_message": null,
+      "generated_plan": {
+        "title": "TC-01 | Cas nominal",
+        "intent_summary": "Interpret the UI-oriented test case 'TC-01 | Cas nominal' and produce the safest executable browser plan possible.",
+        "coverage_type": "generic_ui",
+        "preflight_checks": [
+          {
+            "id": "page-accessible",
+            "kind": "page_accessible",
+            "label": "Initial target page is reachable",
+            "required": true,
+            "failure_message": "The target page could not be reached before executing the generated test plan."
+          }
+        ],
+        "steps": [
+          {
+            "action": "goto",
+            "url": "http://localhost:5173"
+          },
+          {
+            "action": "wait_for_selector",
+            "selector": {
+              "by": "css",
+              "value": "body"
+            },
+            "state": "visible",
+            "timeout_ms": 20000
+          },
+          {
+            "action": "screenshot",
+            "name": "generic-ui-baseline"
+          }
+        ],
+        "asserts": [
+          {
+            "type": "expect_visible",
+            "selector": {
+              "by": "css",
+              "value": "body"
+            }
+          }
+        ],
+        "expected_observations": [
+          "The UI behavior described by 'TC-01 | Cas nominal' should be observable without relying on a generic smoke assertion only."
+        ],
+        "diagnostics": [
+          {
+            "code": "GENERIC_UI_FALLBACK",
+            "message": "The case was only partially actionable, so the generated plan uses a safe generic UI validation instead of a misleading minimal script.",
+            "severity": "info"
+          }
+        ]
+      },
+      "failure_source": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      },
+      "execution_trace": [
+        "[chrome] Planning: browser context starting",
+        "[chrome] Planning: Interpret the UI-oriented test case 'TC-01 | Cas nominal' and produce the safest executable browser plan possible.",
+        "[chrome] Planning: precondition -> Target base URL must be reachable: http://localhost:5173",
+        "[chrome] Planning: precondition -> The checklist-manager target routes should be available with the expected test ids or visible UI elements.",
+        "[chrome] Planning: precondition -> Authenticated session bootstrap must succeed when the case requires an authenticated flow.",
+        "[chrome] Preflight 0: page_accessible -> ok (http://localhost:5173)",
+        "[chrome] Preflight 1: Initial target page is reachable -> ok",
+        "[chrome] Step 2: wait_for_selector css=body state=visible -> ok (33ms)",
+        "[chrome] Step 3: screenshot generic-ui-baseline -> ok (149ms)",
+        "[chrome] Assert 1: expect_visible css=body -> ok (16ms)",
+        "[chrome] Failure analysis: none",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

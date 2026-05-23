@@ -4,12 +4,17 @@ export type ResultErrorType =
   | 'missing_env_var'
   | 'selector_not_found'
   | 'navigation_timeout'
+  | 'url_unreachable'
   | 'assertion_failed'
+  | 'authentication_failed'
+  | 'timeout'
+  | 'script_generation_failed'
   | 'precondition_failed'
   | 'unsupported_test_case'
   | 'input_data_missing'
   | 'ambiguous_target'
   | 'unexpected_error'
+  | 'unknown'
 
 export interface CaseArtifacts {
   trace_path: string | null
@@ -101,11 +106,43 @@ export interface NormalizedError {
   error_message: string
 }
 
+function isUrlReachabilityError(lower: string): boolean {
+  return [
+    'err_name_not_resolved',
+    'err_connection_refused',
+    'err_connection_timed_out',
+    'err_connection_closed',
+    'err_internet_disconnected',
+    'econnrefused',
+    'enotfound',
+    'net::',
+    'dns',
+    'socket hang up',
+  ].some((pattern) => lower.includes(pattern))
+}
+
+function isAuthenticationError(lower: string): boolean {
+  return [
+    'api login failed',
+    'auth verify failed',
+    'csrf bootstrap failed',
+    'authentication failed',
+    'unauthorized',
+    'forbidden',
+    'invalid credentials',
+    'login failed',
+  ].some((pattern) => lower.includes(pattern))
+}
+
+function isSelectorError(lower: string): boolean {
+  return lower.includes('selector') || lower.includes('locator')
+}
+
 export function normalizeError(error: unknown): NormalizedError {
   if (error instanceof MissingEnvVarError) {
     return {
       error_type: 'missing_env_var',
-      error_message: error.message,
+      error_message: `A required environment value is missing for the automated run: ${error.variableName}.`,
     }
   }
 
@@ -148,6 +185,20 @@ export function normalizeError(error: unknown): NormalizedError {
 
   const lower = message.toLowerCase()
 
+  if (isAuthenticationError(lower)) {
+    return {
+      error_type: 'authentication_failed',
+      error_message: 'Authentication failed before or during the automated test flow.',
+    }
+  }
+
+  if (isUrlReachabilityError(lower)) {
+    return {
+      error_type: 'url_unreachable',
+      error_message: 'The target URL could not be reached by Playwright.',
+    }
+  }
+
   if (lower.includes('timeout')) {
     if (
       lower.includes('page.goto') ||
@@ -155,36 +206,34 @@ export function normalizeError(error: unknown): NormalizedError {
       lower.includes('navigation')
     ) {
       return {
-        error_type: 'navigation_timeout',
-        error_message: message,
+        error_type: 'timeout',
+        error_message: 'The target page did not finish loading in time.',
       }
     }
 
-    if (lower.includes('selector') || lower.includes('locator') || lower.includes('waitfor')) {
+    if (isSelectorError(lower) || lower.includes('waitfor')) {
       return {
         error_type: 'selector_not_found',
-        error_message: message,
+        error_message: 'A required element did not appear before the timeout expired.',
       }
     }
-  }
 
-  if (lower.includes('selector') || lower.includes('locator')) {
     return {
-      error_type: 'selector_not_found',
-      error_message: message,
+      error_type: 'timeout',
+      error_message: 'The automated step timed out before completion.',
     }
   }
 
-  if (lower.includes('navigation') && lower.includes('timeout')) {
+  if (isSelectorError(lower)) {
     return {
-      error_type: 'navigation_timeout',
-      error_message: message,
+      error_type: 'selector_not_found',
+      error_message: 'A required button, field, or selector was not found on the page.',
     }
   }
 
   return {
-    error_type: 'unexpected_error',
-    error_message: message,
+    error_type: 'unknown',
+    error_message: message || 'An unknown Playwright error occurred during the automated run.',
   }
 }
 

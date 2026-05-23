@@ -160,6 +160,34 @@ class TestCaseRunControllerTest extends TestCase
             ]);
     }
 
+    public function test_unassigned_tester_cannot_run_test_case_for_foreign_project_version(): void
+    {
+        $this->ensureRoles();
+
+        $ownerChef = User::factory()->create();
+        $ownerChef->assignRole('chef');
+
+        $assignedTester = User::factory()->create();
+        $assignedTester->assignRole('testeur');
+
+        $otherTester = User::factory()->create();
+        $otherTester->assignRole('testeur');
+
+        $item = $this->createVersionItemForProject($ownerChef, $assignedTester);
+
+        Sanctum::actingAs($otherTester);
+        Queue::fake();
+
+        $response = $this->postJson("/api/test-cases/{$item->id}/runs", [
+            'base_url' => 'http://example.test',
+            'use_auth' => true,
+            'watch_mode' => false,
+        ]);
+
+        $response->assertForbidden();
+        Queue::assertNothingPushed();
+    }
+
     private function ensureRoles(): void
     {
         Role::findOrCreate('admin', 'web');
@@ -169,18 +197,24 @@ class TestCaseRunControllerTest extends TestCase
 
     private function createVersionItemForUser(User $owner): VersionItem
     {
+        return $this->createVersionItemForProject($owner, $owner);
+    }
+
+    private function createVersionItemForProject(User $projectOwner, User $assignedTester): VersionItem
+    {
         $checklist = Checklist::create([
             'name' => 'Run checklist',
             'description' => 'Seeded for run endpoint tests',
             'is_active' => true,
-            'created_by' => $owner->id,
+            'created_by' => $projectOwner->id,
         ]);
 
         $project = Project::create([
             'name' => 'Run project',
             'description' => 'Project for single run tests',
-            'created_by' => $owner->id,
+            'created_by' => $projectOwner->id,
         ]);
+        $project->testers()->attach($assignedTester->id);
 
         $version = ProjectVersion::create([
             'project_id' => $project->id,

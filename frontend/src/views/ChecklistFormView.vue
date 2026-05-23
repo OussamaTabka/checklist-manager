@@ -11,6 +11,18 @@ const checklistsStore = useChecklistsStore()
 const checklistId = route.params.id
 const isEditing = !!checklistId
 
+function resolveReturnRoute() {
+  if (route.query.returnTo === 'story-detail' && route.query.storyId) {
+    return {
+      name: 'story-detail',
+      params: { id: route.query.storyId },
+      query: route.query.projectId ? { projectId: route.query.projectId } : {},
+    }
+  }
+
+  return { name: 'checklists' }
+}
+
 const form = ref({
   // Section 1: General Info
   name: '',
@@ -202,7 +214,7 @@ async function submit() {
       await checklistsStore.createChecklist(payload)
     }
 
-    router.push({ name: 'checklists' })
+    router.push(resolveReturnRoute())
   } catch (error) {
     console.error('Error submitting form:', error)
   } finally {

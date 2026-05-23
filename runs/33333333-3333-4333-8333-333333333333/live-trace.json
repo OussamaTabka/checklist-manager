@@ -1,0 +1,16 @@
+{
+    "schema_version": "1.0",
+    "run_id": "33333333-3333-4333-8333-333333333333",
+    "status": "running",
+    "cases": [
+        {
+            "external_id": 1,
+            "title": "TC checkout",
+            "status": "running",
+            "execution_trace": [
+                "Planning: browser context starting",
+                "Step 1: goto /login -> ok"
+            ]
+        }
+    ]
+}

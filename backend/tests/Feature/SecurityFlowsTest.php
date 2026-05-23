@@ -100,6 +100,7 @@ class SecurityFlowsTest extends TestCase
             'description' => 'Service backend',
             'created_by' => $chef->id,
         ]);
+        $project->testers()->attach($tester->id);
 
         $version = ProjectVersion::create([
             'project_id' => $project->id,
@@ -125,6 +126,46 @@ class SecurityFlowsTest extends TestCase
 
         $response->assertOk();
         $response->assertHeader('content-type', 'text/csv; charset=UTF-8');
+    }
+
+    public function test_chef_cannot_export_project_version_of_another_chef_project(): void
+    {
+        $this->ensureRoles();
+
+        $ownerChef = User::factory()->create();
+        $ownerChef->assignRole('chef');
+
+        $otherChef = User::factory()->create();
+        $otherChef->assignRole('chef');
+
+        $assignedTester = User::factory()->create();
+        $assignedTester->assignRole('testeur');
+
+        $checklist = Checklist::create([
+            'name' => 'Restricted export checklist',
+            'description' => 'Export should be limited to project members',
+            'is_active' => true,
+            'created_by' => $ownerChef->id,
+        ]);
+
+        $project = Project::create([
+            'name' => 'Restricted export project',
+            'description' => 'Project owned by another chef',
+            'created_by' => $ownerChef->id,
+        ]);
+        $project->testers()->attach($assignedTester->id);
+
+        $version = ProjectVersion::create([
+            'project_id' => $project->id,
+            'checklist_id' => $checklist->id,
+            'version_number' => 1,
+        ]);
+
+        Sanctum::actingAs($otherChef);
+
+        $response = $this->get("/api/project-versions/{$version->id}/export/csv");
+
+        $response->assertForbidden();
     }
 
     private function ensureRoles(): void

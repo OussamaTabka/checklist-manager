@@ -11,6 +11,7 @@ class ProjectUserStoryImportService
 {
     private const PRIORITIES = ['low', 'medium', 'high', 'critical'];
     private const STATUSES = ['backlog', 'in_progress', 'ready_for_test', 'completed'];
+    private const DUPLICATE_STORY_REFERENCE_MESSAGE = 'Cette référence existe déjà dans ce projet.';
 
     public function prepareManualStories(mixed $stories): array
     {
@@ -23,7 +24,7 @@ class ProjectUserStoryImportService
         return $this->prepareStories($decoded, 'manual');
     }
 
-    public function prepareImportedStories(?UploadedFile $file): array
+    public function prepareImportedStories(?UploadedFile $file, array $existingStoryReferences = []): array
     {
         if (!$file) {
             return $this->emptyResult();
@@ -34,10 +35,10 @@ class ProjectUserStoryImportService
             'csv' => $this->parseCsv($file),
             'json' => $this->parseJson($file),
             'xlsx' => $this->parseXlsx($file),
-            default => throw new RuntimeException('Unsupported user stories file format.'),
+            default => throw new RuntimeException("Le format du fichier importé n'est pas valide."),
         };
 
-        return $this->prepareStories($rows, 'import');
+        return $this->prepareStories($rows, 'import', $existingStoryReferences);
     }
 
     private function decodeManualStories(mixed $stories): mixed
@@ -55,11 +56,12 @@ class ProjectUserStoryImportService
         return $stories;
     }
 
-    private function prepareStories(array $rows, string $source): array
+    private function prepareStories(array $rows, string $source, array $existingStoryReferences = []): array
     {
         $validStories = [];
         $errors = [];
         $failedCount = 0;
+        $seenReferences = $this->normalizeStoryReferences($existingStoryReferences);
 
         foreach (array_values($rows) as $index => $row) {
             if (!is_array($row)) {
@@ -74,6 +76,12 @@ class ProjectUserStoryImportService
 
             [$story, $storyErrors] = $this->normalizeAndValidateRow($row);
 
+            $normalizedStoryReference = $this->normalizeStoryReference($story['story_id'] ?? null);
+
+            if ($normalizedStoryReference !== null && in_array($normalizedStoryReference, $seenReferences, true)) {
+                $storyErrors[] = self::DUPLICATE_STORY_REFERENCE_MESSAGE;
+            }
+
             if ($storyErrors !== []) {
                 $failedCount++;
                 foreach ($storyErrors as $message) {
@@ -87,6 +95,10 @@ class ProjectUserStoryImportService
             }
 
             $validStories[] = $story;
+
+            if ($normalizedStoryReference !== null) {
+                $seenReferences[] = $normalizedStoryReference;
+            }
         }
 
         return [
@@ -477,5 +489,24 @@ class ProjectUserStoryImportService
             'errors' => [],
             'failed_count' => 0,
         ];
+    }
+
+    private function normalizeStoryReferences(array $references): array
+    {
+        return array_values(array_unique(array_filter(array_map(
+            fn ($reference) => $this->normalizeStoryReference(is_string($reference) ? $reference : null),
+            $references
+        ))));
+    }
+
+    private function normalizeStoryReference(?string $reference): ?string
+    {
+        $trimmedReference = trim((string) $reference);
+
+        if ($trimmedReference === '') {
+            return null;
+        }
+
+        return mb_strtolower($trimmedReference);
     }
 }

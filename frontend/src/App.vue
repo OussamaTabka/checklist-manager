@@ -6,13 +6,10 @@ import {
   ChevronDown,
   ClipboardCheck,
   FolderKanban,
-  Gauge,
   Home,
   Menu,
   Plus,
   Search,
-  Sparkles,
-  TriangleAlert,
   UsersRound,
 } from 'lucide-vue-next'
 import { apiRequest, withQuery } from '@/lib/api'
@@ -20,6 +17,7 @@ import { formatNotificationDate, notificationTone } from '@/lib/notifications'
 import { localizeNotification } from '@/lib/localization'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
+import { useToastStore } from '@/stores/toast'
 import { translatePhrase } from '@/lib/runtimeTranslations'
 import LogoHeader from '@/components/LogoHeader.vue'
 import GlobalToast from '@/components/GlobalToast.vue'
@@ -28,6 +26,7 @@ const SIDEBAR_STORAGE_KEY = 'ui_sidebar_collapsed'
 
 const auth = useAuthStore()
 const settings = useSettingsStore()
+const toast = useToastStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -35,22 +34,20 @@ function tr(text) {
   return translatePhrase(text, settings.language)
 }
 
-const roleLabel = computed(() =>
-  auth.roles
-    .map((role) => {
-      if (role === 'admin') return tr('Administrator')
-      if (role === 'chef') return tr('Project manager')
-      if (role === 'testeur') return tr('Tester')
-      return role
-    })
-    .join(', ')
-)
+const isAdminExperience = computed(() => auth.primaryRole === 'admin')
 const workspaceLabel = computed(() => {
   if (auth.roles.includes('chef')) return tr('Project Command')
   if (auth.roles.includes('admin')) return tr('Administration')
   if (auth.roles.includes('testeur')) return 'Espace d’exécution'
   return tr('Workspace')
 })
+const roleLabel = computed(() => {
+  if (auth.roles.includes('admin')) return 'Administrateur'
+  if (auth.roles.includes('chef')) return 'Chef de projet'
+  if (auth.roles.includes('testeur')) return 'Testeur'
+  return 'Utilisateur'
+})
+
 const profileInitial = computed(() => {
   const source = String(auth.user?.name || 'U').trim()
   return source ? source[0].toUpperCase() : 'U'
@@ -84,8 +81,23 @@ const searchIndex = reactive({
   checklists: [],
   users: [],
 })
+const searchIndexLoaded = ref(false)
+const searchIndexLoading = ref(false)
 
 const sidebarSections = computed(() => {
+  if (isAdminExperience.value) {
+    return [
+      {
+        title: tr('NAVIGATION'),
+        items: [
+          { label: tr('Dashboard'), route: { name: 'dashboard' }, icon: Home, show: true },
+          { label: tr('Projects'), route: { name: 'projects' }, icon: FolderKanban, show: true },
+          { label: 'Users & Roles', route: { name: 'users' }, icon: UsersRound, show: auth.canManageUsers },
+        ],
+      },
+    ]
+  }
+
   const sections = [
     {
       title: tr('MAIN'),
@@ -306,9 +318,19 @@ async function loadHeaderMetrics() {
 }
 
 async function loadGlobalSearchIndex() {
-  if (!auth.isAuthenticated) {
+  if (!auth.isAuthenticated || isAdminExperience.value) {
+    searchIndex.projects = []
+    searchIndex.checklists = []
+    searchIndex.users = []
+    searchIndexLoaded.value = false
     return
   }
+
+  if (searchIndexLoaded.value || searchIndexLoading.value) {
+    return
+  }
+
+  searchIndexLoading.value = true
 
   const tasks = [
     apiRequest(withQuery('/projects', { page: 1 }), {}, auth.token),
@@ -354,6 +376,9 @@ async function loadGlobalSearchIndex() {
   } else {
     searchIndex.users = []
   }
+
+  searchIndexLoaded.value = true
+  searchIndexLoading.value = false
 }
 
 async function loadUserNotifications(limit = 6, filter = 'all') {
@@ -432,8 +457,17 @@ async function openNotification(item) {
 
     showNotificationPanel.value = false
     await router.push(nextItem.link || '/notifications')
+    maybeShowDeletedStoryToast(nextItem)
   } catch {
   }
+}
+
+function maybeShowDeletedStoryToast(item) {
+  if (item?.type !== 'user_story_deleted') {
+    return
+  }
+
+  toast.info('La user story concernee a ete supprimee. Verifiez les checklists associees.')
 }
 
 async function goToNotificationsPage() {
@@ -446,6 +480,10 @@ async function goToNotificationsPage() {
 }
 
 function handleGlobalSearchSubmit() {
+  if (isAdminExperience.value) {
+    return
+  }
+
   const first = globalSearchResults.value[0]
   if (first) {
     selectSearchResult(first)
@@ -475,7 +513,12 @@ async function handleLogout() {
 }
 
 function onGlobalSearchFocus() {
+  if (isAdminExperience.value) {
+    return
+  }
+
   showSearchMenu.value = true
+  loadGlobalSearchIndex()
 }
 
 function closePanelsOnRouteChange() {
@@ -504,7 +547,7 @@ onMounted(async () => {
   document.addEventListener('click', handleDocumentClick)
 
   if (auth.isAuthenticated) {
-    await Promise.all([loadHeaderMetrics(), loadGlobalSearchIndex(), loadUserNotifications()])
+    await Promise.all([loadHeaderMetrics(), loadUserNotifications()])
   }
 })
 
@@ -516,11 +559,13 @@ watch(
   () => auth.isAuthenticated,
   async (isAuthenticated) => {
     if (isAuthenticated) {
-      await Promise.all([loadHeaderMetrics(), loadGlobalSearchIndex(), loadUserNotifications()])
+      searchIndexLoaded.value = false
+      await Promise.all([loadHeaderMetrics(), loadUserNotifications()])
       return
     }
 
     globalQuery.value = ''
+    searchIndexLoaded.value = false
     searchIndex.projects = []
     searchIndex.checklists = []
     searchIndex.users = []
@@ -547,7 +592,7 @@ watch(
           <LogoHeader />
         </div>
 
-        <div class="topbar-search" ref="searchMenuRef">
+        <div v-if="!isAdminExperience" class="topbar-search" ref="searchMenuRef">
           <form class="topbar-search-input" @submit.prevent="handleGlobalSearchSubmit">
             <Search :size="16" :stroke-width="1.9" />
             <input
@@ -662,38 +707,9 @@ watch(
             </button>
           </div>
 
-          <div class="sidebar-workspace-card" v-show="!isSidebarCollapsed">
-            <div class="sidebar-workspace-top">
-              <div class="sidebar-workspace-avatar">
-                <img v-if="profileAvatarUrl" :src="profileAvatarUrl" alt="Profile photo" class="profile-avatar-image" />
-                <span v-else>{{ profileInitial }}</span>
-              </div>
-              <div class="sidebar-workspace-copy">
-                <p class="sidebar-workspace-label">{{ workspaceLabel }}</p>
-                <strong>{{ auth.user?.name }}</strong>
-                <span>{{ roleLabel }}</span>
-              </div>
-            </div>
-
-            <div class="sidebar-workspace-signals">
-              <div
-                v-for="signal in workspaceSignals"
-                :key="signal.label"
-                class="workspace-signal"
-                :class="`workspace-signal-${signal.tone}`"
-              >
-                <component :is="signal.icon" :size="14" :stroke-width="1.9" />
-                <div class="workspace-signal-copy">
-                  <span>{{ signal.label }}</span>
-                  <strong>{{ signal.value }}</strong>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <nav class="sidebar-sections">
             <section v-for="section in sidebarSections" :key="section.title" class="sidebar-section">
-              <p class="sidebar-group" v-show="!isSidebarCollapsed">{{ section.title }}</p>
+              <p v-if="!isAdminExperience" class="sidebar-group" v-show="!isSidebarCollapsed">{{ section.title }}</p>
               <RouterLink
                 v-for="item in section.items"
                 :key="item.label"
@@ -707,19 +723,7 @@ watch(
             </section>
           </nav>
 
-          <div class="sidebar-quick" v-if="quickActions.length > 0">
-            <p class="sidebar-group" v-show="!isSidebarCollapsed">Actions rapides</p>
-            <RouterLink
-              v-for="action in quickActions"
-              :key="action.label"
-              :to="action.route"
-              class="sidebar-quick-item"
-              :title="action.label"
-            >
-              <Plus :size="16" :stroke-width="1.9" />
-              <span v-show="!isSidebarCollapsed">{{ action.label }}</span>
-            </RouterLink>
-          </div>
+          
         </aside>
 
         <main class="portal-content">

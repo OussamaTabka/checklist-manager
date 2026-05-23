@@ -197,7 +197,21 @@ class ProjectController extends Controller
             'app_url' => ['required', 'url', 'max:2048'],
             'tester_ids' => ['required', 'array', 'min:1'],
             'tester_ids.*' => ['integer', 'exists:users,id'],
-            'user_stories_file' => ['nullable', 'file', 'mimes:csv,txt,xlsx,json'],
+            'user_stories_file' => [
+                'nullable',
+                'file',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (!$value) {
+                        return;
+                    }
+
+                    $extension = strtolower($value->getClientOriginalExtension());
+
+                    if (!in_array($extension, ['csv', 'xlsx', 'json'], true)) {
+                        $fail("Le format du fichier importé n'est pas valide.");
+                    }
+                },
+            ],
             'manual_user_stories' => ['nullable'],
         ]);
 
@@ -216,7 +230,11 @@ class ProjectController extends Controller
                 $request->input('manual_user_stories', [])
             );
             $importedStories = $this->projectUserStoryImportService->prepareImportedStories(
-                $request->file('user_stories_file')
+                $request->file('user_stories_file'),
+                array_map(
+                    fn (array $story) => (string) ($story['story_id'] ?? ''),
+                    $manualStories['stories']
+                )
             );
         } catch (RuntimeException $exception) {
             return response()->json([

@@ -116,6 +116,38 @@ class ExecuteSingleTestCaseRunTest extends TestCase
         $this->assertFalse($isDockerInfra);
     }
 
+    public function test_merge_provided_inputs_into_execution_profile_prefers_user_values(): void
+    {
+        $job = new ExecuteSingleTestCaseRun('test-run-id');
+
+        $profile = [
+            'required_inputs' => [
+                [
+                    'key' => 'email',
+                    'label' => 'Email',
+                    'kind' => 'email',
+                    'required' => true,
+                    'value' => null,
+                ],
+                [
+                    'key' => 'password',
+                    'label' => 'Password',
+                    'kind' => 'password',
+                    'required' => true,
+                    'value' => null,
+                ],
+            ],
+        ];
+
+        $merged = $this->invokeMergeProvidedInputsIntoExecutionProfile($job, $profile, [
+            'email' => 'qa.user@example.com',
+            'password' => 'Secret123!',
+        ]);
+
+        $this->assertSame('qa.user@example.com', $merged['required_inputs'][0]['value']);
+        $this->assertSame('Secret123!', $merged['required_inputs'][1]['value']);
+    }
+
     private function invokeResolveCaseResult(
         ExecuteSingleTestCaseRun $job,
         array $results,
@@ -146,5 +178,19 @@ class ExecuteSingleTestCaseRunTest extends TestCase
         $method->setAccessible(true);
 
         return (bool) $method->invoke($job, $payload);
+    }
+
+    private function invokeMergeProvidedInputsIntoExecutionProfile(
+        ExecuteSingleTestCaseRun $job,
+        array $profile,
+        array $providedInputs,
+    ): array {
+        $method = new ReflectionMethod(ExecuteSingleTestCaseRun::class, 'mergeProvidedInputsIntoExecutionProfile');
+        $method->setAccessible(true);
+
+        /** @var array<string, mixed> $merged */
+        $merged = $method->invoke($job, $profile, $providedInputs);
+
+        return $merged;
     }
 }

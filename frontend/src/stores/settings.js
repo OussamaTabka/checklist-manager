@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 
 export const useSettingsStore = defineStore('settings', () => {
   const STORAGE_KEY = 'app_settings'
+  const SUPPORTED_LANGUAGE_CODES = new Set(['fr', 'en'])
 
   const language = ref('fr')
   const darkMode = ref(false)
@@ -10,7 +11,6 @@ export const useSettingsStore = defineStore('settings', () => {
   const languages = [
     { code: 'fr', name: 'Français', flag: '🇫🇷' },
     { code: 'en', name: 'English', flag: '🇬🇧' },
-    { code: 'ar', name: 'العربية', flag: '🇸🇦' },
   ]
 
   function loadSettings() {
@@ -18,7 +18,7 @@ export const useSettingsStore = defineStore('settings', () => {
     if (stored) {
       try {
         const settings = JSON.parse(stored)
-        language.value = settings.language || 'fr'
+        language.value = SUPPORTED_LANGUAGE_CODES.has(settings.language) ? settings.language : 'fr'
         darkMode.value = settings.darkMode || false
       } catch (e) {
         console.error('Failed to load settings:', e)
@@ -40,7 +40,7 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   function setLanguage(lang) {
-    language.value = lang
+    language.value = SUPPORTED_LANGUAGE_CODES.has(lang) ? lang : 'fr'
     applyLanguage()
     saveSettings()
   }
@@ -63,14 +63,8 @@ export const useSettingsStore = defineStore('settings', () => {
   function applyLanguage() {
     const html = document.documentElement
     html.lang = language.value
-
-    if (language.value === 'ar') {
-      html.dir = 'rtl'
-      document.body.style.direction = 'rtl'
-    } else {
-      html.dir = 'ltr'
-      document.body.style.direction = 'ltr'
-    }
+    html.dir = 'ltr'
+    document.body.style.direction = 'ltr'
   }
 
   const currentLanguageName = computed(() => {

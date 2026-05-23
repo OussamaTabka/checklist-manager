@@ -9,6 +9,7 @@ import ProjectsView from '@/views/ProjectsView.vue'
 import ProjectDetailView from '@/views/ProjectDetailView.vue'
 import ChecklistsView from '@/views/ChecklistsView.vue'
 import ChecklistDetailView from '@/views/ChecklistDetailView.vue'
+import ChecklistFormView from '@/views/ChecklistFormView.vue'
 import UsersView from '@/views/UsersView.vue'
 import UserStoriesListView from '@/views/UserStoriesListView.vue'
 import UserStoryFormView from '@/views/UserStoryFormView.vue'
@@ -86,6 +87,12 @@ const router = createRouter({
       path: '/checklists/:id',
       name: 'checklist-detail',
       component: ChecklistDetailView,
+      meta: { requiresAuth: true, roles: ['testeur'] },
+    },
+    {
+      path: '/checklists/:id/edit',
+      name: 'checklist-edit',
+      component: ChecklistFormView,
       meta: { requiresAuth: true, roles: ['testeur'] },
     },
     {

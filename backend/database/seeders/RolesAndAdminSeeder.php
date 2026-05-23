@@ -2,54 +2,75 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\User;
-use Spatie\Permission\Models\Role;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 class RolesAndAdminSeeder extends Seeder
 {
     public function run(): void
     {
-        // Création des rôles selon la nouvelle structure
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $chefRole = Role::firstOrCreate(['name' => 'chef']);
-        $testeurRole = Role::firstOrCreate(['name' => 'testeur']);
+        // Creation des roles selon la nouvelle structure
+        Role::firstOrCreate(['name' => 'admin']);
+        Role::firstOrCreate(['name' => 'chef']);
+        Role::firstOrCreate(['name' => 'testeur']);
 
-        // Création utilisateur ADMINISTRATEUR SYSTÈME par défaut
+        // Creation utilisateur ADMINISTRATEUR SYSTEME par defaut
         $admin = User::firstOrCreate(
             ['email' => 'admin@test.com'],
             [
-                'name' => 'Admin Système',
+                'name' => 'Admin Systeme',
                 'password' => Hash::make('password123'),
+                'account_status' => 'active',
+                'activated_at' => now(),
             ]
         );
 
-        // Attribution rôle admin (Gestion des utilisateurs, rôles, permissions, audit)
+        // Attribution role admin (gestion des utilisateurs, roles, permissions, audit)
         $admin->syncRoles(['admin']);
 
-        // Création utilisateur CHEF DE PROJET par défaut
+        // Creation utilisateur CHEF DE PROJET par defaut
         $chef = User::firstOrCreate(
             ['email' => 'chef@test.com'],
             [
                 'name' => 'Chef de Projet',
                 'password' => Hash::make('password123'),
+                'account_status' => 'active',
+                'activated_at' => now(),
             ]
         );
 
-        // Attribution rôle chef (Gestion complète des projets et checklists)
+        // Attribution role chef (gestion complete des projets et checklists)
         $chef->syncRoles(['chef']);
 
-        // Création utilisateur TESTEUR par défaut
+        // Creation utilisateur TESTEUR par defaut
         $testeur = User::firstOrCreate(
             ['email' => 'testeur@test.com'],
             [
                 'name' => 'Testeur',
                 'password' => Hash::make('password123'),
+                'account_status' => 'active',
+                'activated_at' => now(),
             ]
         );
 
-        // Attribution rôle testeur (Exécution des tests)
+        // Attribution role testeur (execution des tests)
         $testeur->syncRoles(['testeur']);
+
+        // Creation de 5 testeurs supplementaires pour faciliter les essais
+        foreach (range(1, 5) as $index) {
+            $tester = User::firstOrCreate(
+                ['email' => "tester{$index}@test.com"],
+                [
+                    'name' => "Tester {$index}",
+                    'password' => Hash::make('password123'),
+                    'account_status' => 'active',
+                    'activated_at' => now(),
+                ]
+            );
+
+            $tester->syncRoles(['testeur']);
+        }
     }
 }

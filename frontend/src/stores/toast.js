@@ -44,6 +44,10 @@ export const useToastStore = defineStore('toast', () => {
     show(nextMessage, 'error', nextDuration)
   }
 
+  function info(nextMessage, nextDuration = 3500) {
+    show(nextMessage, 'info', nextDuration)
+  }
+
   return {
     visible,
     message,
@@ -53,5 +57,6 @@ export const useToastStore = defineStore('toast', () => {
     show,
     success,
     error,
+    info,
   }
 })

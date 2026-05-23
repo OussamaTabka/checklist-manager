@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "run_id": "995e3fea-65ff-4cc2-895d-b86419689707",
+  "status": "done",
+  "updated_at": "2026-05-23T00:27:09.302Z",
+  "cases": [
+    {
+      "external_id": 81,
+      "title": "TC-01 | Cas nominal",
+      "status": "passed",
+      "execution_trace": [
+        "[chrome] Planning: browser context starting",
+        "[chrome] Planning: Interpret the UI-oriented test case 'TC-01 | Cas nominal' and produce the safest executable browser plan possible.",
+        "[chrome] Planning: precondition -> Target base URL must be reachable: http://localhost:5173",
+        "[chrome] Planning: precondition -> The checklist-manager target routes should be available with the expected test ids or visible UI elements.",
+        "[chrome] Planning: precondition -> Authenticated session bootstrap must succeed when the case requires an authenticated flow.",
+        "[chrome] Preflight 0: page_accessible -> ok (http://localhost:5173)",
+        "[chrome] Preflight 1: Initial target page is reachable -> ok",
+        "[chrome] Step 2: wait_for_selector css=body state=visible -> ok (33ms)",
+        "[chrome] Step 3: screenshot generic-ui-baseline -> ok (149ms)",
+        "[chrome] Assert 1: expect_visible css=body -> ok (16ms)",
+        "[chrome] Failure analysis: none",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

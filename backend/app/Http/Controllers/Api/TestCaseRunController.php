@@ -23,6 +23,7 @@ class TestCaseRunController extends Controller
     public function show(int $id)
     {
         $item = VersionItem::with(['version.project'])->findOrFail($id);
+        $this->authorizeVersionItemAccess($item);
 
         $latestResult = TestResult::with('testRun')
             ->where('version_item_id', $item->id)
@@ -96,6 +97,12 @@ class TestCaseRunController extends Controller
             ? $resultPayload['generated_plan']
             : (is_array($executionProfile['last_generated_plan'] ?? null) ? $executionProfile['last_generated_plan'] : null);
         $failureSource = is_array($resultPayload['failure_source'] ?? null) ? $resultPayload['failure_source'] : null;
+        $testedBaseUrl = $latestRun?->base_url;
+        if ((!is_string($testedBaseUrl) || trim($testedBaseUrl) === '') && is_array($latestRun?->request_payload)) {
+            $candidateBaseUrl = $latestRun->request_payload['base_url'] ?? null;
+            $testedBaseUrl = is_string($candidateBaseUrl) ? $candidateBaseUrl : null;
+        }
+        $artifactPaths = $this->extractArtifactPaths($artifactPayload);
 
         return response()->json([
             'id' => $item->id,
@@ -110,19 +117,23 @@ class TestCaseRunController extends Controller
             'last_run_status' => $latestRun ? $this->mapRunStatus($latestRun->status) : null,
             'last_run_started_at' => optional($latestRun?->started_at)->toISOString(),
             'last_run_finished_at' => optional($latestRun?->finished_at)->toISOString(),
+            'tested_base_url' => $testedBaseUrl,
             'last_error_message' => $lastErrorMessage,
             'execution_trace' => $executionTrace,
             'artifacts' => [
                 'trace' => is_array($artifactPayload['trace'] ?? null) ? $artifactPayload['trace'] : [],
                 'screenshot' => is_array($artifactPayload['screenshot'] ?? null) ? $artifactPayload['screenshot'] : [],
                 'video' => is_array($artifactPayload['video'] ?? null) ? $artifactPayload['video'] : [],
+                'all' => $artifactPaths,
+                'raw_paths' => is_array($artifactPayload['raw_paths'] ?? null) ? $artifactPayload['raw_paths'] : [],
             ],
         ]);
     }
 
     public function run(Request $request, int $id)
     {
-        $item = VersionItem::findOrFail($id);
+        $item = VersionItem::with('version.project')->findOrFail($id);
+        $this->authorizeVersionItemAccess($item);
 
         $data = $request->validate([
             'base_url' => ['required', 'url', 'max:2048'],
@@ -184,6 +195,15 @@ class TestCaseRunController extends Controller
     private function normalizeBaseUrl(string $baseUrl): string
     {
         return rtrim(trim($baseUrl), '/');
+    }
+
+    private function authorizeVersionItemAccess(VersionItem $item): void
+    {
+        $item->loadMissing('version.project');
+        $project = $item->version?->project;
+        abort_unless($project, 404, 'Project not found for this version item.');
+
+        $this->authorize('view', $project);
     }
 
     private function mapRunStatus(string $status): string
@@ -290,6 +310,20 @@ class TestCaseRunController extends Controller
         }
 
         return [];
+    }
+
+    private function extractArtifactPaths(array $artifactPayload): array
+    {
+        $paths = [];
+        foreach (['trace', 'screenshot', 'video'] as $key) {
+            foreach (($artifactPayload[$key] ?? []) as $value) {
+                if (is_string($value) && trim($value) !== '') {
+                    $paths[] = $value;
+                }
+            }
+        }
+
+        return array_values(array_unique($paths));
     }
 
     /**

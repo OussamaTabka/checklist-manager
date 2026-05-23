@@ -240,7 +240,16 @@ async function submit() {
       query: { projectId: projectId.value },
     })
   } catch (err) {
-    errors.value.submit = err.message
+    const fieldErrors = err?.data?.errors || {}
+    const storyIdErrors = fieldErrors.story_id
+
+    if (Array.isArray(storyIdErrors) && storyIdErrors.length > 0) {
+      errors.value.story_id = storyIdErrors[0]
+    }
+
+    if (!errors.value.story_id) {
+      errors.value.submit = err.message
+    }
   } finally {
     submitting.value = false
   }
@@ -307,7 +316,9 @@ onMounted(async () => {
                 v-model="form.story_id"
                 type="text"
                 placeholder="US-LOGIN-01"
+                :class="{ 'is-invalid': errors.story_id }"
               />
+              <small v-if="errors.story_id">{{ errors.story_id }}</small>
             </label>
 
             <label class="story-field">
@@ -498,7 +509,7 @@ onMounted(async () => {
 
 .story-form-header {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 18px;
   align-items: center;
   margin-bottom: 24px;
@@ -564,6 +575,14 @@ onMounted(async () => {
   font-weight: 800;
 }
 
+.story-template-button,
+.story-context-card,
+.story-link-card,
+.story-readiness-card,
+.story-summary-card {
+  display: none;
+}
+
 .story-alert {
   margin-bottom: 16px;
   padding: 14px 16px;
@@ -579,7 +598,7 @@ onMounted(async () => {
 
 .story-form-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 22px;
   align-items: start;
 }

@@ -4,9 +4,11 @@ namespace App\Services;
 
 use App\Models\Comment;
 use App\Models\Notification;
+use App\Models\Checklist;
 use App\Models\Project;
 use App\Models\ProjectVersion;
 use App\Models\TestRun;
+use App\Models\UserStory;
 use App\Models\User;
 use Illuminate\Support\Collection;
 
@@ -17,6 +19,9 @@ class NotificationService
     public const PROJECT_TYPES = [
         'project_assigned',
         'project_created',
+        'user_story_created',
+        'user_story_updated',
+        'user_story_deleted',
     ];
 
     public const TEST_TYPES = [
@@ -69,6 +74,102 @@ class NotificationService
     public function notifyProjectCreated(Project $project, ?User $actor = null): void
     {
         // Notifications are reserved for chefs and testers only.
+    }
+
+    public function notifyUserStoryChanged(
+        string $eventType,
+        Project $project,
+        UserStory $userStory,
+        ?User $actor = null,
+        array $options = []
+    ): void {
+        $project->loadMissing('testers.roles');
+
+        $storyTitle = (string) ($options['story_title'] ?? $userStory->title ?? '');
+        $projectName = (string) ($project->name ?? "Projet #{$project->id}");
+        $impactedChecklistsCount = $this->countImpactedChecklists($userStory);
+        $hasImpactedChecklists = $impactedChecklistsCount > 0;
+
+        $notification = match ($eventType) {
+            'user_story_created' => [
+                'title' => 'Nouvelle user story disponible',
+                'message' => "Une nouvelle user story a été ajoutée au projet {$projectName}. Vous pouvez l’utiliser pour préparer ou compléter vos checklists de test.",
+                'link' => "/stories/{$userStory->id}?projectId={$project->id}",
+                'target_id' => $userStory->id,
+                'metadata' => [
+                    'type' => 'user_story_created',
+                    'project_id' => $project->id,
+                    'user_story_id' => $userStory->id,
+                    'link' => "/stories/{$userStory->id}?projectId={$project->id}",
+                    'impact' => [
+                        'impacted_checklists_count' => $impactedChecklistsCount,
+                        'has_impacted_checklists' => $hasImpactedChecklists,
+                    ],
+                ],
+            ],
+            'user_story_updated' => [
+                'title' => 'User story modifiée',
+                'message' => $hasImpactedChecklists
+                    ? "La user story {$storyTitle} a été modifiée. Certaines checklists associées peuvent être impactées. Veuillez les vérifier avant de continuer l’exécution."
+                    : "La user story {$storyTitle} a été modifiée dans le projet {$projectName}. Vérifiez vos checklists associées pour éviter de tester avec des exigences obsolètes.",
+                'link' => "/stories/{$userStory->id}?projectId={$project->id}",
+                'target_id' => $userStory->id,
+                'metadata' => [
+                    'type' => 'user_story_updated',
+                    'project_id' => $project->id,
+                    'user_story_id' => $userStory->id,
+                    'link' => "/stories/{$userStory->id}?projectId={$project->id}",
+                    'impact' => [
+                        'impacted_checklists_count' => $impactedChecklistsCount,
+                        'has_impacted_checklists' => $hasImpactedChecklists,
+                    ],
+                ],
+            ],
+            'user_story_deleted' => [
+                'title' => 'User story supprimée',
+                'message' => $hasImpactedChecklists
+                    ? "La user story {$storyTitle} a été supprimée. Les checklists créées à partir de cette user story doivent être revérifiées."
+                    : "La user story {$storyTitle} a été supprimée du projet {$projectName}. Les checklists basées sur cette user story doivent être vérifiées.",
+                'link' => "/stories?projectId={$project->id}",
+                'target_id' => null,
+                'metadata' => [
+                    'type' => 'user_story_deleted',
+                    'project_id' => $project->id,
+                    'user_story_id' => null,
+                    'deleted_story_title' => $storyTitle,
+                    'link' => "/stories?projectId={$project->id}",
+                    'impact' => [
+                        'impacted_checklists_count' => $impactedChecklistsCount,
+                        'has_impacted_checklists' => $hasImpactedChecklists,
+                    ],
+                ],
+            ],
+            default => null,
+        };
+
+        if (!$notification) {
+            return;
+        }
+
+        $testers = $project->testers
+            ->filter(fn (User $tester) => $tester->hasRole('testeur'))
+            ->reject(fn (User $tester) => $actor && $tester->id === $actor->id)
+            ->unique('id')
+            ->values();
+
+        foreach ($testers as $tester) {
+            $this->createNotification($tester, [
+                'type' => $eventType,
+                'title' => $notification['title'],
+                'message' => $notification['message'],
+                'priority' => 'high',
+                'link' => $notification['link'],
+                'target_type' => 'user_story',
+                'target_id' => $notification['target_id'],
+                'project_id' => $project->id,
+                'metadata' => $notification['metadata'],
+            ]);
+        }
     }
 
     public function notifyUserCreated(User $user, ?User $actor = null): void
@@ -361,16 +462,18 @@ class NotificationService
             return null;
         }
 
+        $metadata = is_array($attributes['metadata'] ?? null) ? $attributes['metadata'] : [];
+
         $payload = [
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
-            'data' => [
+            'data' => array_merge($metadata, [
                 'title' => $attributes['title'],
                 'message' => $attributes['message'],
                 'link' => $attributes['link'] ?? null,
                 'priority' => $attributes['priority'],
                 'type' => $attributes['type'],
-            ],
+            ]),
             'user_id' => $user->id,
             'role' => $this->resolvePrimaryRole($user),
             'type' => $attributes['type'],
@@ -475,5 +578,22 @@ class NotificationService
     private function canReceiveNotifications(User $user): bool
     {
         return $user->hasRole('chef') || $user->hasRole('testeur');
+    }
+
+    private function countImpactedChecklists(UserStory $userStory): int
+    {
+        $attachedChecklistIds = $userStory->checklists()
+            ->pluck('checklists.id')
+            ->all();
+
+        $generatedChecklistIds = Checklist::query()
+            ->where('source_user_story_id', $userStory->id)
+            ->pluck('id')
+            ->all();
+
+        return count(array_unique([
+            ...$attachedChecklistIds,
+            ...$generatedChecklistIds,
+        ]));
     }
 }

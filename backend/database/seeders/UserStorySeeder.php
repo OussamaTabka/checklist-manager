@@ -35,6 +35,7 @@ class UserStorySeeder extends Seeder
         // Create sample user stories
         $userStories = [
             [
+                'story_id' => 'US-LOGIN-001',
                 'title' => 'User can login with email and password',
                 'description' => 'As a user, I want to login to the application using my email and password so that I can access my account.',
                 'acceptance_criteria' => 'Given I am on the login page
@@ -48,6 +49,7 @@ Then I should see an error message saying "Invalid credentials"',
                 'status' => 'ready_for_test',
             ],
             [
+                'story_id' => 'US-CHECKLIST-002',
                 'title' => 'User can create a new checklist',
                 'description' => 'As a project manager, I want to create a new checklist so that I can organize my test items and share with team members.',
                 'acceptance_criteria' => 'Given I am on the checklists page
@@ -60,6 +62,7 @@ And I should be redirected to the checklist details page',
                 'status' => 'in_progress',
             ],
             [
+                'story_id' => 'US-CHECKLIST-003',
                 'title' => 'User can add test items to a checklist',
                 'description' => 'As a tester, I want to add individual test items to a checklist so that I can track test execution.',
                 'acceptance_criteria' => 'Given I am viewing a checklist
@@ -74,6 +77,7 @@ And I should be able to add another item',
                 'status' => 'in_progress',
             ],
             [
+                'story_id' => 'US-CHECKLIST-004',
                 'title' => 'User can mark test items as complete',
                 'description' => 'As a tester, I want to mark test items as complete so that I can track my progress.',
                 'acceptance_criteria' => 'Given I am viewing a checklist with items
@@ -85,6 +89,7 @@ And the completion percentage should show',
                 'status' => 'backlog',
             ],
             [
+                'story_id' => 'US-FILTER-005',
                 'title' => 'User can filter checklists by category',
                 'description' => 'As a user, I want to filter checklists by category so that I can quickly find relevant checklists.',
                 'acceptance_criteria' => 'Given I am on the checklists page
@@ -98,6 +103,7 @@ Then all checklists should display again',
                 'status' => 'backlog',
             ],
             [
+                'story_id' => 'US-NOTIFY-006',
                 'title' => 'User receives email notification when assigned to project',
                 'description' => 'As a tester, I want to receive an email when I am assigned to a project so that I am informed immediately.',
                 'acceptance_criteria' => 'Given a user is assigned to a project
@@ -110,6 +116,7 @@ And the email should be professional and clear',
                 'status' => 'ready_for_test',
             ],
             [
+                'story_id' => 'US-EXPORT-007',
                 'title' => 'User can export checklist as PDF',
                 'description' => 'As a project manager, I want to export checklists as PDF so that I can share them offline and print them.',
                 'acceptance_criteria' => 'Given I am viewing a checklist
@@ -122,6 +129,7 @@ And the PDF should be downloaded to my computer',
                 'status' => 'backlog',
             ],
             [
+                'story_id' => 'US-DUPLICATE-008',
                 'title' => 'User can duplicate an existing checklist',
                 'description' => 'As a user, I want to duplicate an existing checklist so that I can reuse templates for similar test scenarios.',
                 'acceptance_criteria' => 'Given I am viewing a checklist
@@ -134,6 +142,7 @@ And I should be able to edit the duplicated checklist',
                 'status' => 'backlog',
             ],
             [
+                'story_id' => 'US-SEARCH-009',
                 'title' => 'User can search for specific test items',
                 'description' => 'As a user, I want to search for test items by keyword so that I can quickly find relevant tests.',
                 'acceptance_criteria' => 'Given I am viewing a checklist with multiple items
@@ -145,6 +154,7 @@ And search results should update in real-time',
                 'status' => 'backlog',
             ],
             [
+                'story_id' => 'US-REMINDER-010',
                 'title' => 'User can set reminder for incomplete items',
                 'description' => 'As a tester, I want to set reminders for incomplete test items so that I do not forget to complete them.',
                 'acceptance_criteria' => 'Given I am viewing an incomplete test item
@@ -157,6 +167,7 @@ And the reminder should include the item details',
                 'status' => 'backlog',
             ],
             [
+                'story_id' => 'US-GENERATE-011',
                 'title' => 'System generates test cases from user stories',
                 'description' => 'As a developer, I want the system to automatically generate test cases from user story acceptance criteria so that I can save time on test planning.',
                 'acceptance_criteria' => 'Given I have a user story with acceptance criteria in Given-When-Then format
@@ -174,6 +185,7 @@ And each test case should have appropriate criticality assigned',
             UserStory::create([
                 'project_id' => $project->id,
                 'created_by' => $creator->id,
+                'story_id' => $story['story_id'],
                 'title' => $story['title'],
                 'description' => $story['description'],
                 'acceptance_criteria' => $story['acceptance_criteria'],

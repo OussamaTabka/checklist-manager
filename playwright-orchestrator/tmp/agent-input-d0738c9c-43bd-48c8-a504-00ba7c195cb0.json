@@ -1,0 +1,16 @@
+{
+    "run_id": "d0738c9c-43bd-48c8-a504-00ba7c195cb0",
+    "external_id": 99,
+    "test_case_title": "Critere 01 : Given a patient selects a specialty and date, When available slots...",
+    "test_case_description": "Given a patient selects a specialty and date, When available slots are loaded, Then only open teleconsultation slots are displayed.\n\nResultat attendu : Le critere est respecte.",
+    "test_case_text": "Critere 01 : Given a patient selects a specialty and date, When available slots...\nGiven a patient selects a specialty and date, When available slots are loaded, Then only open teleconsultation slots are displayed.\n\nResultat attendu : Le critere est respecte.",
+    "base_url": "https://www.apple.com/tn",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "High",
+    "criticality": "Critical",
+    "current_status": "Passed",
+    "project_version_id": 21,
+    "target_type": "version_item"
+}

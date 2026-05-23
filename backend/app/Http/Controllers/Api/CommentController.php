@@ -17,29 +17,30 @@ class CommentController extends Controller
 
     public function index(VersionItem $versionItem)
     {
+        $this->authorizeVersionItemAccess($versionItem);
+
         $comments = $versionItem->comments()->with('user')->orderBy('created_at', 'desc')->get();
         return response()->json($comments);
     }
 
     public function store(Request $request, VersionItem $versionItem)
     {
+        $this->authorizeVersionItemAccess($versionItem);
+
         $validated = $request->validate([
             'content' => 'required|string|min:1',
-            'file' => 'nullable|file|max:10240' // 10 MB max
+            'file' => 'nullable|file|max:10240',
         ]);
 
         $commentData = [
             'user_id' => auth()->id(),
-            'content' => $validated['content']
+            'content' => $validated['content'],
         ];
 
-        // Handle file upload if provided
         if ($request->hasFile('file')) {
             $file = $request->file('file');
-            
-            // Store file in storage/app/comments directory
             $path = $file->store('comments', 'local');
-            
+
             $commentData['file_path'] = $path;
             $commentData['file_name'] = $file->getClientOriginalName();
             $commentData['file_size'] = $file->getSize();
@@ -55,13 +56,15 @@ class CommentController extends Controller
 
     public function update(Request $request, Comment $comment)
     {
-        // Vérifier que l'utilisateur est propriétaire ou admin
+        $comment->loadMissing('versionItem.version.project');
+        $this->authorizeVersionItemAccess($comment->versionItem);
+
         if ($comment->user_id !== auth()->id() && !auth()->user()->hasRole('admin')) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
         $validated = $request->validate([
-            'content' => 'required|string|min:1'
+            'content' => 'required|string|min:1',
         ]);
 
         $comment->update($validated);
@@ -70,12 +73,25 @@ class CommentController extends Controller
 
     public function destroy(Comment $comment)
     {
-        // Vérifier que l'utilisateur est propriétaire ou admin
+        $comment->loadMissing('versionItem.version.project');
+        $this->authorizeVersionItemAccess($comment->versionItem);
+
         if ($comment->user_id !== auth()->id() && !auth()->user()->hasRole('admin')) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
         $comment->delete();
         return response()->json(null, 204);
+    }
+
+    private function authorizeVersionItemAccess(?VersionItem $versionItem): void
+    {
+        abort_unless($versionItem, 404, 'Version item not found.');
+
+        $versionItem->loadMissing('version.project');
+        $project = $versionItem->version?->project;
+        abort_unless($project, 404, 'Project not found for this version item.');
+
+        $this->authorize('view', $project);
     }
 }

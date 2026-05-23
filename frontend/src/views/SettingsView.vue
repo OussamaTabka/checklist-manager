@@ -137,15 +137,46 @@ watch(
 <template>
   <section class="page stack settings-page-pro">
     <div class="settings-hero">
-      <button @click="goBack" class="btn btn-secondary btn-sm">
-        <ArrowLeft :size="16" />
-        <span>{{ tr('Back') }}</span>
-      </button>
+      <div class="settings-hero-copy-wrap">
+        <div class="settings-hero-copy">
+          <p class="story-kicker">{{ settingsCopy.kicker }}</p>
+          <h1>{{ settingsCopy.title }}</h1>
+          <p>{{ settingsCopy.description }}</p>
+        </div>
+      </div>
 
-      <div class="settings-hero-copy">
-        <p class="story-kicker">{{ settingsCopy.kicker }}</p>
-        <h1>{{ settingsCopy.title }}</h1>
-        <p>{{ settingsCopy.description }}</p>
+      <div class="settings-hero-side">
+        <article class="settings-panel-pro settings-darkmode-hero-card">
+          <div class="settings-panel-head">
+            <div class="settings-panel-icon bg-amber-50 text-amber-700">
+              <Moon :size="18" />
+            </div>
+            <div>
+              <h2>{{ t('settings.darkMode', settingsStore.language) }}</h2>
+              <p>
+                {{
+                  settingsStore.darkMode
+                    ? t('settings.darkModeEnabled', settingsStore.language)
+                    : t('settings.darkModeDisabled', settingsStore.language)
+                }}
+              </p>
+            </div>
+          </div>
+
+          <div class="settings-theme-row">
+            <div class="settings-theme-preview">
+              <Palette :size="18" />
+              <span>{{ settingsStore.darkMode ? tr('Dark canvas enabled') : tr('Light canvas enabled') }}</span>
+            </div>
+
+            <button
+              @click="toggleDarkMode"
+              :class="['settings-toggle', { 'settings-toggle-on': settingsStore.darkMode }]"
+            >
+              <span />
+            </button>
+          </div>
+        </article>
       </div>
     </div>
 
@@ -232,42 +263,32 @@ watch(
         </div>
       </article>
 
-      <article class="settings-panel-pro">
-        <div class="settings-panel-head">
-          <div class="settings-panel-icon bg-amber-50 text-amber-700">
-            <Moon :size="18" />
-          </div>
-          <div>
-            <h2>{{ t('settings.darkMode', settingsStore.language) }}</h2>
-            <p>
-              {{
-                settingsStore.darkMode
-                  ? t('settings.darkModeEnabled', settingsStore.language)
-                  : t('settings.darkModeDisabled', settingsStore.language)
-              }}
-            </p>
-          </div>
-        </div>
-
-        <div class="settings-theme-row">
-          <div class="settings-theme-preview">
-            <Palette :size="18" />
-            <span>{{ settingsStore.darkMode ? tr('Dark canvas enabled') : tr('Light canvas enabled') }}</span>
-          </div>
-
-          <button
-            @click="toggleDarkMode"
-            :class="['settings-toggle', { 'settings-toggle-on': settingsStore.darkMode }]"
-          >
-            <span />
-          </button>
-        </div>
-      </article>
     </div>
   </section>
 </template>
 
 <style scoped>
+.settings-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.72fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.settings-hero-copy-wrap {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.settings-hero-side {
+  min-width: 0;
+}
+
+.settings-darkmode-hero-card {
+  height: 100%;
+}
+
 .profile-settings-layout {
   display: grid;
   grid-template-columns: 220px 1fr;
@@ -306,6 +327,10 @@ watch(
 }
 
 @media (max-width: 900px) {
+  .settings-hero {
+    grid-template-columns: 1fr;
+  }
+
   .profile-settings-layout {
     grid-template-columns: 1fr;
   }

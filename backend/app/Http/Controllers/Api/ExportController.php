@@ -13,6 +13,8 @@ class ExportController extends Controller
 {
     public function exportProject(Project $project, string $format = 'json')
     {
+        $this->authorize('view', $project);
+
         $report = $this->buildProjectExportData($project);
 
         return $this->formatResponse($format, $report, 'project_' . $project->id);
@@ -20,6 +22,9 @@ class ExportController extends Controller
 
     public function exportProjectVersion(ProjectVersion $projectVersion, string $format = 'json')
     {
+        $projectVersion->loadMissing('project');
+        $this->authorize('view', $projectVersion->project);
+
         $report = $this->buildVersionExportData($projectVersion);
 
         return $this->formatResponse($format, $report, 'project_version_' . $projectVersion->id);

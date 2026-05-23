@@ -200,8 +200,8 @@ const primaryAction = computed(() => {
 const agentStatus = computed(() => {
   if (storiesStore.isGenerating) {
     return {
-      label: 'Generation en cours',
-      description: 'L agent prepare une proposition de checklist.',
+      label: 'Generation...',
+      description: 'Le système génére une proposition de checklist. Veuillez patienter.',
       tone: 'info',
     }
   }
@@ -229,20 +229,70 @@ const agentStatus = computed(() => {
   }
 })
 
+const suggestionStatus = computed(() => {
+  if (loadingSuggestions.value) {
+    return {
+      title: 'Recherche...',
+      description: 'Le systeme recherche les checklists les plus proches de cette User Story.',
+    }
+  }
+
+  return {
+    title: 'Checklists suggerées',
+    description: 'Checklists existantes proches de cette User Story.',
+  }
+})
+const interactionLockState = computed(() => {
+  if (storiesStore.isGenerating) {
+    return {
+      active: true,
+      title: 'Generation de checklist en cours',
+      description: 'Veuillez patienter pendant que le systeme prepare la checklist.',
+    }
+  }
+
+  if (lockingSuggestionRefresh.value) {
+    return {
+      active: true,
+      title: 'Recherche des recommandations en cours',
+      description: 'Le systeme analyse les checklists existantes pour trouver les meilleures correspondances.',
+    }
+  }
+
+  if (previewLoading.value) {
+    return {
+      active: true,
+      title: 'Ouverture de la recommandation',
+      description: 'Les details de la checklist suggeree sont en cours de chargement.',
+    }
+  }
+
+  return {
+    active: false,
+    title: '',
+    description: '',
+  }
+})
+const isInteractionLocked = computed(() => interactionLockState.value.active)
+
 const previewOpen = ref(false)
 const previewLoading = ref(false)
 const adapting = ref(false)
 const attaching = ref(false)
 const loadingAvailableChecklists = ref(false)
+const loadingAvailableItems = ref(false)
 const loadingSuggestions = ref(false)
+const lockingSuggestionRefresh = ref(false)
 const attachingExistingChecklist = ref(false)
 const approvingDraftId = ref(null)
 const collapsedDrafts = ref({})
 const previewMode = ref('suggestion')
 const previewChecklistId = ref(null)
 const availableChecklists = ref([])
+const availableItems = ref([])
 const showAttachExistingPanel = ref(false)
 const selectedExistingChecklistIds = ref([])
+const selectedExistingItemId = ref('')
 const attachChecklistPage = ref(1)
 const attachedSection = ref(null)
 const highlightedChecklistId = ref(null)
@@ -256,6 +306,19 @@ const previewForm = ref({
   category: '',
   items: [],
 })
+const addableExistingItems = computed(() => {
+  const usedSignatures = new Set(
+    previewForm.value.items.map((item) =>
+      `${String(item.title || '').trim()}|${String(item.description || '').trim()}|${item.priority || ''}|${item.criticality || ''}`,
+    ),
+  )
+
+  return availableItems.value.filter((item) => {
+    const signature =
+      `${String(item.title || '').trim()}|${String(item.description || '').trim()}|${item.priority || ''}|${item.criticality || ''}`
+    return !usedSignatures.has(signature)
+  })
+})
 
 async function loadStory() {
   if (!projectId.value) {
@@ -264,23 +327,30 @@ async function loadStory() {
 
   await Promise.all([
     storiesStore.fetchStory(projectId.value, storyId),
-    storiesStore.fetchGeneratorStatus(projectId.value),
-    refreshSuggestedChecklists(),
+    auth.isTester ? storiesStore.fetchGeneratorStatus(projectId.value) : Promise.resolve(),
+    auth.isTester ? refreshSuggestedChecklists() : Promise.resolve(),
     loadProjectSummary(),
     auth.isTester ? loadAvailableChecklists() : Promise.resolve(),
   ])
 }
 
-async function refreshSuggestedChecklists() {
+async function refreshSuggestedChecklists(options = {}) {
+  const { notifyIfEmpty = false, lockUi = false } = options
+
   if (!projectId.value) {
     return
   }
 
   try {
+    lockingSuggestionRefresh.value = lockUi
     loadingSuggestions.value = true
     await storiesStore.fetchChecklistSuggestions(projectId.value, storyId)
+    if (notifyIfEmpty && visibleSuggestions.value.length === 0) {
+      toast.info('Aucune checklist correspondante n a ete trouvee pour cette user story.')
+    }
   } finally {
     loadingSuggestions.value = false
+    lockingSuggestionRefresh.value = false
   }
 }
 
@@ -299,6 +369,22 @@ async function loadAvailableChecklists() {
   } finally {
     loadingAvailableChecklists.value = false
     goToAttachChecklistPage(attachChecklistPage.value)
+  }
+}
+
+async function loadAvailableItems() {
+  if (loadingAvailableItems.value) {
+    return
+  }
+
+  try {
+    loadingAvailableItems.value = true
+    const data = await apiRequest('/checklists/items/available', {}, auth.token)
+    availableItems.value = Array.isArray(data) ? data : []
+  } catch {
+    availableItems.value = []
+  } finally {
+    loadingAvailableItems.value = false
   }
 }
 
@@ -421,6 +507,7 @@ async function viewSuggestedChecklist(checklistId) {
 
   try {
     previewLoading.value = true
+    await loadAvailableItems()
     const preview = await storiesStore.previewSuggestedChecklist(projectId.value, storyId, checklistId)
     previewForm.value = {
       name: preview?.checklist?.title || '',
@@ -433,6 +520,7 @@ async function viewSuggestedChecklist(checklistId) {
           }))
         : [],
     }
+    selectedExistingItemId.value = ''
     previewMode.value = 'suggestion'
     previewChecklistId.value = checklistId
     previewOpen.value = true
@@ -533,6 +621,7 @@ function openManualDraft() {
   previewIntent.value = 'manual'
   previewMode.value = 'manual'
   previewChecklistId.value = null
+  loadAvailableItems()
   previewForm.value = {
     name: `Manual Draft: ${storiesStore.currentStory?.title || 'Checklist'}`,
     description: '',
@@ -548,6 +637,7 @@ function openManualDraft() {
       },
     ],
   }
+  selectedExistingItemId.value = ''
   previewOpen.value = true
 }
 
@@ -555,6 +645,7 @@ function editPendingDraft(draft) {
   previewIntent.value = 'draft'
   previewMode.value = 'draft'
   previewChecklistId.value = draft.id
+  loadAvailableItems()
   previewForm.value = {
     name: draft.name || '',
     description: draft.description || '',
@@ -566,6 +657,7 @@ function editPendingDraft(draft) {
         }))
       : [],
   }
+  selectedExistingItemId.value = ''
   previewOpen.value = true
 }
 
@@ -614,6 +706,18 @@ function executionSpaceRoute(checklistId = null) {
   }
 
   return { name: 'project-detail', params: { id: projectId.value } }
+}
+
+function checklistEditRoute(checklistId) {
+  return {
+    name: 'checklist-edit',
+    params: { id: checklistId },
+    query: {
+      returnTo: 'story-detail',
+      storyId,
+      ...(projectId.value ? { projectId: projectId.value } : {}),
+    },
+  }
 }
 
 function toggleHeaderActions() {
@@ -738,17 +842,17 @@ function confidenceLabel(suggestion) {
 
 function recommendationLabel(recommendation) {
   const labels = {
-    reuse: 'Reutilisation recommandee',
-    review: 'Relecture recommandee',
-    adapt: 'Adaptation recommandee',
-    create_draft: 'Creation de brouillon recommandee',
-    create_new_draft: 'Creation de brouillon recommandee',
-    generate_new: 'Generation recommandee',
-    generate_new_draft: 'Generation recommandee',
+    reuse: 'Réutilisation recommandée',
+    review: 'Relecture recommandée',
+    adapt: 'Adaptation recommandée',
+    create_draft: 'Création de brouillon recommandée',
+    create_new_draft: 'Création de brouillon recommandée',
+    generate_new: 'Génération recommandée',
+    generate_new_draft: 'Génération recommandée',
   }
 
   const normalized = String(recommendation || '').trim().toLowerCase()
-  return labels[normalized] || 'Preparation recommandee'
+  return labels[normalized] || 'Préparation recommandée'
 }
 
 function coveredCount(suggestion) {
@@ -810,12 +914,12 @@ function humanizeTechnicalLabel(value) {
 
 function generatedSourceLabel(value) {
   const labels = {
-    ai: 'Generation automatique',
-    reuse: 'Reutilisation d une checklist existante',
-    manual: 'Creation manuelle',
+    ai: 'Génération automatique',
+    reuse: 'Réutilisation d une checklist existante',
+    manual: 'Création manuelle',
   }
 
-  return labels[value] || 'Preparation manuelle'
+  return labels[value] || 'Préparation manuelle'
 }
 
 function generatedFromLabel(value) {
@@ -829,8 +933,8 @@ function generatedFromLabel(value) {
 function lifecycleLabel(value) {
   const labels = {
     draft: 'Brouillon',
-    approved: 'Approuvee',
-    archived: 'Archivee',
+    approved: 'Approuvée',
+    archived: 'Archivée',
   }
 
   return labels[value] || value || '-'
@@ -878,6 +982,7 @@ async function adaptSuggestedChecklist() {
 
   try {
     adapting.value = true
+    let attachedChecklistId = null
     const payload = {
       name: previewForm.value.name,
       description: previewForm.value.description,
@@ -892,7 +997,12 @@ async function adaptSuggestedChecklist() {
     }
 
     if (previewMode.value === 'manual') {
-      await storiesStore.createManualDraft(projectId.value, storyId, payload)
+      const createdChecklist = await storiesStore.createManualDraft(projectId.value, storyId, payload)
+      attachedChecklistId = createdChecklist?.id || null
+
+      if (attachedChecklistId) {
+        await storiesStore.attachChecklist(projectId.value, storyId, attachedChecklistId)
+      }
     } else if (previewMode.value === 'draft' && previewChecklistId.value) {
       await storiesStore.updateDraftChecklist(previewChecklistId.value, payload)
     } else if (currentPreview.value?.source_checklist_id) {
@@ -906,6 +1016,25 @@ async function adaptSuggestedChecklist() {
 
     previewOpen.value = false
     await loadStory()
+
+    if (attachedChecklistId) {
+      await nextTick()
+      highlightedChecklistId.value = attachedChecklistId
+
+      if (scrollTimeoutId) {
+        clearTimeout(scrollTimeoutId)
+      }
+      scrollTimeoutId = setTimeout(() => {
+        attachedSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 250)
+
+      if (highlightTimeoutId) {
+        clearTimeout(highlightTimeoutId)
+      }
+      highlightTimeoutId = setTimeout(() => {
+        highlightedChecklistId.value = null
+      }, 2000)
+    }
   } catch (err) {
     alert(`${tr('error_prefix', {}, currentLanguage.value)}: ${localizeError(err, 'error_generic', currentLanguage.value)}`)
   } finally {
@@ -922,6 +1051,31 @@ function addPreviewItem() {
     criticality: 'Major',
     status: 'pending',
   })
+}
+
+function addExistingItemToPreview() {
+  if (!selectedExistingItemId.value) {
+    return
+  }
+
+  const existingItem = availableItems.value.find(
+    (item) => String(item.id) === String(selectedExistingItemId.value),
+  )
+
+  if (!existingItem) {
+    return
+  }
+
+  previewForm.value.items.push({
+    id: `TC-${Date.now()}`,
+    title: existingItem.title || '',
+    description: existingItem.description || '',
+    priority: existingItem.priority || 'Medium',
+    criticality: existingItem.criticality || 'Major',
+    status: String(existingItem.status || 'pending').toLowerCase(),
+  })
+
+  selectedExistingItemId.value = ''
 }
 
 function removePreviewItem(index) {
@@ -986,7 +1140,12 @@ onBeforeUnmount(() => {
       <div class="h-8 w-8 animate-spin rounded-full border border-blue-500 border-t-transparent"></div>
     </div>
 
-    <div v-else-if="storiesStore.currentStory" class="space-y-6">
+    <div
+      v-else-if="storiesStore.currentStory"
+      class="space-y-6"
+      :aria-busy="isInteractionLocked ? 'true' : 'false'"
+      :class="{ 'pointer-events-none select-none': isInteractionLocked }"
+    >
       <section class="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_24px_60px_-44px_rgba(15,23,42,0.35)]">
         <div class="bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.15),transparent_18rem),radial-gradient(circle_at_bottom_left,rgba(14,165,233,0.12),transparent_18rem)] px-6 py-6 md:px-8">
           <div class="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
@@ -1010,14 +1169,14 @@ onBeforeUnmount(() => {
                 <p class="max-w-4xl text-sm leading-7 text-slate-600">
                   {{ isAdminReadonly
                     ? 'Consultez la story, son contexte et les checklists deja rattachees dans un mode lecture seule.'
-                    : 'Analysez le besoin, preparez la checklist la plus pertinente, puis faites progresser la validation jusqu a l execution.' }}
+                    : "Analysez le besoin, preparez la checklist la plus pertinente, puis faites progresser la validation jusqu a l execution." }}
                 </p>
               </div>
             </div>
 
             <div class="flex w-full flex-col gap-3 xl:max-w-md xl:items-end">
               <button
-                v-if="!isAdminReadonly"
+                v-if="auth.isTester"
                 type="button"
                 class="btn btn-primary w-full justify-center xl:w-auto"
                 @click="handlePrimaryAction"
@@ -1056,7 +1215,7 @@ onBeforeUnmount(() => {
                     <span>Creer manuellement</span>
                   </button>
                   <RouterLink
-                    v-if="projectId && !isAdminReadonly"
+                    v-if="projectId && auth.isTester"
                     :to="executionSpaceRoute()"
                     class="story-menu-action"
                     @click="openHeaderActions = false"
@@ -1104,7 +1263,7 @@ onBeforeUnmount(() => {
         <div class="mb-4 flex items-center justify-between gap-3">
           <div>
             <h2 class="text-xl font-semibold text-slate-950">Contexte de la user story</h2>
-            <p class="text-sm text-slate-500">Consultez le besoin par onglets pour eviter de surcharger la page.</p>
+            <p class="text-sm text-slate-500">Consultez le besoin par onglets pour éviter de surcharger la page.</p>
           </div>
           <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
             {{ storyTabs.length }} vues
@@ -1114,7 +1273,7 @@ onBeforeUnmount(() => {
       </section>
 
       <section
-        v-if="!isAdminReadonly"
+        v-if="auth.isTester"
         ref="prepareSection"
         class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm md:p-6"
       >
@@ -1163,12 +1322,18 @@ onBeforeUnmount(() => {
                 <Sparkles :size="18" />
               </span>
               <div>
-                <p class="font-semibold text-slate-900">Generer avec l agent</p>
-                <p class="text-sm text-slate-500">L agent privilegie la reutilisation avant de completer la couverture manquante.</p>
+                <p class="font-semibold text-slate-900">
+                  {{ storiesStore.isGenerating ? "Génération..." : "Générer avec l'agent" }}
+                </p>
+                <p class="text-sm text-slate-500">
+                  {{ storiesStore.isGenerating
+                    ? 'Veuillez patienter pendant que le systeme prepare la checklist.'
+                    : 'L agent privilegie la reutilisation avant de completer la couverture manquante.' }}
+                </p>
               </div>
             </div>
             <p class="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-              {{ storiesStore.isGenerating ? 'Generation en cours' : 'Pret a lancer' }}
+              {{ storiesStore.isGenerating ? 'Generation en cours...' : 'Pret a lancer' }}
             </p>
           </button>
 
@@ -1178,8 +1343,8 @@ onBeforeUnmount(() => {
                 <Plus :size="18" />
               </span>
               <div>
-                <p class="font-semibold text-slate-900">Creer manuellement</p>
-                <p class="text-sm text-slate-500">Preparez un brouillon sur mesure avant validation.</p>
+                <p class="font-semibold text-slate-900">Créer manuellement</p>
+                <p class="text-sm text-slate-500">Préparez un brouillon sur mesure avant validation.</p>
               </div>
             </div>
             <p class="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
@@ -1204,7 +1369,7 @@ onBeforeUnmount(() => {
           <div v-else-if="attachableChecklists.length === 0" class="mt-4 rounded-3xl border border-dashed border-slate-200 bg-white px-5 py-8 text-center">
             <AlertCircle :size="30" class="mx-auto mb-3 text-slate-400" />
             <p class="font-medium text-slate-900">Aucune checklist existante disponible</p>
-            <p class="mt-2 text-sm text-slate-500">Toutes les checklists actives du projet sont deja associees ou archivees.</p>
+            <p class="mt-2 text-sm text-slate-500">Toutes les checklists actives du projet sont deja associees ou archivées.</p>
           </div>
 
           <form v-else class="mt-4 space-y-4" @submit.prevent="attachExistingChecklist">
@@ -1349,20 +1514,20 @@ onBeforeUnmount(() => {
       </section>
 
       <section
-        v-if="!isAdminReadonly"
+        v-if="auth.isTester"
         ref="suggestionsSection"
         class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm md:p-6"
       >
         <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h2 class="text-xl font-semibold text-slate-950">Checklists suggerees</h2>
-            <p class="text-sm text-slate-500">Checklists existantes proches de cette User Story.</p>
+            <h2 class="text-xl font-semibold text-slate-950">{{ suggestionStatus.title }}</h2>
+            <p class="text-sm text-slate-500">{{ suggestionStatus.description }}</p>
           </div>
           <button
             type="button"
             class="btn btn-secondary btn-sm self-start"
             :disabled="loadingSuggestions"
-            @click="refreshSuggestedChecklists"
+            @click="refreshSuggestedChecklists({ notifyIfEmpty: true, lockUi: true })"
           >
             <Zap :size="14" />
             <span>{{ loadingSuggestions ? 'Recherche...' : 'Recommander' }}</span>
@@ -1390,8 +1555,14 @@ onBeforeUnmount(() => {
 
         <div v-else class="mt-5 rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 py-9 text-center">
           <AlertCircle :size="30" class="mx-auto mb-3 text-slate-400" />
-          <p class="font-medium text-slate-900">Aucune checklist similaire trouvee</p>
-          <p class="mt-2 text-sm text-slate-500">Vous pouvez creer une checklist manuellement ou lancer l agent de generation.</p>
+          <p class="font-medium text-slate-900">
+            {{ loadingSuggestions ? 'Recherche en cours...' : 'Aucune checklist similaire trouvee' }}
+          </p>
+          <p class="mt-2 text-sm text-slate-500">
+            {{ loadingSuggestions
+              ? 'Veuillez patienter pendant que le systeme analyse les checklists existantes.'
+              : 'Vous pouvez creer une checklist manuellement ou lancer l agent de generation.' }}
+          </p>
         </div>
       </section>
 
@@ -1401,16 +1572,9 @@ onBeforeUnmount(() => {
       >
         <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h2 class="text-xl font-semibold text-slate-950">Checklists associees</h2>
-            <p class="text-sm text-slate-500">Ces checklists sont pretes a etre consultees puis executees dans l espace dedie.</p>
+            <h2 class="text-xl font-semibold text-slate-950">Checklists associées</h2>
+            <p class="text-sm text-slate-500">Ces checklists sont rattachees a cette User Story pour conserver la traçabilité et le contexte de test.</p>
           </div>
-          <RouterLink
-            v-if="projectId && hasAttachedChecklists && !isAdminReadonly"
-            class="btn btn-secondary btn-sm"
-            :to="executionSpaceRoute(attachedChecklists[0]?.id)"
-          >
-            
-          </RouterLink>
         </div>
 
         <div v-if="hasAttachedChecklists" class="mt-5 flex flex-col gap-4">
@@ -1419,7 +1583,8 @@ onBeforeUnmount(() => {
             :key="checklist.id"
             :checklist="checklist"
             :execution-to="executionSpaceRoute(checklist.id)"
-            :can-execute="Boolean(projectId) && !isAdminReadonly"
+            :edit-to="checklistEditRoute(checklist.id)"
+            :can-execute="Boolean(projectId) && auth.isTester"
             :can-manage="auth.isTester"
             :highlighted="highlightedChecklistId === checklist.id"
             @detach="detachChecklist(checklist.id)"
@@ -1429,9 +1594,9 @@ onBeforeUnmount(() => {
         <div v-else class="mt-5 rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 py-9 text-center">
           <AlertCircle :size="30" class="mx-auto mb-3 text-slate-400" />
           <p class="font-medium text-slate-900">Aucune checklist associee</p>
-          <p class="mt-2 text-sm text-slate-500">Preparez ou associez une checklist pour debloquer l execution.</p>
+          <p class="mt-2 text-sm text-slate-500">Aucune checklist n est encore rattachee a cette User Story.</p>
           <button
-            v-if="!isAdminReadonly"
+            v-if="auth.isTester"
             type="button"
             class="btn btn-primary mt-4"
             @click="scrollToSection(prepareSection)"
@@ -1444,6 +1609,20 @@ onBeforeUnmount(() => {
 
     <div v-else class="card empty-dashed-card story-empty-state">
       <p class="muted">User Story introuvable.</p>
+    </div>
+
+    <div
+      v-if="isInteractionLocked"
+      class="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/28 px-4 backdrop-blur-[2px]"
+      aria-live="polite"
+      aria-modal="true"
+      role="status"
+    >
+      <div class="w-full max-w-sm rounded-[1.75rem] border border-slate-200 bg-white px-6 py-6 text-center shadow-2xl">
+        <div class="story-lock-spinner mx-auto"></div>
+        <h3 class="mt-4 text-lg font-semibold text-slate-950">{{ interactionLockState.title }}</h3>
+        <p class="mt-2 text-sm leading-6 text-slate-500">{{ interactionLockState.description }}</p>
+      </div>
     </div>
 
     <div v-if="previewOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
@@ -1528,16 +1707,6 @@ onBeforeUnmount(() => {
                 </template>
               </div>
 
-              <details class="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-                <summary class="cursor-pointer font-semibold text-slate-900">Afficher les details techniques</summary>
-                <div class="mt-3 space-y-2 leading-6">
-                  <p v-if="previewMode === 'suggestion'">Score brut : {{ currentPreview?.suggestion?.score ?? '-' }}</p>
-                  <p v-if="previewMode === 'suggestion'">Recommendation source : {{ currentPreview?.suggestion?.recommendation || '-' }}</p>
-                  <p v-if="previewMode === 'suggestion'">Termes relies : {{ (currentPreview?.suggestion?.matching_keywords || currentPreview?.suggestion?.matched_terms || []).join(', ') || '-' }}</p>
-                  <p>Mode : {{ previewMode }}</p>
-                </div>
-              </details>
-
               <button
                 class="w-full rounded-2xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:opacity-50"
                 :disabled="adapting || attaching || previewForm.items.length === 0"
@@ -1547,12 +1716,12 @@ onBeforeUnmount(() => {
                   adapting
                     ? 'Enregistrement...'
                     : previewMode === 'manual'
-                      ? 'Enregistrer le brouillon manuel'
+                      ? 'Associer'
                       : previewMode === 'draft'
                         ? 'Enregistrer les modifications'
                         : previewIntent === 'adapt'
-                          ? 'Creer un brouillon adapte'
-                          : 'Creer un brouillon de validation'
+                          ? 'Créer un brouillon adapté'
+                          : 'Créer un brouillon de validation'
                 }}
               </button>
             </div>
@@ -1585,7 +1754,48 @@ onBeforeUnmount(() => {
               </button>
             </div>
 
-            <div class="space-y-4">
+            <div class="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+              <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                <label class="block">
+                  <span class="text-sm font-medium text-slate-700">Ajouter un item existant</span>
+                  <select
+                    v-model="selectedExistingItemId"
+                    class="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                    @focus="loadAvailableItems"
+                  >
+                    <option value="">
+                      {{
+                        loadingAvailableItems
+                          ? 'Chargement des items disponibles...'
+                          : addableExistingItems.length > 0
+                            ? 'Selectionner un item existant'
+                            : 'Aucun item réutilisable disponible'
+                      }}
+                    </option>
+                    <option
+                      v-for="existingItem in addableExistingItems"
+                      :key="existingItem.id"
+                      :value="existingItem.id"
+                    >
+                      {{ existingItem.title }} ({{ existingItem.priority }} / {{ existingItem.criticality }})
+                    </option>
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  class="rounded-xl border border-slate-200 px-4 py-3 text-sm hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                  :disabled="loadingAvailableItems || !selectedExistingItemId"
+                  @click="addExistingItemToPreview"
+                >
+                  Ajouter l item selectionne
+                </button>
+              </div>
+              <p class="mt-3 text-sm text-slate-500">
+                éutilisez rapidement des items déjà présents dans la bibliothèque de checklists.
+              </p>
+            </div>
+
+            <div class="max-h-[26rem] space-y-4 overflow-y-auto pr-2">
               <div
                 v-for="(item, index) in previewForm.items"
                 :key="item.id || index"
@@ -1684,4 +1894,20 @@ onBeforeUnmount(() => {
   transform: none;
   box-shadow: none;
 }
+
+.story-lock-spinner {
+  height: 2.75rem;
+  width: 2.75rem;
+  border-radius: 9999px;
+  border: 3px solid #dbeafe;
+  border-top-color: #0284c7;
+  animation: story-lock-spin 0.8s linear infinite;
+}
+
+@keyframes story-lock-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 </style>
+

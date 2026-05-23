@@ -10,8 +10,6 @@ class Notification extends Model
 {
     use HasUuids;
 
-    protected $table = 'notifications';
-
     public $incrementing = false;
 
     protected $keyType = 'string';

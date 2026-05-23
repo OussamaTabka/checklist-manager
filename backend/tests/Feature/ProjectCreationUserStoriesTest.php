@@ -132,6 +132,80 @@ class ProjectCreationUserStoriesTest extends TestCase
         $response->assertJsonValidationErrors(['user_stories_file']);
     }
 
+    public function test_project_creation_rejects_unsupported_user_story_file_type(): void
+    {
+        $this->ensureRoles();
+
+        $chef = User::factory()->create();
+        $chef->assignRole('chef');
+
+        $tester = User::factory()->create();
+        $tester->assignRole('testeur');
+
+        Sanctum::actingAs($chef);
+
+        $file = UploadedFile::fake()->createWithContent(
+            'stories.pdf',
+            'not a supported user stories file'
+        );
+
+        $response = $this->post('/api/projects', [
+            'name' => 'Unsupported Import Project',
+            'description' => 'Invalid file type',
+            'test_objectives' => 'Should fail',
+            'app_url' => 'https://example.test',
+            'tester_ids' => [$tester->id],
+            'user_stories_file' => $file,
+        ], [
+            'Accept' => 'application/json',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['user_stories_file']);
+        $response->assertJsonPath(
+            'errors.user_stories_file.0',
+            "Le format du fichier importé n'est pas valide."
+        );
+    }
+
+    public function test_project_creation_rejects_duplicate_story_references_inside_import_file(): void
+    {
+        $this->ensureRoles();
+
+        $chef = User::factory()->create();
+        $chef->assignRole('chef');
+
+        $tester = User::factory()->create();
+        $tester->assignRole('testeur');
+
+        Sanctum::actingAs($chef);
+
+        $file = UploadedFile::fake()->createWithContent(
+            'stories.csv',
+            implode("\n", [
+                'title,description,acceptance_criteria,reference',
+                '"Imported Story 1","Imported description 1","Given valid data, When submitted, Then saved","US-IMP-01"',
+                '"Imported Story 2","Imported description 2","Given valid data, When submitted, Then saved"," us-imp-01 "',
+            ])
+        );
+
+        $response = $this->post('/api/projects', [
+            'name' => 'Duplicate Reference Project',
+            'description' => 'Project with duplicate references in import',
+            'test_objectives' => 'Validate duplicate references are rejected',
+            'app_url' => 'https://example.test',
+            'tester_ids' => [$tester->id],
+            'user_stories_file' => $file,
+        ], [
+            'Accept' => 'application/json',
+        ]);
+
+        $response->assertCreated();
+        $response->assertJsonPath('user_stories_summary.imported_created', 1);
+        $response->assertJsonPath('user_stories_summary.failed_imports', 1);
+        $response->assertJsonPath('user_stories_summary.errors.0.message', 'Cette référence existe déjà dans ce projet.');
+    }
+
     private function ensureRoles(): void
     {
         Role::findOrCreate('admin', 'web');

@@ -13,6 +13,7 @@ use App\Services\UserPasswordSetupService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Throwable;
 
@@ -47,6 +48,9 @@ class UserController extends Controller
                 },
             ])
             ->select(['id', 'name', 'email', 'account_status', 'archived_previous_status', 'invited_at', 'activated_at', 'archived_at', 'created_at'])
+            ->withCount([
+                'ownedProjects as owned_projects_count' => fn ($query) => $query->withTrashed(),
+            ])
             ->when(
                 $status === 'archived',
                 fn ($query) => $query->where('account_status', 'disabled'),
@@ -193,28 +197,91 @@ class UserController extends Controller
         ]);
     }
 
-    public function permanentDestroy(User $user)
+    public function permanentDestroy(Request $request, User $user)
     {
         if ($user->account_status !== 'disabled') {
             return response()->json(['message' => "L'utilisateur doit d'abord etre archive avant suppression definitive."], 422);
         }
 
         $ownership = $this->protectedOwnershipCounts($user);
-        $blocking = array_keys(array_filter($ownership));
+        $hasOwnedProjects = $ownership['projects'] > 0;
 
-        if ($blocking !== []) {
+        $data = $request->validate([
+            'replacement_owner_id' => [
+                Rule::requiredIf($hasOwnedProjects),
+                'nullable',
+                'integer',
+                Rule::exists('users', 'id')->where(function ($query) {
+                    $query
+                        ->where('account_status', 'active')
+                        ->whereIn('id', User::role('chef')->select('id'));
+                }),
+            ],
+        ], [
+            'replacement_owner_id.required' => 'Un chef de projet remplacant est requis pour reassigner les projets de cet utilisateur.',
+            'replacement_owner_id.exists' => 'Le chef de projet remplacant selectionne est invalide ou inactif.',
+        ]);
+
+        if (isset($data['replacement_owner_id']) && (int) $data['replacement_owner_id'] === (int) $user->id) {
             return response()->json([
-                'message' => 'Suppression definitive impossible tant que cet utilisateur possede encore des donnees metier.',
-                'blocking_resources' => $blocking,
-                'ownership_counts' => $ownership,
+                'message' => "Le chef de projet remplacant doit etre different de l'utilisateur supprime.",
+                'errors' => [
+                    'replacement_owner_id' => [
+                        "Le chef de projet remplacant doit etre different de l'utilisateur supprime.",
+                    ],
+                ],
             ], 422);
         }
 
-        $user->delete();
+        if ($hasOwnedProjects && empty($data['replacement_owner_id'])) {
+            return response()->json([
+                'message' => 'Suppression definitive impossible sans reassigner les projets de cet utilisateur.',
+                'ownership_counts' => $ownership,
+                'requires_replacement_owner' => true,
+            ], 422);
+        }
+
+        DB::transaction(function () use ($user, $data) {
+            $replacementOwnerId = $data['replacement_owner_id'] ?? null;
+
+            if ($replacementOwnerId) {
+                Project::withTrashed()
+                    ->where('created_by', $user->id)
+                    ->update(['created_by' => $replacementOwnerId]);
+
+                UserStory::withTrashed()
+                    ->where('created_by', $user->id)
+                    ->update(['created_by' => $replacementOwnerId]);
+            }
+
+            Checklist::withTrashed()
+                ->where('created_by', $user->id)
+                ->update(['created_by' => null]);
+
+            if ($user->profile_photo_path) {
+                Storage::disk('public')->delete($user->profile_photo_path);
+            }
+
+            $user->tokens()->delete();
+            $user->delete();
+        });
 
         return response()->json([
             'message' => 'Utilisateur supprime definitivement avec succes.',
         ]);
+    }
+
+    public function getAvailableProjectManagers()
+    {
+        $users = User::with(['roles:id,name'])
+            ->where('account_status', 'active')
+            ->whereHas('roles', function ($query) {
+                $query->where('name', 'chef');
+            })
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'account_status']);
+
+        return response()->json(['data' => $users]);
     }
 
     public function getAvailableTesters()

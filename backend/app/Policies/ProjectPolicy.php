@@ -43,4 +43,9 @@ class ProjectPolicy
     {
         return $user->hasRole('chef') && $project->created_by === $user->id;
     }
+
+    public function exportReport(User $user, Project $project): bool
+    {
+        return $user->hasRole('chef') && !$user->hasRole('admin') && $project->created_by === $user->id;
+    }
 }

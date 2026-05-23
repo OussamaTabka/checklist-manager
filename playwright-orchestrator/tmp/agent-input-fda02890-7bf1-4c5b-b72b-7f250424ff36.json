@@ -1,0 +1,16 @@
+{
+    "run_id": "fda02890-7bf1-4c5b-b72b-7f250424ff36",
+    "external_id": 85,
+    "test_case_title": "Session expires after inactivity",
+    "test_case_description": "Verify inactive users are logged out and redirected to login.",
+    "test_case_text": "Session expires after inactivity\nVerify inactive users are logged out and redirected to login.",
+    "base_url": "https://www.apple.com/tn",
+    "use_auth": true,
+    "environment_name": "",
+    "notes": "",
+    "priority": "Medium",
+    "criticality": "Major",
+    "current_status": "Not Tested",
+    "project_version_id": 19,
+    "target_type": "version_item"
+}

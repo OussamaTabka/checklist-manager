@@ -1,13 +1,13 @@
 import { getCurrentLanguage } from '@/lib/localization'
 
 const FILTER_LABELS = {
-  all: { fr: 'Toutes', en: 'All', ar: 'الكل' },
-  unread: { fr: 'Non lues', en: 'Unread', ar: 'غير مقروءة' },
-  projects: { fr: 'Projets', en: 'Projects', ar: 'المشاريع' },
-  tests: { fr: 'Tests', en: 'Tests', ar: 'الاختبارات' },
-  comments: { fr: 'Commentaires', en: 'Comments', ar: 'التعليقات' },
-  system: { fr: 'Systeme', en: 'System', ar: 'النظام' },
-  archived: { fr: 'Archivees', en: 'Archived', ar: 'مؤرشفة' },
+  all: { fr: 'Toutes', en: 'All' },
+  unread: { fr: 'Non lues', en: 'Unread' },
+  projects: { fr: 'Projets', en: 'Projects' },
+  tests: { fr: 'Tests', en: 'Tests' },
+  comments: { fr: 'Commentaires', en: 'Comments' },
+  system: { fr: 'Systeme', en: 'System' },
+  archived: { fr: 'Archivees', en: 'Archived' },
 }
 
 export const notificationFilters = Object.keys(FILTER_LABELS).map((value) => ({
@@ -32,7 +32,7 @@ export function formatNotificationDate(value, language = getCurrentLanguage()) {
     return ''
   }
 
-  const locale = language === 'en' ? 'en-US' : language === 'ar' ? 'ar-SA' : 'fr-FR'
+  const locale = language === 'en' ? 'en-US' : 'fr-FR'
 
   return date.toLocaleString(locale, {
     day: '2-digit',
@@ -44,14 +44,14 @@ export function formatNotificationDate(value, language = getCurrentLanguage()) {
 
 export function notificationStatusLabel(notification, language = getCurrentLanguage()) {
   if (notification.is_archived) {
-    return { fr: 'Archivee', en: 'Archived', ar: 'مؤرشفة' }[language] || 'Archivee'
+    return { fr: 'Archivee', en: 'Archived' }[language] || 'Archivee'
   }
 
   if (notification.is_read) {
-    return { fr: 'Lue', en: 'Read', ar: 'مقروءة' }[language] || 'Lue'
+    return { fr: 'Lue', en: 'Read' }[language] || 'Lue'
   }
 
-  return { fr: 'Non lue', en: 'Unread', ar: 'غير مقروءة' }[language] || 'Non lue'
+  return { fr: 'Non lue', en: 'Unread' }[language] || 'Non lue'
 }
 
 export function notificationTone(notification) {
@@ -64,11 +64,11 @@ export function notificationTone(notification) {
 
 export function notificationTypeLabel(notification, language = getCurrentLanguage()) {
   const labels = {
-    projects: { fr: 'Projet', en: 'Project', ar: 'مشروع' },
-    tests: { fr: 'Test', en: 'Test', ar: 'اختبار' },
-    comments: { fr: 'Commentaire', en: 'Comment', ar: 'تعليق' },
-    system: { fr: 'Systeme', en: 'System', ar: 'النظام' },
-    default: { fr: 'Notification', en: 'Notification', ar: 'إشعار' },
+    projects: { fr: 'Projet', en: 'Project' },
+    tests: { fr: 'Test', en: 'Test' },
+    comments: { fr: 'Commentaire', en: 'Comment' },
+    system: { fr: 'Systeme', en: 'System' },
+    default: { fr: 'Notification', en: 'Notification' },
   }
 
   const label = labels[notification.category] || labels.default

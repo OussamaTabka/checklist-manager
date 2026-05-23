@@ -9,6 +9,9 @@ class ProjectVersionController extends Controller
 {
     public function show(ProjectVersion $projectVersion)
     {
+        $projectVersion->loadMissing('project');
+        $this->authorize('view', $projectVersion->project);
+
         return response()->json(
             $projectVersion->load([
                 'items.comments.user',
@@ -20,6 +23,9 @@ class ProjectVersionController extends Controller
 
     public function progress(ProjectVersion $projectVersion)
     {
+        $projectVersion->loadMissing('project');
+        $this->authorize('view', $projectVersion->project);
+
         $items = $projectVersion->items();
 
         $total = (int) $items->count();
