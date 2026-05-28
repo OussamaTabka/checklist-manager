@@ -1,0 +1,7 @@
+playwright-orchestrator/tmp/
+runs/
+playwright-runner-job/debug.log
+playwright-runner-job/dist/
+playwright-agent/src/**/*.js
+playwright-agent/src/**/*.d.ts
+playwright-agent/src/**/*.js.map

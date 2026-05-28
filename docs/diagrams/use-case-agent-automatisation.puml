@@ -1,0 +1,70 @@
+@startuml
+' Diagramme de cas d'utilisation centré sur l'agent d'automatisation des tests
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam ActorStyle awesome
+
+actor "Testeur QA" as Testeur
+actor "Application sous test" as Application
+
+rectangle "Agent d'automatisation des tests" {
+  package "Préparation à l'automatisation" {
+    usecase "Préparer un cas de test\npour l'automatisation" as UC_Preparer
+    usecase "Renseigner les inputs\nrequis" as UC_Inputs
+    usecase "Valider la testabilité\ndu cas de test" as UC_Valider
+  }
+
+  package "Exécution automatisée" {
+    usecase "Déclencher l'automatisation\nd'un cas de test" as UC_Declencher
+    usecase "Générer la spécification\nd'exécution via IA" as UC_Generer
+    usecase "Exécuter la spécification\ndans un environnement isolé" as UC_Executer
+    usecase "Collecter les artefacts\nd'exécution" as UC_Collecter
+    usecase "Suivre l'avancement d'une\nexécution automatisée" as UC_Suivre
+  }
+
+  package "Analyse des résultats" {
+    usecase "Consulter le rapport d'une\nexécution automatisée" as UC_Consulter
+    usecase "Visualiser les traces et\ncaptures d'écran" as UC_Visualiser
+    usecase "Comparer plusieurs exécutions\nd'un même cas" as UC_Comparer
+    usecase "Relancer une exécution\nautomatisée" as UC_Relancer
+  }
+}
+
+' Associations avec l'acteur principal
+Testeur -- UC_Preparer
+Testeur -- UC_Inputs
+Testeur -- UC_Valider
+Testeur -- UC_Declencher
+Testeur -- UC_Suivre
+Testeur -- UC_Consulter
+Testeur -- UC_Visualiser
+Testeur -- UC_Comparer
+Testeur -- UC_Relancer
+
+' Association avec l'acteur secondaire externe
+UC_Executer -- Application
+
+' Relations d'inclusion
+UC_Declencher ..> UC_Generer : <<include>>
+UC_Declencher ..> UC_Executer : <<include>>
+UC_Executer ..> UC_Collecter : <<include>>
+
+' Relations d'extension
+UC_Valider ..> UC_Declencher : <<extend>>
+UC_Comparer ..> UC_Visualiser : <<extend>>
+UC_Relancer ..> UC_Consulter : <<extend>>
+
+note bottom of UC_Generer
+  L'appel au modèle d'IA fait partie
+  du comportement interne du système.
+end note
+
+note bottom of UC_Executer
+  L'orchestration, l'exécution Playwright
+  isolée et la collecte des artefacts
+  sont internes au système.
+end note
+
+@enduml
