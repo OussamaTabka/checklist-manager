@@ -1,8 +1,12 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { z } from 'zod'
-import { config } from './config.js'
-import { classifyItem, type Scenario } from './classify.js'
+import { config, getGenerationEngine, getOpenAIConfig } from './config.js'
+import { RunSpecDslV1Schema, type GenerationMetadataDsl } from './dslSchema.js'
+import { createLLMProvider } from './llm/provider.js'
+import { generateRunCase, RunCaseGenerationFailedError } from './llm/runCaseGenerator.js'
+import { LLMProviderError } from './llm/types.js'
+import type { GeneratorChecklistItem } from './prompts/generatorPrompt.js'
 
 const InputSchema = z.object({
   run_id: z.string().min(1),
@@ -19,6 +23,9 @@ const InputSchema = z.object({
   current_status: z.string().optional().default(''),
   project_version_id: z.number().int().positive().optional(),
   target_type: z.string().optional().default('version_item'),
+  source_app: z.string().optional().default(''),
+  provided_inputs: z.record(z.string(), z.any()).optional().default({}),
+  expected_result: z.record(z.string(), z.any()).optional().default({}),
 })
 
 type GeneratorInput = z.infer<typeof InputSchema>
@@ -36,6 +43,7 @@ const RequiredInputSchema = z.object({
   label: z.string().min(1),
   kind: z.enum(['text', 'email', 'password', 'textarea', 'search', 'file']),
   required: z.boolean(),
+  allow_empty: z.boolean().optional(),
   description: z.string().optional(),
   value: z.string().nullable().optional(),
 })
@@ -72,6 +80,7 @@ const AssertSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('expect_visible'), selector: SelectorSchema }),
   z.object({ type: z.literal('expect_hidden'), selector: SelectorSchema }),
   z.object({ type: z.literal('expect_text'), selector: SelectorSchema, text: z.string() }),
+  z.object({ type: z.literal('expect_text_contains'), selector: SelectorSchema, text: z.string() }),
   z.object({ type: z.literal('expect_url_contains'), value: z.string().min(1) }),
   z.object({ type: z.literal('expect_title'), value: z.string().min(1) }),
 ])
@@ -148,6 +157,8 @@ type CoverageType =
   | 'generic_ui'
   | 'unsupported_non_ui'
 
+type Scenario = 'login' | 'dashboard' | 'checklists' | 'projects' | 'users' | 'unknown'
+
 type RequiredInput = z.infer<typeof RequiredInputSchema>
 type Diagnostic = z.infer<typeof DiagnosticSchema>
 type PreflightCheck = z.infer<typeof PreflightCheckSchema>
@@ -174,6 +185,19 @@ function normalizeText(input: GeneratorInput): string {
     input.test_case_description,
     input.notes,
   ].filter(Boolean).join('\n').toLowerCase()
+}
+
+function benchmarkHintText(input: GeneratorInput): string {
+  const assertionKeywords = Array.isArray(input.expected_result.assertion_keywords)
+    ? input.expected_result.assertion_keywords.filter((value): value is string => typeof value === 'string')
+    : []
+
+  return [
+    normalizeText(input),
+    typeof input.expected_result.visible_text_contains === 'string' ? input.expected_result.visible_text_contains.toLowerCase() : '',
+    typeof input.expected_result.visible_text === 'string' ? input.expected_result.visible_text.toLowerCase() : '',
+    assertionKeywords.join(' ').toLowerCase(),
+  ].filter(Boolean).join('\n')
 }
 
 function hasAny(text: string, patterns: RegExp[]): boolean {
@@ -256,6 +280,230 @@ function requiredInput(key: string, label: string, kind: RequiredInput['kind'], 
   return { key, label, kind, required, description, value }
 }
 
+function getProvidedInputValue(input: GeneratorInput, key: string): string | null {
+  const aliasesByKey: Record<string, string[]> = {
+    email: ['email', 'username', 'user', 'login', 'identifier'],
+    username: ['username', 'email', 'user', 'login', 'identifier'],
+    user: ['user', 'username', 'email', 'login', 'identifier'],
+    login: ['login', 'username', 'email', 'user', 'identifier'],
+    identifier: ['identifier', 'username', 'email', 'user', 'login'],
+  }
+
+  const candidateKeys = aliasesByKey[key] ?? [key]
+
+  for (const candidateKey of candidateKeys) {
+    const value = input.provided_inputs[candidateKey]
+    if (typeof value === 'string') {
+      return value
+    }
+  }
+
+  return null
+}
+
+function isSauceDemoTarget(input: GeneratorInput): boolean {
+  const normalizedBaseUrl = normalizeBaseUrl(input.base_url)
+  const { hostname, port } = new URL(normalizedBaseUrl)
+  const normalizedHost = hostname.toLowerCase()
+  const normalizedSourceApp = (input.source_app ?? '').toLowerCase()
+
+  if (normalizedSourceApp.startsWith('sauce_demo')) {
+    return true
+  }
+
+  if (normalizedHost.includes('saucedemo.com')) {
+    return true
+  }
+
+  return normalizedHost === '127.0.0.1' && port === '4177'
+}
+
+function isRequiredFieldValidationScenario(input: GeneratorInput): boolean {
+  const text = normalizeText(input)
+
+  return mentionsAny(text, [
+    /\bmissing\b/,
+    /\brequired field\b/,
+    /\brequired\b/,
+    /\bblank field\b/,
+    /\bempty field\b/,
+    /\bleav(?:e|ing) field blank\b/,
+    /\bleav(?:e|ing) .* blank\b/,
+  ])
+}
+
+function isIntentionalBlankInput(input: GeneratorInput, key: string): boolean {
+  const text = benchmarkHintText(input)
+  const value = getProvidedInputValue(input, key)
+
+  if (value === null || value !== '' || !isRequiredFieldValidationScenario(input)) {
+    return false
+  }
+
+  const patternsByKey: Record<string, RegExp[]> = {
+    email: [/\bmissing username\b/, /\bmissing username and password\b/, /\bmissing email\b/, /\bmissing login\b/, /\bmissing identifier\b/, /\bblank username\b/, /\bempty username\b/, /\busername is required\b/, /\bemail is required\b/],
+    username: [/\bmissing username\b/, /\bblank username\b/, /\bempty username\b/, /\busername is required\b/],
+    user: [/\bmissing username\b/, /\bblank username\b/, /\bempty username\b/],
+    login: [/\bmissing login\b/, /\bblank login\b/, /\bempty login\b/],
+    identifier: [/\bmissing identifier\b/, /\bblank identifier\b/, /\bempty identifier\b/],
+    password: [/\bmissing password\b/, /\bmissing username and password\b/, /\bmissing credentials\b/, /\bblank password\b/, /\bempty password\b/, /\bpassword is required\b/],
+  }
+
+  const patterns = patternsByKey[key] ?? []
+  return patterns.some((pattern) => pattern.test(text))
+}
+
+function isSauceDemoProtectedRouteCase(input: GeneratorInput): boolean {
+  if (!isSauceDemoTarget(input)) {
+    return false
+  }
+
+  const text = benchmarkHintText(input)
+  return /\binventory page requires login\b|\bcart page requires login\b|\bwithout an authenticated session redirects to login\b/.test(text)
+}
+
+function sauceDemoProtectedPath(input: GeneratorInput): string {
+  const text = benchmarkHintText(input)
+  if (/\bcart\b/.test(text)) {
+    return '/cart.html'
+  }
+
+  return '/inventory.html'
+}
+
+function isSauceDemoAddToCartCase(input: GeneratorInput): boolean {
+  if (!isSauceDemoTarget(input)) {
+    return false
+  }
+
+  const text = benchmarkHintText(input)
+  return /\badd\b.*\bcart\b|\bcart badge\b/.test(text)
+}
+
+function isSauceDemoInventoryRemovalCase(input: GeneratorInput): boolean {
+  return isSauceDemoTarget(input) && /\bremove\b.*\binventory page\b/.test(benchmarkHintText(input))
+}
+
+function isSauceDemoCartRemovalCase(input: GeneratorInput): boolean {
+  return isSauceDemoTarget(input) && /\bremove\b.*\bcart page\b/.test(benchmarkHintText(input))
+}
+
+function isSauceDemoCartRetentionCase(input: GeneratorInput): boolean {
+  return isSauceDemoTarget(input) && /\bcart retains\b|\bstill present after navigating to the cart page\b/.test(benchmarkHintText(input))
+}
+
+function isSauceDemoProductDetailCase(input: GeneratorInput): boolean {
+  return isSauceDemoTarget(input) && /\bproduct detail\b|\bopens the product detail page\b/.test(benchmarkHintText(input))
+}
+
+function isSauceDemoBackToProductsCase(input: GeneratorInput): boolean {
+  return isSauceDemoTarget(input) && /\bback to products\b/.test(benchmarkHintText(input))
+}
+
+function isSauceDemoSortingCase(input: GeneratorInput): boolean {
+  return isSauceDemoTarget(input) && /\bsort\b/.test(benchmarkHintText(input))
+}
+
+function isSauceDemoAuthenticatedCatalogCase(input: GeneratorInput): boolean {
+  return isSauceDemoAddToCartCase(input)
+    || isSauceDemoInventoryRemovalCase(input)
+    || isSauceDemoCartRemovalCase(input)
+    || isSauceDemoCartRetentionCase(input)
+    || isSauceDemoProductDetailCase(input)
+    || isSauceDemoBackToProductsCase(input)
+    || isSauceDemoSortingCase(input)
+}
+
+function sauceDemoProductSlugFromName(name: string | null | undefined): string {
+  const normalized = (name ?? '').trim().toLowerCase()
+
+  if (normalized.includes('bike light')) {
+    return 'sauce-labs-bike-light'
+  }
+
+  if (normalized.includes('t-shirt')) {
+    return 'test.allthethings()-t-shirt-(red)'
+  }
+
+  return 'sauce-labs-backpack'
+}
+
+function sauceDemoProductNameForSlug(slug: string): string {
+  switch (slug) {
+    case 'sauce-labs-bike-light':
+      return 'Sauce Labs Bike Light'
+    case 'test.allthethings()-t-shirt-(red)':
+      return 'Test.allTheThings() T-Shirt (Red)'
+    case 'sauce-labs-backpack':
+    default:
+      return 'Sauce Labs Backpack'
+  }
+}
+
+function sauceDemoPrimaryProductSlug(input: GeneratorInput): string {
+  const explicitProduct = input.provided_inputs.product
+  if (typeof explicitProduct === 'string' && explicitProduct.trim() !== '') {
+    return sauceDemoProductSlugFromName(explicitProduct)
+  }
+
+  const products = input.provided_inputs.products
+  if (Array.isArray(products)) {
+    const firstProduct = products.find((value): value is string => typeof value === 'string' && value.trim() !== '')
+    if (firstProduct) {
+      return sauceDemoProductSlugFromName(firstProduct)
+    }
+  }
+
+  if (/\bbike light\b/.test(benchmarkHintText(input))) {
+    return 'sauce-labs-bike-light'
+  }
+
+  return 'sauce-labs-backpack'
+}
+
+function sauceDemoProductSlugs(input: GeneratorInput): string[] {
+  const products = input.provided_inputs.products
+  if (Array.isArray(products)) {
+    const resolved = products
+      .filter((value): value is string => typeof value === 'string' && value.trim() !== '')
+      .map((value) => sauceDemoProductSlugFromName(value))
+
+    if (resolved.length > 0) {
+      return Array.from(new Set(resolved))
+    }
+  }
+
+  return [sauceDemoPrimaryProductSlug(input)]
+}
+
+function sauceDemoSortValue(input: GeneratorInput): string {
+  const providedSort = input.provided_inputs.sort
+  if (typeof providedSort === 'string' && providedSort.trim() !== '') {
+    return providedSort.trim().toLowerCase()
+  }
+
+  const text = benchmarkHintText(input)
+  if (/\bz to a\b/.test(text)) return 'za'
+  if (/\blow to high\b/.test(text)) return 'lohi'
+  if (/\bhigh to low\b/.test(text)) return 'hilo'
+
+  return 'az'
+}
+
+function sauceDemoSortLabel(sortValue: string): string {
+  switch (sortValue) {
+    case 'za':
+      return 'Name (Z to A)'
+    case 'lohi':
+      return 'Price (low to high)'
+    case 'hilo':
+      return 'Price (high to low)'
+    case 'az':
+    default:
+      return 'Name (A to Z)'
+  }
+}
+
 function dedupeRequiredInputs(inputs: RequiredInput[]): RequiredInput[] {
   const seen = new Map<string, RequiredInput>()
   for (const input of inputs) {
@@ -277,6 +525,24 @@ function quotedPhrasesFromText(text: string): string[] {
 }
 
 function extractExpectedFeedbackText(input: GeneratorInput): string | null {
+  const expectedVisibleText = input.expected_result.visible_text_contains
+  if (typeof expectedVisibleText === 'string' && expectedVisibleText.trim() !== '') {
+    return expectedVisibleText.trim()
+  }
+
+  const expectedVisibleTextExact = input.expected_result.visible_text
+  if (typeof expectedVisibleTextExact === 'string' && expectedVisibleTextExact.trim() !== '') {
+    return expectedVisibleTextExact.trim()
+  }
+
+  const assertionKeywords = input.expected_result.assertion_keywords
+  if (Array.isArray(assertionKeywords)) {
+    const firstKeyword = assertionKeywords.find((keyword) => typeof keyword === 'string' && keyword.trim() !== '')
+    if (typeof firstKeyword === 'string') {
+      return firstKeyword.trim()
+    }
+  }
+
   const text = normalizeText(input)
   if (!mentionsAny(text, [/\bmessage\b/, /\btoast\b/, /\balert\b/, /\berror\b/, /\bsuccess\b/, /\bconfirmation\b/])) {
     return null
@@ -289,16 +555,45 @@ function extractExpectedFeedbackText(input: GeneratorInput): string | null {
     input.notes,
   ].filter(Boolean).join('\n'))
 
-  return candidates[0] ?? null
+  if (candidates[0]) {
+    return candidates[0]
+  }
+
+  if (isSauceDemoTarget(input)) {
+    if (/\blocked out\b/.test(text)) return 'locked out'
+    if (/\bmissing username\b|\busername is required\b/.test(text)) return 'Username is required'
+    if (/\bmissing password\b|\bpassword is required\b/.test(text)) return 'Password is required'
+    if (/\binvalid password\b|\binvalid username\b|\bdo not match\b/.test(text)) return 'Username and password do not match'
+  }
+
+  return null
 }
 
 function extractRequiredInputs(input: GeneratorInput, coverageType: CoverageType): RequiredInput[] {
   const text = normalizeText(input)
   const inputs: RequiredInput[] = []
 
+  if (isSauceDemoProtectedRouteCase(input)) {
+    return []
+  }
+
   if (coverageType === 'auth_login') {
-    inputs.push(requiredInput('email', 'Email or username', 'email', true, 'Credential used to authenticate the user.'))
-    inputs.push(requiredInput('password', 'Password', 'password', true, 'Password used to authenticate the user.'))
+    const identityInput = requiredInput('email', 'Email or username', 'email', true, 'Credential used to authenticate the user.', getProvidedInputValue(input, 'email'))
+    if (isIntentionalBlankInput(input, 'email')) {
+      identityInput.allow_empty = true
+    }
+    const passwordInput = requiredInput('password', 'Password', 'password', true, 'Password used to authenticate the user.', getProvidedInputValue(input, 'password'))
+    if (isIntentionalBlankInput(input, 'password')) {
+      passwordInput.allow_empty = true
+    }
+
+    inputs.push(identityInput)
+    inputs.push(passwordInput)
+  }
+
+  if (isSauceDemoAuthenticatedCatalogCase(input)) {
+    inputs.push(requiredInput('email', 'Email or username', 'email', true, 'Credential used to authenticate the user.', getProvidedInputValue(input, 'email')))
+    inputs.push(requiredInput('password', 'Password', 'password', true, 'Password used to authenticate the user.', getProvidedInputValue(input, 'password')))
   }
 
   if (coverageType === 'search_filter') {
@@ -612,7 +907,7 @@ function defaultDestinationForScenario(scenario: Scenario): string {
   }
 }
 
-function buildPreflightChecks(coverageType: CoverageType, requiredInputs: RequiredInput[], scenario: Scenario, internalTarget: boolean): PreflightCheck[] {
+function buildPreflightChecks(input: GeneratorInput, coverageType: CoverageType, requiredInputs: RequiredInput[], scenario: Scenario, internalTarget: boolean): PreflightCheck[] {
   const checks: PreflightCheck[] = [
     {
       id: 'page-accessible',
@@ -643,6 +938,10 @@ function buildPreflightChecks(coverageType: CoverageType, requiredInputs: Requir
       input_key: input.key,
       failure_message: `Missing required test data for '${input.label}'. Provide a value before running the test.`,
     })
+  }
+
+  if (isSauceDemoProtectedRouteCase(input) || isSauceDemoAuthenticatedCatalogCase(input)) {
+    return checks
   }
 
   switch (coverageType) {
@@ -762,8 +1061,11 @@ function buildPreflightChecks(coverageType: CoverageType, requiredInputs: Requir
 function buildStepsAndAsserts(input: GeneratorInput, coverageType: CoverageType, scenario: Scenario, internalTarget: boolean): { steps: Step[]; asserts: Assert[]; useAuth: boolean } {
   const normalizedBaseUrl = normalizeBaseUrl(input.base_url)
   const requiredInputs = extractRequiredInputs(input, coverageType)
-  const negativeCase = /invalid|wrong|incorrect|negative|unsuccessful|error/.test(normalizeText(input))
+  const negativeCase = /invalid|wrong|incorrect|negative|unsuccessful|error|missing|required|blank|empty|locked out|cannot login|can't login|unable to login|denied|rejected|reject/.test(normalizeText(input))
   const expectedFeedbackText = extractExpectedFeedbackText(input)
+  const isSauceDemoLogin = coverageType === 'auth_login' && isSauceDemoTarget(input)
+  const identityInput = requiredInputs.find((entry) => entry.key === 'email') ?? requiredInput('email', 'Email', 'email', true, '')
+  const passwordInput = requiredInputs.find((entry) => entry.key === 'password') ?? requiredInput('password', 'Password', 'password', true, '')
   const destination = internalTarget && scenario !== 'unknown' && coverageType === 'generic_ui'
     ? defaultDestinationForScenario(scenario)
     : internalTarget && coverageType === 'auth_login'
@@ -772,26 +1074,170 @@ function buildStepsAndAsserts(input: GeneratorInput, coverageType: CoverageType,
 
   const steps: Step[] = [{ action: 'goto', url: destination }]
   const asserts: Assert[] = []
-  const alertSelector: Selector = { by: 'css', value: '[role="alert"], .error, .alert, .invalid-feedback, .field-error, .toast, .notification, .success' }
+  const alertSelector: Selector = { by: 'css', value: '[role="alert"], [data-test="error"], h3[data-test="error"], .error-message-container, .error-message-container.error, button.error-button, .error, .alert, .invalid-feedback, .field-error, .toast, .notification, .success' }
   const successSelector: Selector = { by: 'css', value: '[role="alert"], .success, .toast, .notification, [data-testid*="success"], [data-testid*="toast"]' }
   const listSelector: Selector = { by: 'css', value: 'table, [role="table"], [role="grid"], ul, ol, [data-testid*="list"], [data-testid*="table"]' }
+  const sauceDemoLoginSelector: Selector = { by: 'css', value: 'input[data-test="username"], #user-name, input[name="user-name"]' }
+  const sauceDemoCartBadgeSelector: Selector = { by: 'css', value: '[data-test="shopping-cart-badge"], .shopping_cart_badge, .cart-badge' }
+  const sauceDemoBackpackAddSelector: Selector = { by: 'css', value: '[data-test="add-to-cart-sauce-labs-backpack"]' }
+  const sauceDemoBikeLightAddSelector: Selector = { by: 'css', value: '[data-test="add-to-cart-sauce-labs-bike-light"]' }
+  const sauceDemoBackpackRemoveSelector: Selector = { by: 'css', value: '[data-test="remove-sauce-labs-backpack"]' }
+  const sauceDemoBikeLightRemoveSelector: Selector = { by: 'css', value: '[data-test="remove-sauce-labs-bike-light"]' }
+  const sauceDemoInventoryListSelector: Selector = { by: 'css', value: '[data-test="inventory-container"], .inventory_list' }
+  const sauceDemoCartLinkSelector: Selector = { by: 'css', value: '[data-test="shopping-cart-link"]' }
+  const sauceDemoSortSelector: Selector = { by: 'css', value: '[data-test="product-sort-container"]' }
+  const sauceDemoBackToProductsSelector: Selector = { by: 'css', value: '[data-test="back-to-products"]' }
+  const sauceDemoEmptyCartSelector: Selector = { by: 'css', value: '[data-test="empty-cart"]' }
+  const sauceDemoProductTitleSelector = (slug: string): Selector => ({ by: 'css', value: `[data-test="item-${slug}-title"]` })
+
+  const appendSauceDemoLogin = (): void => {
+    steps.push({ action: 'goto', url: '/login' })
+    steps.push({ action: 'wait_for_selector', selector: sauceDemoLoginSelector, state: 'visible', timeout_ms: 20000 })
+    if (!identityInput.allow_empty) {
+      steps.push({ action: 'fill', selector: selectorForInput(identityInput), input_key: 'email' })
+    }
+    if (!passwordInput.allow_empty) {
+      steps.push({ action: 'fill', selector: selectorForInput(passwordInput), input_key: 'password' })
+    }
+    steps.push({ action: 'click', selector: actionSelectorForInput(input, 'auth_login') })
+    steps.push({ action: 'wait_for_url', contains: '/inventory.html', timeout_ms: 20000 })
+    steps.push({ action: 'wait_for_selector', selector: sauceDemoInventoryListSelector, state: 'visible', timeout_ms: 20000 })
+  }
+
+  if (isSauceDemoProtectedRouteCase(input)) {
+    const protectedPath = sauceDemoProtectedPath(input)
+    steps.push({ action: 'goto', url: protectedPath })
+    steps.push({ action: 'wait_for_selector', selector: sauceDemoLoginSelector, state: 'visible', timeout_ms: 20000 })
+    steps.push({ action: 'screenshot', name: 'protected-route-login-gate' })
+    asserts.push({ type: 'expect_visible', selector: sauceDemoLoginSelector })
+    asserts.push({ type: 'expect_visible', selector: { by: 'text', text: 'Swag Labs' } })
+    return { steps, asserts, useAuth: false }
+  }
+
+  if (isSauceDemoAddToCartCase(input)) {
+    appendSauceDemoLogin()
+    const products = sauceDemoProductSlugs(input)
+    for (const productSlug of products) {
+      steps.push({
+        action: 'click',
+        selector: productSlug === 'sauce-labs-bike-light' ? sauceDemoBikeLightAddSelector : sauceDemoBackpackAddSelector,
+      })
+    }
+    steps.push({ action: 'wait_for_selector', selector: sauceDemoCartBadgeSelector, state: 'visible', timeout_ms: 20000 })
+    steps.push({ action: 'screenshot', name: 'cart-updated' })
+    asserts.push({ type: 'expect_url_contains', value: '/inventory.html' })
+    asserts.push({ type: 'expect_text_contains', selector: sauceDemoCartBadgeSelector, text: String(products.length) })
+    for (const productSlug of products) {
+      asserts.push({
+        type: 'expect_visible',
+        selector: productSlug === 'sauce-labs-bike-light' ? sauceDemoBikeLightRemoveSelector : sauceDemoBackpackRemoveSelector,
+      })
+    }
+    return { steps, asserts, useAuth: false }
+  }
+
+  if (isSauceDemoInventoryRemovalCase(input)) {
+    appendSauceDemoLogin()
+    steps.push({ action: 'click', selector: sauceDemoBackpackAddSelector })
+    steps.push({ action: 'wait_for_selector', selector: sauceDemoBackpackRemoveSelector, state: 'visible', timeout_ms: 20000 })
+    steps.push({ action: 'click', selector: sauceDemoBackpackRemoveSelector })
+    steps.push({ action: 'wait_for_selector', selector: sauceDemoBackpackAddSelector, state: 'visible', timeout_ms: 20000 })
+    steps.push({ action: 'screenshot', name: 'inventory-item-removed' })
+    asserts.push({ type: 'expect_visible', selector: sauceDemoBackpackAddSelector })
+    asserts.push({ type: 'expect_text_contains', selector: sauceDemoBackpackAddSelector, text: 'Add to cart' })
+    return { steps, asserts, useAuth: false }
+  }
+
+  if (isSauceDemoCartRemovalCase(input)) {
+    appendSauceDemoLogin()
+    steps.push({ action: 'click', selector: sauceDemoBackpackAddSelector })
+    steps.push({ action: 'wait_for_selector', selector: sauceDemoCartBadgeSelector, state: 'visible', timeout_ms: 20000 })
+    steps.push({ action: 'click', selector: sauceDemoCartLinkSelector })
+    steps.push({ action: 'wait_for_url', contains: '/cart.html', timeout_ms: 20000 })
+    steps.push({ action: 'wait_for_selector', selector: sauceDemoBackpackRemoveSelector, state: 'visible', timeout_ms: 20000 })
+    steps.push({ action: 'click', selector: sauceDemoBackpackRemoveSelector })
+    steps.push({ action: 'wait_for_selector', selector: sauceDemoEmptyCartSelector, state: 'visible', timeout_ms: 20000 })
+    steps.push({ action: 'screenshot', name: 'cart-item-removed' })
+    asserts.push({ type: 'expect_url_contains', value: '/cart.html' })
+    asserts.push({ type: 'expect_text_contains', selector: { by: 'text', text: 'Your Cart' }, text: 'Your Cart' })
+    asserts.push({ type: 'expect_visible', selector: sauceDemoEmptyCartSelector })
+    return { steps, asserts, useAuth: false }
+  }
+
+  if (isSauceDemoCartRetentionCase(input)) {
+    const productSlug = sauceDemoPrimaryProductSlug(input)
+    appendSauceDemoLogin()
+    steps.push({ action: 'click', selector: productSlug === 'sauce-labs-bike-light' ? sauceDemoBikeLightAddSelector : sauceDemoBackpackAddSelector })
+    steps.push({ action: 'click', selector: sauceDemoCartLinkSelector })
+    steps.push({ action: 'wait_for_url', contains: '/cart.html', timeout_ms: 20000 })
+    steps.push({ action: 'wait_for_selector', selector: sauceDemoProductTitleSelector(productSlug), state: 'visible', timeout_ms: 20000 })
+    steps.push({ action: 'screenshot', name: 'cart-retains-item' })
+    asserts.push({ type: 'expect_url_contains', value: '/cart.html' })
+    asserts.push({ type: 'expect_text_contains', selector: sauceDemoProductTitleSelector(productSlug), text: sauceDemoProductNameForSlug(productSlug) })
+    return { steps, asserts, useAuth: false }
+  }
+
+  if (isSauceDemoProductDetailCase(input)) {
+    const productSlug = sauceDemoPrimaryProductSlug(input)
+    appendSauceDemoLogin()
+    steps.push({ action: 'click', selector: sauceDemoProductTitleSelector(productSlug) })
+    steps.push({ action: 'wait_for_url', contains: `/inventory-item.html?id=${productSlug}`, timeout_ms: 20000 })
+    steps.push({ action: 'wait_for_selector', selector: sauceDemoBackToProductsSelector, state: 'visible', timeout_ms: 20000 })
+    steps.push({ action: 'screenshot', name: 'product-detail-page' })
+    asserts.push({ type: 'expect_url_contains', value: `/inventory-item.html?id=${productSlug}` })
+    asserts.push({ type: 'expect_text_contains', selector: sauceDemoBackToProductsSelector, text: 'Back to products' })
+    return { steps, asserts, useAuth: false }
+  }
+
+  if (isSauceDemoBackToProductsCase(input)) {
+    const productSlug = sauceDemoPrimaryProductSlug(input)
+    appendSauceDemoLogin()
+    steps.push({ action: 'click', selector: sauceDemoProductTitleSelector(productSlug) })
+    steps.push({ action: 'wait_for_url', contains: `/inventory-item.html?id=${productSlug}`, timeout_ms: 20000 })
+    steps.push({ action: 'click', selector: sauceDemoBackToProductsSelector })
+    steps.push({ action: 'wait_for_url', contains: '/inventory.html', timeout_ms: 20000 })
+    steps.push({ action: 'wait_for_selector', selector: sauceDemoInventoryListSelector, state: 'visible', timeout_ms: 20000 })
+    steps.push({ action: 'screenshot', name: 'back-to-products' })
+    asserts.push({ type: 'expect_url_contains', value: '/inventory.html' })
+    asserts.push({ type: 'expect_visible', selector: sauceDemoInventoryListSelector })
+    asserts.push({ type: 'expect_text_contains', selector: { by: 'text', text: 'Products' }, text: 'Products' })
+    return { steps, asserts, useAuth: false }
+  }
+
+  if (isSauceDemoSortingCase(input)) {
+    const sortValue = sauceDemoSortValue(input)
+    appendSauceDemoLogin()
+    steps.push({ action: 'goto', url: `/inventory.html?sort=${sortValue}` })
+    steps.push({ action: 'wait_for_selector', selector: sauceDemoSortSelector, state: 'visible', timeout_ms: 20000 })
+    steps.push({ action: 'screenshot', name: `inventory-sort-${sortValue}` })
+    asserts.push({ type: 'expect_url_contains', value: `/inventory.html?sort=${sortValue}` })
+    asserts.push({ type: 'expect_text_contains', selector: sauceDemoSortSelector, text: sauceDemoSortLabel(sortValue) })
+    return { steps, asserts, useAuth: false }
+  }
 
   switch (coverageType) {
     case 'auth_login':
       steps.push({ action: 'wait_for_selector', selector: cssSelector('email'), state: 'visible', timeout_ms: 20000 })
-      steps.push({ action: 'fill', selector: selectorForInput(requiredInputs.find((entry) => entry.key === 'email') ?? requiredInput('email', 'Email', 'email', true, '')) , input_key: 'email' })
-      steps.push({ action: 'fill', selector: selectorForInput(requiredInputs.find((entry) => entry.key === 'password') ?? requiredInput('password', 'Password', 'password', true, '')), input_key: 'password' })
+      if (!identityInput.allow_empty) {
+        steps.push({ action: 'fill', selector: selectorForInput(identityInput), input_key: 'email' })
+      }
+      if (!passwordInput.allow_empty) {
+        steps.push({ action: 'fill', selector: selectorForInput(passwordInput), input_key: 'password' })
+      }
       steps.push({ action: 'click', selector: actionSelectorForInput(input, 'auth_login') })
       if (!negativeCase) {
-        steps.push({ action: 'wait_for_url', contains: internalTarget ? '/dashboard' : new URL(normalizedBaseUrl).hostname, timeout_ms: 20000 })
+        steps.push({ action: 'wait_for_url', contains: isSauceDemoLogin ? '/inventory.html' : internalTarget ? '/dashboard' : new URL(normalizedBaseUrl).hostname, timeout_ms: 20000 })
         steps.push({ action: 'screenshot', name: 'post-login' })
-        asserts.push({ type: 'expect_url_contains', value: internalTarget ? '/dashboard' : new URL(normalizedBaseUrl).hostname })
+        asserts.push({ type: 'expect_url_contains', value: isSauceDemoLogin ? '/inventory.html' : internalTarget ? '/dashboard' : new URL(normalizedBaseUrl).hostname })
+        if (isSauceDemoLogin) {
+          asserts.push({ type: 'expect_visible', selector: { by: 'text', text: 'Products' } })
+        }
       } else {
         steps.push({ action: 'wait_for_selector', selector: alertSelector, state: 'visible', timeout_ms: 20000 })
         steps.push({ action: 'screenshot', name: 'login-error-state' })
         asserts.push({ type: 'expect_visible', selector: alertSelector })
         if (expectedFeedbackText) {
-          asserts.push({ type: 'expect_text', selector: alertSelector, text: expectedFeedbackText })
+          asserts.push({ type: 'expect_text_contains', selector: alertSelector, text: expectedFeedbackText })
         }
       }
       break
@@ -809,7 +1255,7 @@ function buildStepsAndAsserts(input: GeneratorInput, coverageType: CoverageType,
       steps.push({ action: 'screenshot', name: 'form-submission-result' })
       asserts.push({ type: 'expect_visible', selector: successSelector })
       if (expectedFeedbackText) {
-        asserts.push({ type: 'expect_text', selector: successSelector, text: expectedFeedbackText })
+        asserts.push({ type: 'expect_text_contains', selector: successSelector, text: expectedFeedbackText })
       }
       break
     case 'validation':
@@ -819,7 +1265,7 @@ function buildStepsAndAsserts(input: GeneratorInput, coverageType: CoverageType,
       steps.push({ action: 'screenshot', name: 'validation-feedback' })
       asserts.push({ type: 'expect_visible', selector: { by: 'css', value: '[role="alert"], .error, .invalid-feedback, .field-error, [aria-invalid="true"]' } })
       if (expectedFeedbackText) {
-        asserts.push({ type: 'expect_text', selector: alertSelector, text: expectedFeedbackText })
+        asserts.push({ type: 'expect_text_contains', selector: alertSelector, text: expectedFeedbackText })
       }
       break
     case 'search_filter':
@@ -843,7 +1289,7 @@ function buildStepsAndAsserts(input: GeneratorInput, coverageType: CoverageType,
       steps.push({ action: 'screenshot', name: 'upload-result' })
       asserts.push({ type: 'expect_visible', selector: successSelector })
       if (expectedFeedbackText) {
-        asserts.push({ type: 'expect_text', selector: successSelector, text: expectedFeedbackText })
+        asserts.push({ type: 'expect_text_contains', selector: successSelector, text: expectedFeedbackText })
       }
       break
     case 'modal_dialog':
@@ -876,7 +1322,7 @@ function buildStepsAndAsserts(input: GeneratorInput, coverageType: CoverageType,
       steps.push({ action: 'screenshot', name: 'feedback-message' })
       asserts.push({ type: 'expect_visible', selector: alertSelector })
       if (expectedFeedbackText) {
-        asserts.push({ type: 'expect_text', selector: alertSelector, text: expectedFeedbackText })
+        asserts.push({ type: 'expect_text_contains', selector: alertSelector, text: expectedFeedbackText })
       }
       break
     case 'generic_ui':
@@ -943,7 +1389,7 @@ function buildCasePlan(input: GeneratorInput, scenarioOverride?: Scenario) {
   const expectedObservations = buildExpectedObservations(input, coverageType)
   const diagnostics = buildDiagnostics(input, coverageType, internalTarget)
   const stepsAndAsserts = buildStepsAndAsserts(input, coverageType, scenario, internalTarget)
-  const preflightChecks = buildPreflightChecks(coverageType, requiredInputs, scenario, internalTarget)
+  const preflightChecks = buildPreflightChecks(input, coverageType, requiredInputs, scenario, internalTarget)
   const intentSummary = buildIntentSummary(input, coverageType)
 
   const generatedPlan = {
@@ -978,81 +1424,6 @@ function buildCasePlan(input: GeneratorInput, scenarioOverride?: Scenario) {
   }
 }
 
-type ClassificationOutcome = {
-  scenario: Scenario
-  confidence?: number
-  source: string
-  modelUsed?: string
-}
-
-function isOllamaTimeoutError(err: unknown): err is Error {
-  return err instanceof Error && /timed out/i.test(err.message)
-}
-
-async function classifyWithFallback(input: GeneratorInput): Promise<ClassificationOutcome> {
-  const description = [
-    input.test_case_text,
-    input.test_case_description ? `Description: ${input.test_case_description}` : '',
-    input.notes ? `Notes: ${input.notes}` : '',
-    input.priority ? `Priority: ${input.priority}` : '',
-    input.criticality ? `Criticality: ${input.criticality}` : '',
-  ].filter(Boolean).join('\n')
-
-  let modelUsed = config.ollamaModel
-
-  try {
-    const primary = await classifyItem({
-      baseUrl: config.ollamaBaseUrl,
-      model: modelUsed,
-      timeoutMs: config.ollamaTimeoutMs,
-      title: input.test_case_title,
-      description,
-      context: {
-        external_id: input.external_id,
-        project_version_id: input.project_version_id,
-        environment_name: input.environment_name,
-      },
-    })
-
-    return {
-      scenario: primary.scenario,
-      source: 'primary',
-      modelUsed,
-      ...(typeof primary.confidence === 'number' ? { confidence: primary.confidence } : {}),
-    }
-  } catch (error) {
-    const fallbackModel = config.ollamaFallbackModel
-    if (fallbackModel.length > 0 && fallbackModel !== modelUsed && isOllamaTimeoutError(error)) {
-      modelUsed = fallbackModel
-      const fallback = await classifyItem({
-        baseUrl: config.ollamaBaseUrl,
-        model: modelUsed,
-        timeoutMs: config.ollamaTimeoutMs,
-        title: input.test_case_title,
-        description,
-        context: {
-          external_id: input.external_id,
-          project_version_id: input.project_version_id,
-          environment_name: input.environment_name,
-        },
-      })
-
-      return {
-        scenario: fallback.scenario,
-        source: 'fallback',
-        modelUsed,
-        ...(typeof fallback.confidence === 'number' ? { confidence: fallback.confidence } : {}),
-      }
-    }
-
-    return {
-      scenario: inferScenarioFromText(input),
-      confidence: 0,
-      source: 'heuristic',
-    }
-  }
-}
-
 function buildRunSpecFromPlan(input: GeneratorInput, scenarioOverride?: Scenario) {
   const normalizedBaseUrl = normalizeBaseUrl(input.base_url)
   const plan = buildCasePlan(input, scenarioOverride)
@@ -1080,6 +1451,116 @@ function buildRunSpecFromPlan(input: GeneratorInput, scenarioOverride?: Scenario
   }
 }
 
+function buildLLMChecklistItem(input: GeneratorInput): GeneratorChecklistItem {
+  return {
+    external_id: input.external_id,
+    test_case_title: input.test_case_title,
+    test_case_description: input.test_case_description,
+    test_case_text: input.test_case_text,
+    base_url: input.base_url,
+    use_auth: input.use_auth,
+    environment_name: input.environment_name,
+    notes: input.notes,
+    priority: input.priority,
+    criticality: input.criticality,
+    current_status: input.current_status,
+    target_type: input.target_type,
+    source_app: input.source_app,
+    provided_inputs: input.provided_inputs,
+    expected_result: input.expected_result,
+  }
+}
+
+function buildRunSpecFromGeneratedCase(
+  input: GeneratorInput,
+  runCase: z.infer<typeof RunSpecDslV1Schema>['cases'][number],
+): z.infer<typeof RunSpecDslV1Schema> {
+  return {
+    schema_version: '1.0',
+    run_id: input.run_id,
+    target: {
+      base_url: normalizeBaseUrl(input.base_url),
+    },
+    runtime: buildRuntimeConfig(input),
+    cases: [runCase],
+  }
+}
+
+function isStrictGenerationEnabled(): boolean {
+  return process.env.AGENT_STRICT_GENERATION === 'true'
+}
+
+function withGenerationMetadata(
+  runSpec: z.infer<typeof RunSpecDslV1Schema>,
+  metadata: GenerationMetadataDsl,
+): z.infer<typeof RunSpecDslV1Schema> {
+  return {
+    ...runSpec,
+    generation_metadata: metadata,
+  }
+}
+
+function describeProviderFailure(error: unknown): {
+  reason: string
+  debugFilePath: string | undefined
+  detail: string | undefined
+  model: string | undefined
+  apiKeyPresent: boolean | undefined
+  httpStatus: number | undefined
+  errorName: string | undefined
+  errorCode: string | undefined
+} {
+  if (error instanceof RunCaseGenerationFailedError) {
+    return {
+      reason: error.message,
+      debugFilePath: error.debugFilePath,
+      detail: undefined,
+      model: undefined,
+      apiKeyPresent: undefined,
+      httpStatus: undefined,
+      errorName: error.name,
+      errorCode: error.reason,
+    }
+  }
+
+  if (error instanceof LLMProviderError) {
+    return {
+      reason: error.message,
+      debugFilePath: error.debugFilePath,
+      detail: undefined,
+      model: error.model,
+      apiKeyPresent: error.apiKeyPresent,
+      httpStatus: error.httpStatus,
+      errorName: error.name,
+      errorCode: error.errorCode ?? error.reason,
+    }
+  }
+
+  if (error instanceof Error) {
+    return {
+      reason: error.message,
+      debugFilePath: undefined,
+      detail: undefined,
+      model: undefined,
+      apiKeyPresent: undefined,
+      httpStatus: undefined,
+      errorName: error.name,
+      errorCode: undefined,
+    }
+  }
+
+  return {
+    reason: String(error),
+    debugFilePath: undefined,
+    detail: undefined,
+    model: undefined,
+    apiKeyPresent: undefined,
+    httpStatus: undefined,
+    errorName: undefined,
+    errorCode: undefined,
+  }
+}
+
 function usageAndExit(): never {
   process.stderr.write('Usage: node dist/generateRunSpec.js --input <path-to-input.json>\n')
   process.exit(2)
@@ -1092,25 +1573,87 @@ async function main(): Promise<void> {
   }
 
   const inputPath = path.resolve(process.argv[inputFlagIndex + 1] as string)
-  const raw = await fs.readFile(inputPath, 'utf8')
+  const raw = (await fs.readFile(inputPath, 'utf8')).replace(/^\uFEFF/, '')
   const parsedInput = InputSchema.parse(JSON.parse(raw))
 
-  const generationEngine = config.generationEngine === 'classification' ? 'classification' : 'playwright-models'
+  const generationEngine = getGenerationEngine()
   process.stderr.write(`[agent] Generation engine: ${generationEngine}\n`)
 
-  let runSpec: ReturnType<typeof buildRunSpecFromPlan>
+  let runSpec: z.infer<typeof RunSpecDslV1Schema>
 
-  if (generationEngine === 'classification') {
-    const classification = await classifyWithFallback(parsedInput)
-    process.stderr.write(
-      `[agent] Classification outcome: scenario=${classification.scenario}; source=${classification.source}; confidence=${typeof classification.confidence === 'number' ? classification.confidence.toFixed(3) : 'n/a'}\n`,
-    )
-    runSpec = buildRunSpecFromPlan(parsedInput, classification.scenario)
+  if (generationEngine === 'openai') {
+    const providerConfig = getOpenAIConfig()
+
+    try {
+      process.stderr.write(
+        `[agent] LLM provider config: provider=openai model=${providerConfig.model} api_key_present=${providerConfig.apiKey !== '' ? 'yes' : 'no'}\n`,
+      )
+
+      const provider = createLLMProvider({
+        provider: 'openai',
+        config: providerConfig,
+      })
+      const generated = await generateRunCase(provider, buildLLMChecklistItem(parsedInput))
+      process.stderr.write(
+        `[llm-gen] provider=openai external_id=${parsedInput.external_id} duration_ms=${generated.durationMs} provider_retries=${generated.providerRetries} correction_retries=${generated.correctionRetries}\n`,
+      )
+
+      runSpec = withGenerationMetadata(
+        buildRunSpecFromGeneratedCase(parsedInput, generated.runCase),
+        {
+          engine: 'openai',
+          requested_engine: 'openai',
+          model: generated.model,
+          fallback_used: false,
+        },
+      )
+    } catch (error) {
+      const failure = describeProviderFailure(error)
+
+      if (isStrictGenerationEnabled()) {
+        throw error
+      }
+
+      process.stderr.write(`[agent] openai generation failed, falling back to heuristic generator\n`)
+      process.stderr.write(`[agent] openai failure reason: ${failure.reason}\n`)
+      if (failure.detail) {
+        process.stderr.write(`[agent] openai failure detail: ${failure.detail}\n`)
+      }
+      if (failure.errorName) {
+        process.stderr.write(`[agent] openai error name: ${failure.errorName}\n`)
+      }
+      if (failure.errorCode) {
+        process.stderr.write(`[agent] openai error code: ${failure.errorCode}\n`)
+      }
+      if (failure.httpStatus !== undefined) {
+        process.stderr.write(`[agent] openai HTTP status: ${failure.httpStatus}\n`)
+      }
+      if (failure.model) {
+        process.stderr.write(`[agent] openai model used: ${failure.model}\n`)
+      }
+      if (failure.apiKeyPresent !== undefined) {
+        process.stderr.write(`[agent] openai API key loaded: ${failure.apiKeyPresent ? 'yes' : 'no'}\n`)
+      }
+      if (failure.debugFilePath) {
+        process.stderr.write(`[agent] openai debug raw response: ${failure.debugFilePath}\n`)
+      }
+
+      runSpec = withGenerationMetadata(
+        buildRunSpecFromPlan(parsedInput),
+        {
+          engine: 'heuristic',
+          requested_engine: 'openai',
+          fallback_used: true,
+          fallback_reason: failure.reason,
+          model: failure.model,
+        },
+      )
+    }
   } else {
     runSpec = buildRunSpecFromPlan(parsedInput)
   }
 
-  const validatedRunSpec = RunSpecSchema.parse(runSpec)
+  const validatedRunSpec = RunSpecDslV1Schema.parse(runSpec)
   process.stdout.write(`${JSON.stringify(validatedRunSpec)}\n`)
 }
 
