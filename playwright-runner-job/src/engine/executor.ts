@@ -32,6 +32,7 @@ import {
 import {
   AmbiguousTargetError,
   AssertionFailureError,
+  InitialNavigationError,
   InputDataMissingError,
   MissingEnvVarError,
   normalizeError,
@@ -73,6 +74,7 @@ interface BrowserCaseResult {
 
 const ENV_VAR_PATTERN = /\$\{([A-Z0-9_]+)\}/g
 const UNKNOWN_SCENARIO_GUARD_TOKEN = '__agent_unknown_scenario__'
+const RUNNER_DEBUG_ENABLED = ['1', 'true', 'yes', 'on'].includes((process.env.AGENT_RUNNER_DEBUG ?? '').trim().toLowerCase())
 
 function sleep(ms: number): Promise<void> {
   if (ms <= 0) {
@@ -280,6 +282,8 @@ function describeAssert(assertItem: AssertDsl): string {
       return `expect_hidden ${selectorDebugText(assertItem.selector)}`
     case 'expect_text':
       return `expect_text ${selectorDebugText(assertItem.selector)}`
+    case 'expect_text_contains':
+      return `expect_text_contains ${selectorDebugText(assertItem.selector)}`
     case 'expect_url_contains':
       return `expect_url_contains '${assertItem.value}'`
     case 'expect_title':
@@ -289,6 +293,14 @@ function describeAssert(assertItem: AssertDsl): string {
       return JSON.stringify(unreachable)
     }
   }
+}
+
+function debugTrace(line: string): void {
+  if (!RUNNER_DEBUG_ENABLED) {
+    return
+  }
+
+  console.error(`[runner-debug] ${line}`)
 }
 
 function cloneGeneratedPlan(runCase: RunCaseDsl): Record<string, unknown> | null {
@@ -312,7 +324,7 @@ function cloneGeneratedPlan(runCase: RunCaseDsl): Record<string, unknown> | null
   }
 }
 
-function resolveRequiredInputValue(runCase: RunCaseDsl, inputKey: string): string {
+export function resolveRequiredInputValue(runCase: RunCaseDsl, inputKey: string): string {
   const requiredInputs = runCase.execution_profile?.required_inputs ?? []
   const matched = requiredInputs.find((entry) => entry.key === inputKey)
 
@@ -321,7 +333,11 @@ function resolveRequiredInputValue(runCase: RunCaseDsl, inputKey: string): strin
   }
 
   const value = matched.value
-  if (matched.required && (value === undefined || value === null || String(value).trim() === '')) {
+  if (
+    matched.required &&
+    !matched.allow_empty &&
+    (value === undefined || value === null || String(value).trim() === '')
+  ) {
     throw new InputDataMissingError(`Le champ '${matched.label}' est requis mais aucune valeur n'a ete fournie.`)
   }
 
@@ -433,12 +449,13 @@ async function executeStep(
   baseUrl: string,
   timeoutMs: number,
   caseArtifactsDir: string,
-): Promise<void> {
+): Promise<{ redirectedTo?: string } | void> {
   switch (step.action) {
     case 'goto': {
       const finalUrl = resolveUrl(baseUrl, step.url)
       await page.goto(finalUrl, { timeout: timeoutMs, waitUntil: 'domcontentloaded' })
-      return
+      const actualUrl = page.url()
+      return actualUrl !== finalUrl ? { redirectedTo: actualUrl } : {}
     }
 
     case 'click': {
@@ -504,6 +521,43 @@ async function executeStep(
   }
 }
 
+async function gotoWithRetry(
+  page: Page,
+  url: string,
+  timeoutMs: number,
+  pushTrace: (line: string) => Promise<void>,
+  reference: string,
+): Promise<void> {
+  const attempts = 3
+  let lastError: unknown = null
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await pushTrace(`${reference} -> started (attempt ${attempt}/${attempts}, url=${url})`)
+      debugTrace(`${reference} started attempt=${attempt} url=${url}`)
+      await page.goto(url, { timeout: timeoutMs, waitUntil: 'domcontentloaded' })
+      await pushTrace(`${reference} -> ok (attempt ${attempt}/${attempts})`)
+      if (page.url() !== url) {
+        await pushTrace(`${reference} -> redirected to ${page.url()}`)
+      }
+      debugTrace(`${reference} ok attempt=${attempt} url=${url}`)
+      return
+    } catch (error) {
+      lastError = error
+      const message = error instanceof Error ? error.message : String(error)
+      await pushTrace(`${reference} -> failed (attempt ${attempt}/${attempts}, failure_type=initial_navigation_failed, failure_message=${message})`)
+      debugTrace(`${reference} failed attempt=${attempt} url=${url} message=${message}`)
+
+      if (attempt < attempts) {
+        await sleep(1500 * attempt)
+      }
+    }
+  }
+
+  const lastMessage = lastError instanceof Error ? lastError.message : String(lastError)
+  throw new InitialNavigationError(`The target URL could not be reached by Playwright. Details: ${lastMessage}`)
+}
+
 async function runPreflight(
   page: Page,
   runCase: RunCaseDsl,
@@ -526,20 +580,23 @@ async function runPreflight(
   if (runCase.execution_profile?.required_inputs?.length) {
     for (const input of runCase.execution_profile.required_inputs) {
       const status = input.required ? 'required' : 'optional'
-      const valueState = input.value && input.value.trim() !== '' ? 'provided' : 'missing'
+      const valueState =
+        typeof input.value === 'string' && input.value.trim() === '' && input.allow_empty
+          ? 'intentionally_empty'
+          : input.value && input.value.trim() !== ''
+            ? 'provided'
+            : 'missing'
       await pushTrace(`Planning: input ${input.key} (${status}, ${input.kind}) -> ${valueState}`)
     }
   }
 
   if (firstStep?.action === 'goto') {
     const preflightUrl = resolveUrl(request.target.base_url, firstStep.url)
-    await page.goto(preflightUrl, { timeout: timeoutMs, waitUntil: 'domcontentloaded' })
-    await pushTrace(`Preflight 0: page_accessible -> ok (${preflightUrl})`)
+    await gotoWithRetry(page, preflightUrl, timeoutMs, pushTrace, 'Preflight 0: page_accessible')
     consumedGoto = true
   } else if (preflightChecks.some((check) => check.kind === 'page_accessible')) {
     const preflightUrl = resolveUrl(request.target.base_url, request.target.base_url)
-    await page.goto(preflightUrl, { timeout: timeoutMs, waitUntil: 'domcontentloaded' })
-    await pushTrace(`Preflight 0: page_accessible -> ok (${preflightUrl})`)
+    await gotoWithRetry(page, preflightUrl, timeoutMs, pushTrace, 'Preflight 0: page_accessible')
   }
 
   for (let index = 0; index < preflightChecks.length; index += 1) {
@@ -547,6 +604,7 @@ async function runPreflight(
     const prefix = `Preflight ${index + 1}: ${check.label}`
 
     try {
+      await pushTrace(`${prefix} -> started (kind=${check.kind})`)
       switch (check.kind) {
         case 'unsupported':
           throw new UnsupportedTestCaseError(check.failure_message)
@@ -591,7 +649,8 @@ async function runPreflight(
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
-      await pushTrace(`${prefix} -> failed (${message})`)
+      await pushTrace(`${prefix} -> failed (failure_type=preflight_check_failed, failure_message=${message})`)
+      debugTrace(`${prefix} failed kind=${check.kind} message=${message}`)
       throw error
     }
   }
@@ -630,6 +689,18 @@ async function executeAssert(page: Page, assertItem: AssertDsl, timeoutMs: numbe
       if (actual !== expected) {
         throw new AssertionFailureError(
           `Expected text '${expected}' but got '${actual}' for ${selectorDebugText(assertItem.selector)}`,
+        )
+      }
+      return
+    }
+
+    case 'expect_text_contains': {
+      const expected = resolveTemplateValue(assertItem.text)
+      const actualRaw = await textContentWithStrictFallback(page, assertItem.selector, timeoutMs)
+      const actual = (actualRaw ?? '').trim()
+      if (!actual.toLowerCase().includes(expected.toLowerCase())) {
+        throw new AssertionFailureError(
+          `Expected text containing '${expected}' but got '${actual}' for ${selectorDebugText(assertItem.selector)}`,
         )
       }
       return
@@ -746,6 +817,8 @@ async function executeCase(
   let error_type: CaseResultV1['error_type'] = null
   let error_message: string | null = null
   let failureSource: CaseResultV1['failure_source'] = null
+  let diagnostics: CaseResultV1['diagnostics'] = null
+  let pageReachable = false
 
   try {
     await pushTrace('Planning: browser context starting')
@@ -783,6 +856,7 @@ async function executeCase(
       timeoutMs,
       pushTrace,
     )
+    pageReachable = true
 
     for (let index = firstExecutableStepIndex; index < runCase.steps.length; index += 1) {
       const step = runCase.steps[index]
@@ -790,11 +864,18 @@ async function executeCase(
       const stepStart = Date.now()
 
       try {
-        await executeStep(page, runCase, step, request.target.base_url, timeoutMs, caseArtifactsDir)
+        await pushTrace(`Step ${index + 1}: ${stepLabel} -> started`)
+        const stepOutcome = await executeStep(page, runCase, step, request.target.base_url, timeoutMs, caseArtifactsDir)
         await pushTrace(`Step ${index + 1}: ${stepLabel} -> ok (${Date.now() - stepStart}ms)`)
+        if (stepOutcome && stepOutcome.redirectedTo) {
+          await pushTrace(`Step ${index + 1}: ${stepLabel} -> redirected to ${stepOutcome.redirectedTo}`)
+        }
+        debugTrace(`Step ${index + 1} ok action=${step.action}`)
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
-        await pushTrace(`Step ${index + 1}: ${stepLabel} -> failed (${message})`)
+        const normalized = normalizeError(error)
+        await pushTrace(`Step ${index + 1}: ${stepLabel} -> failed (failure_type=${normalized.error_type}, failure_message=${message})`)
+        debugTrace(`Step ${index + 1} failed action=${step.action} type=${normalized.error_type} message=${message}`)
         failureSource = {
           phase: 'step',
           reference: stepLabel,
@@ -810,11 +891,15 @@ async function executeCase(
       const assertStart = Date.now()
 
       try {
+        await pushTrace(`Assert ${index + 1}: ${assertLabel} -> started`)
         await executeAssert(page, assertItem, timeoutMs)
         await pushTrace(`Assert ${index + 1}: ${assertLabel} -> ok (${Date.now() - assertStart}ms)`)
+        debugTrace(`Assert ${index + 1} ok type=${assertItem.type}`)
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
-        await pushTrace(`Assert ${index + 1}: ${assertLabel} -> failed (${message})`)
+        const normalized = normalizeError(error)
+        await pushTrace(`Assert ${index + 1}: ${assertLabel} -> failed (failure_type=${normalized.error_type}, failure_message=${message})`)
+        debugTrace(`Assert ${index + 1} failed type=${assertItem.type} failure_type=${normalized.error_type} message=${message}`)
         failureSource = {
           phase: 'assert',
           reference: assertLabel,
@@ -824,11 +909,18 @@ async function executeCase(
       }
     }
   } catch (error) {
-    const normalized = normalizeError(error)
+    let normalized = normalizeError(error)
+    const failurePhase = failureSource ? failureSource.phase : null
+
+    if (pageReachable && normalized.error_type === 'url_unreachable') {
+      normalized = {
+        error_type: failurePhase === 'assert' ? 'assertion_failed' : 'unexpected_navigation_state',
+        error_message: normalized.error_message,
+      }
+    }
 
     if (
       normalized.error_type === 'missing_env_var' ||
-      normalized.error_type === 'selector_not_found' ||
       normalized.error_type === 'url_unreachable' ||
       normalized.error_type === 'authentication_failed' ||
       normalized.error_type === 'precondition_failed' ||
@@ -837,15 +929,24 @@ async function executeCase(
       normalized.error_type === 'ambiguous_target'
     ) {
       status = 'blocked'
+    } else if (failurePhase === 'preflight') {
+      status = 'blocked'
     } else {
       status = 'failed'
     }
 
     error_type = normalized.error_type
     error_message = normalized.error_message
+    diagnostics = {
+      raw_error: error instanceof Error ? error.message : String(error),
+      normalized_error_type: normalized.error_type,
+      page_reachable: pageReachable,
+    }
     if (!failureSource) {
       failureSource = {
-        phase: normalized.error_type === 'precondition_failed' || normalized.error_type === 'unsupported_test_case' || normalized.error_type === 'input_data_missing'
+        phase: normalized.error_type === 'url_unreachable'
+          ? 'initial_navigation'
+          : normalized.error_type === 'precondition_failed' || normalized.error_type === 'unsupported_test_case' || normalized.error_type === 'input_data_missing'
           ? 'preflight'
           : 'runtime',
         reference: normalized.error_type,
@@ -906,6 +1007,7 @@ async function executeCase(
     error_message,
     artifacts,
     generated_plan: generatedPlan,
+    diagnostics,
     failure_source: failureSource,
     execution_trace: executionTrace,
   }

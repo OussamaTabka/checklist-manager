@@ -4,11 +4,14 @@ namespace Tests\Unit;
 
 use App\Jobs\ExecuteSingleTestCaseRun;
 use App\Models\VersionItem;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use ReflectionMethod;
 use Tests\TestCase;
 
 class ExecuteSingleTestCaseRunTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_resolve_case_result_matches_external_id_when_present(): void
     {
         $job = new ExecuteSingleTestCaseRun('test-run-id');
@@ -142,10 +145,40 @@ class ExecuteSingleTestCaseRunTest extends TestCase
         $merged = $this->invokeMergeProvidedInputsIntoExecutionProfile($job, $profile, [
             'email' => 'qa.user@example.com',
             'password' => 'Secret123!',
-        ]);
+        ], []);
 
         $this->assertSame('qa.user@example.com', $merged['required_inputs'][0]['value']);
         $this->assertSame('Secret123!', $merged['required_inputs'][1]['value']);
+    }
+
+    public function test_merge_provided_inputs_into_execution_profile_marks_intentionally_blank_required_field_as_allow_empty(): void
+    {
+        $job = new ExecuteSingleTestCaseRun('test-run-id');
+
+        $profile = [
+            'required_inputs' => [
+                [
+                    'key' => 'email',
+                    'label' => 'Email or username',
+                    'kind' => 'email',
+                    'required' => true,
+                    'value' => null,
+                ],
+            ],
+        ];
+
+        $merged = $this->invokeMergeProvidedInputsIntoExecutionProfile($job, $profile, [
+            'email' => '',
+        ], [
+            'test_case_title' => 'Missing username prevents login',
+            'test_case_description' => 'Verify leaving the username blank shows the required username validation message.',
+            'expected_result' => [
+                'assertion_keywords' => ['username is required'],
+            ],
+        ]);
+
+        $this->assertSame('', $merged['required_inputs'][0]['value']);
+        $this->assertTrue((bool) ($merged['required_inputs'][0]['allow_empty'] ?? false));
     }
 
     private function invokeResolveCaseResult(
@@ -184,12 +217,13 @@ class ExecuteSingleTestCaseRunTest extends TestCase
         ExecuteSingleTestCaseRun $job,
         array $profile,
         array $providedInputs,
+        array $runPayload,
     ): array {
         $method = new ReflectionMethod(ExecuteSingleTestCaseRun::class, 'mergeProvidedInputsIntoExecutionProfile');
         $method->setAccessible(true);
 
         /** @var array<string, mixed> $merged */
-        $merged = $method->invoke($job, $profile, $providedInputs);
+        $merged = $method->invoke($job, $profile, $providedInputs, $runPayload);
 
         return $merged;
     }

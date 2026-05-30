@@ -13,6 +13,7 @@ export type ResultErrorType =
   | 'unsupported_test_case'
   | 'input_data_missing'
   | 'ambiguous_target'
+  | 'unexpected_navigation_state'
   | 'unexpected_error'
   | 'unknown'
 
@@ -31,8 +32,9 @@ export interface CaseResultV1 {
   error_message: string | null
   artifacts: CaseArtifacts
   generated_plan?: Record<string, unknown> | null
+  diagnostics?: Record<string, unknown> | null
   failure_source?: {
-    phase: 'planning' | 'preflight' | 'step' | 'assert' | 'runtime'
+    phase: 'planning' | 'preflight' | 'step' | 'assert' | 'runtime' | 'initial_navigation'
     reference: string
     message: string
   } | null
@@ -91,6 +93,13 @@ export class InputDataMissingError extends Error {
   constructor(message: string) {
     super(message)
     this.name = 'InputDataMissingError'
+  }
+}
+
+export class InitialNavigationError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'InitialNavigationError'
   }
 }
 
@@ -181,6 +190,13 @@ export function normalizeError(error: unknown): NormalizedError {
     }
   }
 
+  if (error instanceof InitialNavigationError) {
+    return {
+      error_type: 'url_unreachable',
+      error_message: error.message,
+    }
+  }
+
   const message = error instanceof Error ? error.message : String(error)
 
   const lower = message.toLowerCase()
@@ -192,13 +208,6 @@ export function normalizeError(error: unknown): NormalizedError {
     }
   }
 
-  if (isUrlReachabilityError(lower)) {
-    return {
-      error_type: 'url_unreachable',
-      error_message: 'The target URL could not be reached by Playwright.',
-    }
-  }
-
   if (lower.includes('timeout')) {
     if (
       lower.includes('page.goto') ||
@@ -206,8 +215,8 @@ export function normalizeError(error: unknown): NormalizedError {
       lower.includes('navigation')
     ) {
       return {
-        error_type: 'timeout',
-        error_message: 'The target page did not finish loading in time.',
+        error_type: 'navigation_timeout',
+        error_message: 'The page navigation did not finish in time.',
       }
     }
 
@@ -228,6 +237,13 @@ export function normalizeError(error: unknown): NormalizedError {
     return {
       error_type: 'selector_not_found',
       error_message: 'A required button, field, or selector was not found on the page.',
+    }
+  }
+
+  if (isUrlReachabilityError(lower)) {
+    return {
+      error_type: 'unexpected_navigation_state',
+      error_message: 'The browser encountered an unexpected navigation or network state after the page was already being exercised.',
     }
   }
 

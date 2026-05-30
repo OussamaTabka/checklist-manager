@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ChecklistItem;
 use App\Models\VersionItem;
+use stdClass;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
@@ -96,7 +97,10 @@ class ExecutionProfileService
             $overrides,
         );
 
-        $tmpDir = $workspaceRoot . DIRECTORY_SEPARATOR . 'playwright-orchestrator' . DIRECTORY_SEPARATOR . 'tmp';
+        $payload['provided_inputs'] = $this->normalizeRecordPayload($payload['provided_inputs'] ?? []);
+        $payload['expected_result'] = $this->normalizeRecordPayload($payload['expected_result'] ?? []);
+
+        $tmpDir = storage_path('app' . DIRECTORY_SEPARATOR . 'agent-profile-tmp');
         $this->ensureDirectory($tmpDir);
 
         $agentInputPath = $tmpDir . DIRECTORY_SEPARATOR . 'profile-input-' . uniqid() . '.json';
@@ -175,11 +179,6 @@ class ExecutionProfileService
             return $distEntrypoint;
         }
 
-        $srcEntrypoint = $agentDir . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'generateRunSpec.js';
-        if (is_file($srcEntrypoint)) {
-            return $srcEntrypoint;
-        }
-
         throw new \RuntimeException('Missing agent entrypoint generateRunSpec.js. Run npm run build in playwright-agent.');
     }
 
@@ -198,6 +197,19 @@ class ExecutionProfileService
         if (!mkdir($path, 0777, true) && !is_dir($path)) {
             throw new \RuntimeException('Unable to create directory: ' . $path);
         }
+    }
+
+    /**
+     * @param  mixed  $value
+     * @return array<string, mixed>|stdClass
+     */
+    private function normalizeRecordPayload(mixed $value): array|stdClass
+    {
+        if (!is_array($value) || $value === []) {
+            return new stdClass();
+        }
+
+        return array_is_list($value) ? new stdClass() : $value;
     }
 
     /**

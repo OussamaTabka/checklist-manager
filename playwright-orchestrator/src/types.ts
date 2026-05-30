@@ -86,7 +86,9 @@ export interface RunRequestDslV1 {
   cases: Array<{
     external_id: number
     title: string
+    description?: string
     severity?: 'minor' | 'major' | 'critical'
+    provided_inputs?: Record<string, unknown>
     use_auth?: boolean
     execution_profile?: ExecutionProfileDsl
     generated_plan?: GeneratedPlanDsl

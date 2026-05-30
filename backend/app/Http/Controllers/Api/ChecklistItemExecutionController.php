@@ -3,23 +3,23 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\ExecuteSingleTestCaseRun;
 use App\Models\Checklist;
 use App\Models\ChecklistItem;
 use App\Models\ChecklistItemHistory;
 use App\Models\Project;
 use App\Models\TestResult;
 use App\Models\TestRun;
+use App\Services\ChecklistItemRunService;
 use App\Services\ExecutionProfileService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 
 class ChecklistItemExecutionController extends Controller
 {
     public function __construct(
         private readonly ExecutionProfileService $executionProfileService,
+        private readonly ChecklistItemRunService $checklistItemRunService,
     ) {
     }
 
@@ -96,6 +96,8 @@ class ChecklistItemExecutionController extends Controller
             'execution_state' => $executionState,
             'execution_profile' => $executionProfile,
             'generated_plan' => $generatedPlan,
+            'generated_test' => is_array($resultPayload['generated_test'] ?? null) ? $resultPayload['generated_test'] : null,
+            'pipeline' => isset($resultPayload['pipeline']) && is_string($resultPayload['pipeline']) ? $resultPayload['pipeline'] : 'deterministic',
             'failure_source' => $failureSource,
             'last_run_id' => $latestRun?->run_id,
             'last_run_status' => $latestRun ? $this->mapRunStatus($latestRun->status) : null,
@@ -129,52 +131,15 @@ class ChecklistItemExecutionController extends Controller
             'provided_inputs.*' => ['nullable', 'string', 'max:4000'],
         ]);
 
-        $run = TestRun::create([
-            'run_id' => (string) Str::uuid(),
-            'project_version_id' => null,
-            'checklist_id' => $checklist->id,
-            'schema_version' => '1.0',
-            'base_url' => rtrim(trim($data['base_url']), '/'),
-            'mode' => 'single-test-case',
-            'status' => 'created',
-            'requested_by' => Auth::id(),
-            'summary_total' => 1,
-            'request_payload' => [
-                'schema_version' => '1.0',
-                'target_type' => 'checklist_item',
-                'test_case_id' => $item->id,
-                'test_case_title' => (string) $item->title,
-                'test_case_description' => (string) ($item->description ?? ''),
-                'test_case_text' => trim((string) $item->title . "\n" . (string) ($item->description ?? '')),
-                'base_url' => rtrim(trim($data['base_url']), '/'),
-                'use_auth' => array_key_exists('use_auth', $data) ? (bool) $data['use_auth'] : true,
-                'watch_mode' => array_key_exists('watch_mode', $data) ? (bool) $data['watch_mode'] : true,
-                'environment_name' => (string) ($data['environment_name'] ?? ''),
-                'notes' => (string) ($data['notes'] ?? ''),
-                'provided_inputs' => is_array($data['provided_inputs'] ?? null) ? $data['provided_inputs'] : [],
-                'priority' => (string) ($item->priority ?? ''),
-                'criticality' => (string) ($item->criticality ?? ''),
-                'current_status' => (string) ($item->status ?? ''),
-                'checklist_id' => (int) $checklist->id,
-            ],
-        ]);
-
-        ChecklistItemHistory::create([
-            'checklist_item_id' => $item->id,
-            'changed_by' => Auth::id(),
-            'field_name' => 'execution',
-            'old_value' => $this->displayStatus($item->status),
-            'new_value' => 'queued',
-            'change_type' => 'automated_test_started',
-            'notes' => 'Automated test requested for run ' . $run->run_id,
-        ]);
-
         $watchMode = array_key_exists('watch_mode', $data) ? (bool) $data['watch_mode'] : true;
-        if ($watchMode) {
-            ExecuteSingleTestCaseRun::dispatch($run->run_id)->afterResponse();
-        } else {
-            ExecuteSingleTestCaseRun::dispatch($run->run_id);
-        }
+        $run = $this->checklistItemRunService->start($checklist, $item, (int) Auth::id(), [
+            'base_url' => $data['base_url'],
+            'use_auth' => array_key_exists('use_auth', $data) ? (bool) $data['use_auth'] : true,
+            'watch_mode' => $watchMode,
+            'environment_name' => (string) ($data['environment_name'] ?? ''),
+            'notes' => (string) ($data['notes'] ?? ''),
+            'provided_inputs' => is_array($data['provided_inputs'] ?? null) ? $data['provided_inputs'] : [],
+        ]);
 
         return response()->json([
             'run_id' => $run->run_id,

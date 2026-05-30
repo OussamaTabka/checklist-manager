@@ -279,6 +279,20 @@ function withTimeoutSignal(timeoutMs: number): AbortSignal {
   return controller.signal
 }
 
+function resolveChatCompletionsUrl(apiUrl: string): string {
+  const trimmed = apiUrl.trim().replace(/\/+$/, '')
+
+  if (trimmed.endsWith('/chat/completions')) {
+    return trimmed
+  }
+
+  if (trimmed.endsWith('/models')) {
+    return `${trimmed.slice(0, -'/models'.length)}/chat/completions`
+  }
+
+  return `${trimmed}/chat/completions`
+}
+
 export function createOpenAIProvider(config: OpenAIConfig): LLMProvider {
   return {
     name: 'openai',
@@ -295,7 +309,7 @@ export function createOpenAIProvider(config: OpenAIConfig): LLMProvider {
 
       while (true) {
         try {
-          const response = await fetch(`${config.apiUrl.replace(/\/$/, '')}/chat/completions`, {
+          const response = await fetch(resolveChatCompletionsUrl(config.apiUrl), {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${config.apiKey}`,

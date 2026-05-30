@@ -8,8 +8,9 @@ use App\Models\ItemChange;
 use App\Models\TestResult;
 use App\Models\TestRun;
 use App\Models\VersionItem;
-use App\Services\NotificationService;
+use App\Services\ExecutionInputNormalizer;
 use App\Services\ExecutionProfileService;
+use App\Services\NotificationService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -26,6 +27,11 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
 
     public function __construct(private readonly string $runId)
     {
+    }
+
+    private function inputNormalizer(): ExecutionInputNormalizer
+    {
+        return app(ExecutionInputNormalizer::class);
     }
 
     public function handle(): void
@@ -61,7 +67,10 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
             ? (int) ($payload['project_version_id'] ?? $item->project_version_id)
             : null;
         $watchMode = (bool) ($payload['watch_mode'] ?? true);
-        $providedInputs = is_array($payload['provided_inputs'] ?? null) ? $payload['provided_inputs'] : [];
+        $debugMode = (bool) ($payload['debug'] ?? false);
+        $providedInputs = $this->inputNormalizer()->normalizeProvidedInputs(
+            is_array($payload['provided_inputs'] ?? null) ? $payload['provided_inputs'] : []
+        );
 
         try {
             $workspaceRoot = realpath(base_path('..'));
@@ -71,7 +80,7 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
 
             $orchestratorDir = $workspaceRoot . DIRECTORY_SEPARATOR . 'playwright-orchestrator';
             $runnerDir = $workspaceRoot . DIRECTORY_SEPARATOR . 'playwright-runner-job';
-            $runsRoot = $workspaceRoot . DIRECTORY_SEPARATOR . 'runs';
+            $runsRoot = storage_path('app' . DIRECTORY_SEPARATOR . 'agent-runs');
 
             $orchestratorEntrypoint = $orchestratorDir . DIRECTORY_SEPARATOR . 'dist' . DIRECTORY_SEPARATOR . 'cli' . DIRECTORY_SEPARATOR . 'fromDsl.js';
             $runnerEntrypoint = $runnerDir . DIRECTORY_SEPARATOR . 'dist' . DIRECTORY_SEPARATOR . 'main.js';
@@ -86,7 +95,7 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
                 }
             }
 
-            $dslPath = $orchestratorDir . DIRECTORY_SEPARATOR . 'tmp' . DIRECTORY_SEPARATOR . 'run-single-' . $run->run_id . '.json';
+            $dslPath = storage_path('app' . DIRECTORY_SEPARATOR . 'agent-run-dsl' . DIRECTORY_SEPARATOR . 'run-single-' . $run->run_id . '.json');
 
             $this->ensureDirectory(dirname($dslPath));
 
@@ -104,6 +113,9 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
                         'current_status' => $currentStatus,
                         'project_version_id' => $projectVersionId,
                         'target_type' => $targetType,
+                        'source_app' => isset($payload['source_app']) ? (string) $payload['source_app'] : '',
+                        'provided_inputs' => $providedInputs,
+                        'expected_result' => is_array($payload['expected_result'] ?? null) ? $payload['expected_result'] : [],
                     ])
                     : $planner->generateForChecklistItem($item, $run->base_url, [
                         'run_id' => $run->run_id,
@@ -114,6 +126,9 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
                         'criticality' => $criticality,
                         'current_status' => $currentStatus,
                         'target_type' => $targetType,
+                        'source_app' => isset($payload['source_app']) ? (string) $payload['source_app'] : '',
+                        'provided_inputs' => $providedInputs,
+                        'expected_result' => is_array($payload['expected_result'] ?? null) ? $payload['expected_result'] : [],
                     ]);
             } catch (\Throwable $error) {
                 $this->markBlocked(
@@ -135,6 +150,7 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
             $runSpec['cases'][0]['execution_profile'] = $this->mergeProvidedInputsIntoExecutionProfile(
                 is_array($runSpec['cases'][0]['execution_profile'] ?? null) ? $runSpec['cases'][0]['execution_profile'] : [],
                 $providedInputs,
+                $payload,
             );
             $runSpec['cases'][0]['generated_plan'] = is_array($runSpec['cases'][0]['generated_plan'] ?? null)
                 ? $runSpec['cases'][0]['generated_plan']
@@ -158,6 +174,7 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
                         'RESULT_JSON_PATH' => $resultPath,
                         'ARTIFACTS_DIR' => dirname($resultPath) . DIRECTORY_SEPARATOR . 'artifacts',
                         'LIVE_TRACE_PATH' => dirname($resultPath) . DIRECTORY_SEPARATOR . 'live-trace.json',
+                        'AGENT_RUNNER_DEBUG' => $debugMode ? '1' : '0',
                     ],
                     900,
                 );
@@ -641,11 +658,11 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
         $process->setTimeout($timeoutSeconds);
         $process->run();
 
-        return [
-            'exitCode' => $process->getExitCode() ?? 1,
-            'output' => $process->getOutput(),
-            'errorOutput' => $process->getErrorOutput(),
-        ];
+            return [
+                'exitCode' => $process->getExitCode() ?? 1,
+                'output' => $process->getOutput(),
+                'errorOutput' => $process->getErrorOutput(),
+            ];
     }
 
     private function sanitizeUtf8(string $message): string
@@ -766,9 +783,10 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
     /**
      * @param  array<string, mixed>  $executionProfile
      * @param  array<string, mixed>  $providedInputs
+     * @param  array<string, mixed>  $runPayload
      * @return array<string, mixed>
      */
-    private function mergeProvidedInputsIntoExecutionProfile(array $executionProfile, array $providedInputs): array
+    private function mergeProvidedInputsIntoExecutionProfile(array $executionProfile, array $providedInputs, array $runPayload): array
     {
         $requiredInputs = is_array($executionProfile['required_inputs'] ?? null)
             ? $executionProfile['required_inputs']
@@ -784,12 +802,68 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
                 continue;
             }
 
-            if (array_key_exists($key, $providedInputs) && is_string($providedInputs[$key])) {
-                $requiredInputs[$index]['value'] = $providedInputs[$key];
+            $resolvedValue = $this->resolveProvidedInputValue($key, $providedInputs);
+            if (is_string($resolvedValue)) {
+                $requiredInputs[$index]['value'] = $resolvedValue;
+            }
+
+            if ($this->shouldAllowEmptyInput($runPayload, $key, $providedInputs)) {
+                $requiredInputs[$index]['allow_empty'] = true;
             }
         }
 
         $executionProfile['required_inputs'] = $requiredInputs;
         return $executionProfile;
+    }
+
+    /**
+     * @param  array<string, mixed>  $runPayload
+     * @param  array<string, mixed>  $providedInputs
+     */
+    private function shouldAllowEmptyInput(array $runPayload, string $key, array $providedInputs): bool
+    {
+        $resolvedValue = $this->resolveProvidedInputValue($key, $providedInputs);
+        if (!is_string($resolvedValue) || $resolvedValue !== '') {
+            return false;
+        }
+
+        $text = mb_strtolower(trim(implode("\n", array_filter([
+            (string) ($runPayload['test_case_title'] ?? ''),
+            (string) ($runPayload['test_case_description'] ?? ''),
+            (string) ($runPayload['test_case_text'] ?? ''),
+            (string) ($runPayload['notes'] ?? ''),
+            (string) data_get($runPayload, 'expected_result.visible_text_contains', ''),
+            implode(' ', array_filter(is_array(data_get($runPayload, 'expected_result.assertion_keywords')) ? data_get($runPayload, 'expected_result.assertion_keywords') : [])),
+        ]))));
+
+        $isRequiredFieldScenario = preg_match('/missing|required field|required|blank field|empty field|leave .* blank|leaving .* blank|username is required|password is required/', $text) === 1;
+        if (!$isRequiredFieldScenario) {
+            return false;
+        }
+
+        return match ($key) {
+            'email', 'username', 'user', 'login', 'identifier' => preg_match('/missing username|missing email|blank username|empty username|username is required|email is required/', $text) === 1,
+            'password' => preg_match('/missing password|blank password|empty password|password is required/', $text) === 1,
+            default => false,
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $providedInputs
+     */
+    private function resolveProvidedInputValue(string $key, array $providedInputs): ?string
+    {
+        $aliases = match ($key) {
+            'email', 'username', 'user', 'login', 'identifier' => ['email', 'username', 'user', 'login', 'identifier'],
+            default => [$key],
+        };
+
+        foreach ($aliases as $alias) {
+            if (array_key_exists($alias, $providedInputs) && is_string($providedInputs[$alias])) {
+                return $providedInputs[$alias];
+            }
+        }
+
+        return null;
     }
 }

@@ -5,6 +5,3 @@ dist/
 tmp/
 runs/
 test-results/
-src/**/*.js
-src/**/*.d.ts
-src/**/*.js.map

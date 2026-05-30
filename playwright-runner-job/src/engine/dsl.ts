@@ -114,6 +114,12 @@ export interface AssertExpectText {
   text: string
 }
 
+export interface AssertExpectTextContains {
+  type: 'expect_text_contains'
+  selector: SelectorDsl
+  text: string
+}
+
 export interface AssertExpectUrlContains {
   type: 'expect_url_contains'
   value: string
@@ -128,6 +134,7 @@ export type AssertDsl =
   | AssertExpectVisible
   | AssertExpectHidden
   | AssertExpectText
+  | AssertExpectTextContains
   | AssertExpectUrlContains
   | AssertExpectTitle
 
@@ -136,6 +143,7 @@ export interface RequiredInputDsl {
   label: string
   kind: 'text' | 'email' | 'password' | 'textarea' | 'search' | 'file'
   required: boolean
+  allow_empty?: boolean
   description?: string
   value?: string | null
 }
@@ -478,8 +486,12 @@ function validateRequiredInput(input: unknown, path: string, errors: string[]): 
     errors.push(`${path}.description must be a non-empty string when provided`)
   }
 
-  if (input.value !== undefined && input.value !== null && !isNonEmptyString(input.value)) {
-    errors.push(`${path}.value must be a non-empty string when provided`)
+  if (input.allow_empty !== undefined && typeof input.allow_empty !== 'boolean') {
+    errors.push(`${path}.allow_empty must be a boolean when provided`)
+  }
+
+  if (input.value !== undefined && input.value !== null && typeof input.value !== 'string') {
+    errors.push(`${path}.value must be a string when provided`)
   }
 
   return true
@@ -673,6 +685,7 @@ function validateAssert(input: unknown, path: string, errors: string[]): input i
       return validateSelector(input.selector, `${path}.selector`, errors)
 
     case 'expect_text':
+    case 'expect_text_contains':
       if (!validateSelector(input.selector, `${path}.selector`, errors)) {
         return false
       }
