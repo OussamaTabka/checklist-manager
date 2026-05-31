@@ -36,6 +36,15 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
 
     public function handle(): void
     {
+        // In watch mode this job is dispatched with ->afterResponse(), so it runs
+        // inside the PHP web process (e.g. `php artisan serve`). PHP's
+        // max_execution_time (60s here, counted as wall-clock on Windows) would
+        // otherwise raise an UNCATCHABLE FatalError while we block reading the
+        // Node runner's output pipes — bypassing the try/catch below and leaving
+        // the TestRun stuck on "running" forever. Remove the PHP limit; the
+        // underlying Symfony Process keeps its own explicit timeout (600-900s).
+        @set_time_limit(0);
+
         $run = TestRun::where('run_id', $this->runId)->first();
         if (!$run) {
             return;
@@ -280,7 +289,33 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
                 }
             }
 
-            $this->persistResult($run->fresh(), $item->fresh(), $resultPayload);
+            $attempt = 1;
+            $healed = false;
+            $healDiagnosis = null;
+
+            $generationMode = (string) ($runSpec['generation_mode'] ?? 'dsl');
+            if ($watchMode
+                && $generationMode === 'python_script'
+                && (bool) env('HEALER_ENABLED', false)
+                && $this->isHealable($resultPayload)
+            ) {
+                [$healedPayload, $healDiagnosis] = $this->runHealerPass(
+                    $run, $item, $runSpec, $resultPayload,
+                    $workspaceRoot, $runnerDir, $runnerEntrypoint, $providedInputs, $payload, $debugMode,
+                );
+
+                if ($healedPayload !== null) {
+                    $attempt = 2;
+                    $healedResults = is_array($healedPayload['results'] ?? null) ? $healedPayload['results'] : [];
+                    $healedStatus = (string) (is_array($healedResults[0] ?? null) ? ($healedResults[0]['status'] ?? 'unknown') : 'unknown');
+                    if ($healedStatus === 'passed') {
+                        $resultPayload = $healedPayload;
+                        $healed = true;
+                    }
+                }
+            }
+
+            $this->persistResult($run->fresh(), $item->fresh(), $resultPayload, $attempt, $healed, $healDiagnosis);
         } catch (\Throwable $error) {
             $safeMessage = $this->sanitizeUtf8($error->getMessage());
 
@@ -294,8 +329,14 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
         }
     }
 
-    private function persistResult(TestRun $run, VersionItem|ChecklistItem $item, array $resultPayload): void
-    {
+    private function persistResult(
+        TestRun $run,
+        VersionItem|ChecklistItem $item,
+        array $resultPayload,
+        int $attempt = 1,
+        bool $healed = false,
+        ?string $healDiagnosis = null,
+    ): void {
         $summary = is_array($resultPayload['summary'] ?? null) ? $resultPayload['summary'] : [];
         $results = is_array($resultPayload['results'] ?? null) ? $resultPayload['results'] : [];
         $runnerStatus = (string) ($resultPayload['status'] ?? 'unknown');
@@ -348,7 +389,7 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
             'raw_paths' => $artifacts,
         ];
 
-        DB::transaction(function () use ($run, $item, $summary, $caseResult, $mappedItemStatus, $artifactPayload, $resultStatus) {
+        DB::transaction(function () use ($run, $item, $summary, $caseResult, $mappedItemStatus, $artifactPayload, $resultStatus, $attempt, $healed, $healDiagnosis) {
             $oldStatus = $item->status;
             $this->updateItemStatusFromRun($item, $run->requested_by, $mappedItemStatus, 'Updated from single test-case run ' . $run->run_id, $oldStatus);
 
@@ -362,6 +403,9 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
                     'artifacts' => $artifactPayload,
                     'result_payload' => $caseResult,
                     'executed_at' => now(),
+                    'attempt' => $attempt,
+                    'healed' => $healed,
+                    'heal_diagnosis' => $healDiagnosis,
                 ],
             );
 
@@ -778,6 +822,236 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
         }
 
         return array_merge($environment, $extraEnv);
+    }
+
+    private function isHealable(array $resultPayload): bool
+    {
+        $results = is_array($resultPayload['results'] ?? null) ? $resultPayload['results'] : [];
+        if ($results === []) {
+            return false;
+        }
+
+        $firstResult = is_array($results[0] ?? null) ? $results[0] : [];
+        if (($firstResult['status'] ?? '') !== 'failed') {
+            return false;
+        }
+
+        return in_array(
+            (string) ($firstResult['error_type'] ?? ''),
+            ['selector_not_found', 'navigation_timeout', 'assertion_failed'],
+            true,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $runSpec
+     * @param  array<string, mixed>  $firstResultPayload
+     * @param  array<string, mixed>  $providedInputs
+     * @param  array<string, mixed>  $runPayload
+     * @return array{0: array<string,mixed>|null, 1: string|null}
+     */
+    private function runHealerPass(
+        TestRun $run,
+        VersionItem|ChecklistItem $item,
+        array $runSpec,
+        array $firstResultPayload,
+        string $workspaceRoot,
+        string $runnerDir,
+        string $runnerEntrypoint,
+        array $providedInputs,
+        array $runPayload,
+        bool $debugMode,
+    ): array {
+        try {
+            $agentDir = $workspaceRoot . DIRECTORY_SEPARATOR . 'playwright-agent';
+            $healScriptEntrypoint = $agentDir . DIRECTORY_SEPARATOR . 'dist'
+                . DIRECTORY_SEPARATOR . 'python-gen'
+                . DIRECTORY_SEPARATOR . 'healScript.js';
+
+            if (!is_file($healScriptEntrypoint)) {
+                Log::warning('[healer] healScript.js not found — skipping healer pass', [
+                    'run_id' => $run->run_id,
+                    'expected_path' => $healScriptEntrypoint,
+                ]);
+                return [null, null];
+            }
+
+            $runsRoot = storage_path('app' . DIRECTORY_SEPARATOR . 'agent-runs');
+            $runDir = $runsRoot . DIRECTORY_SEPARATOR . $run->run_id;
+            $this->ensureDirectory($runDir);
+
+            // Extract failure info from the first attempt
+            $firstResults = is_array($firstResultPayload['results'] ?? null) ? $firstResultPayload['results'] : [];
+            $firstCaseResult = is_array($firstResults[0] ?? null) ? $firstResults[0] : [];
+
+            $originalScript = (string) ($runSpec['cases'][0]['python_script_body'] ?? '');
+            if ($originalScript === '') {
+                Log::warning('[healer] No python_script_body in run-spec — skipping healer pass', [
+                    'run_id' => $run->run_id,
+                ]);
+                return [null, null];
+            }
+
+            $executionProfile = is_array($runSpec['cases'][0]['execution_profile'] ?? null)
+                ? $runSpec['cases'][0]['execution_profile']
+                : [];
+            $humanReadableSteps = is_array($runSpec['cases'][0]['human_readable_steps'] ?? null)
+                ? $runSpec['cases'][0]['human_readable_steps']
+                : [];
+
+            $userStoryRaw = is_array($runPayload['user_story'] ?? null) ? $runPayload['user_story'] : [];
+            $businessRulesRaw = $userStoryRaw['business_rules'] ?? [];
+            $businessRules = is_array($businessRulesRaw)
+                ? implode("\n", $businessRulesRaw)
+                : (string) $businessRulesRaw;
+
+            $failureInfo = [
+                'error_type' => (string) ($firstCaseResult['error_type'] ?? ''),
+                'error_message' => (string) ($firstCaseResult['error_message'] ?? ''),
+            ];
+            if (isset($firstCaseResult['last_action_attempted'])) {
+                $failureInfo['last_action_attempted'] = (string) $firstCaseResult['last_action_attempted'];
+            }
+
+            $healPayload = [
+                'original_script' => $originalScript,
+                'test_case' => [
+                    'title' => (string) ($runPayload['test_case_title'] ?? $item->title ?? ''),
+                    'description' => (string) ($runPayload['test_case_description'] ?? $item->description ?? ''),
+                    'priority' => (string) ($runPayload['priority'] ?? $item->priority ?? ''),
+                    'criticality' => (string) ($runPayload['criticality'] ?? $item->criticality ?? ''),
+                ],
+                'user_story' => [
+                    'reference' => (string) ($userStoryRaw['story_id'] ?? $userStoryRaw['id'] ?? ''),
+                    'title' => (string) ($userStoryRaw['title'] ?? ''),
+                    'as_a' => (string) ($userStoryRaw['as_a'] ?? ''),
+                    'i_want_that' => (string) ($userStoryRaw['i_want_that'] ?? ''),
+                    'so_that' => (string) ($userStoryRaw['so_that'] ?? ''),
+                    'business_rules' => $businessRules,
+                ],
+                'failure' => $failureInfo,
+                'run_context' => [
+                    'run_id' => $run->run_id,
+                    'external_id' => $item->id,
+                    'base_url' => rtrim($run->base_url, '/'),
+                    'provided_inputs' => $providedInputs,
+                    'execution_profile' => $executionProfile,
+                    'human_readable_steps' => $humanReadableSteps,
+                ],
+            ];
+
+            $firstArtifacts = is_array($firstCaseResult['artifacts'] ?? null) ? $firstCaseResult['artifacts'] : [];
+            $screenshotPath = isset($firstArtifacts['screenshot_path']) && is_string($firstArtifacts['screenshot_path'])
+                ? $firstArtifacts['screenshot_path']
+                : null;
+            if ($screenshotPath !== null) {
+                $healPayload['screenshot_path'] = $screenshotPath;
+            }
+
+            $healInputPath = $runDir . DIRECTORY_SEPARATOR . 'heal-input.json';
+            file_put_contents(
+                $healInputPath,
+                json_encode($healPayload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n",
+            );
+
+            Log::info('[healer] running healer pass', [
+                'run_id' => $run->run_id,
+                'error_type' => $failureInfo['error_type'],
+            ]);
+
+            $healerOutcome = $this->runCommandWithExitCode(
+                ['node', $healScriptEntrypoint, '--input', $healInputPath],
+                $agentDir,
+                [],
+                120,
+            );
+
+            if ($healerOutcome['exitCode'] !== 0) {
+                Log::warning('[healer] healScript.js exited with non-zero code', [
+                    'run_id' => $run->run_id,
+                    'exit_code' => $healerOutcome['exitCode'],
+                    'stderr' => $healerOutcome['errorOutput'],
+                ]);
+                return [null, null];
+            }
+
+            $healedRunSpec = json_decode(trim((string) $healerOutcome['output']), true);
+            if (!is_array($healedRunSpec)) {
+                Log::warning('[healer] healScript.js output is not valid JSON', [
+                    'run_id' => $run->run_id,
+                    'output_snippet' => mb_substr((string) $healerOutcome['output'], 0, 200),
+                ]);
+                return [null, null];
+            }
+
+            $diagnosis = (string) ($healedRunSpec['generation_metadata']['heal_diagnosis'] ?? '');
+
+            // Patch the healed run-spec the same way the original is patched
+            $healedRunSpec['run_id'] = $run->run_id;
+            $healedRunSpec['target']['base_url'] = rtrim($run->base_url, '/');
+            $healedRunSpec['cases'][0]['external_id'] = $item->id;
+            $healedRunSpec['cases'][0]['use_auth'] = (bool) ($runPayload['use_auth'] ?? true);
+            $healedRunSpec['cases'][0]['execution_profile'] = $this->mergeProvidedInputsIntoExecutionProfile(
+                is_array($healedRunSpec['cases'][0]['execution_profile'] ?? null)
+                    ? $healedRunSpec['cases'][0]['execution_profile']
+                    : [],
+                $providedInputs,
+                $runPayload,
+            );
+
+            $healedDslPath = $runDir . DIRECTORY_SEPARATOR . 'run-spec-attempt-2.json';
+            file_put_contents(
+                $healedDslPath,
+                json_encode($healedRunSpec, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n",
+            );
+
+            $healedResultPath = $runDir . DIRECTORY_SEPARATOR . 'result-attempt-2.json';
+            $healedArtifactsDir = $runDir . DIRECTORY_SEPARATOR . 'artifacts-attempt-2';
+
+            $healedOutcome = $this->runCommandWithExitCode(
+                ['node', $runnerEntrypoint],
+                $runnerDir,
+                [
+                    'RUN_JSON_PATH' => $healedDslPath,
+                    'RESULT_JSON_PATH' => $healedResultPath,
+                    'ARTIFACTS_DIR' => $healedArtifactsDir,
+                    'LIVE_TRACE_PATH' => $runDir . DIRECTORY_SEPARATOR . 'live-trace-attempt-2.json',
+                    'AGENT_RUNNER_DEBUG' => $debugMode ? '1' : '0',
+                ],
+                900,
+            );
+
+            if (!is_file($healedResultPath)) {
+                Log::warning('[healer] result-attempt-2.json was not produced', [
+                    'run_id' => $run->run_id,
+                    'exit_code' => $healedOutcome['exitCode'],
+                    'stderr' => $healedOutcome['errorOutput'],
+                ]);
+                return [null, $diagnosis !== '' ? $diagnosis : null];
+            }
+
+            $healedResultPayload = json_decode((string) file_get_contents($healedResultPath), true);
+            if (!is_array($healedResultPayload)) {
+                return [null, $diagnosis !== '' ? $diagnosis : null];
+            }
+
+            $healedResults = is_array($healedResultPayload['results'] ?? null) ? $healedResultPayload['results'] : [];
+            $healedStatus = (string) (is_array($healedResults[0] ?? null) ? ($healedResults[0]['status'] ?? 'unknown') : 'unknown');
+
+            Log::info('[healer] healed attempt completed', [
+                'run_id' => $run->run_id,
+                'status' => $healedStatus,
+                'diagnosis' => $diagnosis,
+            ]);
+
+            return [$healedResultPayload, $diagnosis !== '' ? $diagnosis : null];
+        } catch (\Throwable $error) {
+            Log::error('[healer] healer pass threw an exception', [
+                'run_id' => $run->run_id,
+                'error' => $error->getMessage(),
+            ]);
+            return [null, null];
+        }
     }
 
     /**

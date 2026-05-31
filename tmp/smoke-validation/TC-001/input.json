@@ -1,0 +1,41 @@
+﻿{
+    "expected_result":  {
+
+                        },
+    "test_case_text":  "TC-001 Standard login\nVerify a standard user logs in with the project defaults (standard_user / secret_sauce), reaches /inventory.html, sees the Swag Labs header, and at least one product is visible.",
+    "environment_name":  "sauce-demo",
+    "notes":  "Smoke validation of prompt-based credential inference.",
+    "source_app":  "sauce_demo",
+    "base_url":  "https://www.saucedemo.com",
+    "user_story":  {
+                       "i_want_that":  "I can log in with my credentials",
+                       "so_that":  "I can reach the catalog and place orders",
+                       "priority":  "critical",
+                       "as_a":  "Swag Labs customer",
+                       "business_rules":  "The default password is secret_sauce for all accounts. locked_out_user must be rejected. A successful login redirects to /inventory.html.",
+                       "title":  "Authentication",
+                       "story_id":  "US-001"
+                   },
+    "priority":  "High",
+    "provided_inputs":  {
+
+                        },
+    "criticality":  "Major",
+    "project":  {
+                    "source_app":  "sauce_demo",
+                    "name":  "Sauce Demo E-commerce Automation",
+                    "app_url":  "https://www.saucedemo.com"
+                },
+    "run_id":  "smoke-tc-001",
+    "test_case_description":  "Verify a standard user logs in with the project defaults (standard_user / secret_sauce), reaches /inventory.html, sees the Swag Labs header, and at least one product is visible.",
+    "use_auth":  false,
+    "target_type":  "checklist_item",
+    "current_status":  "pending",
+    "test_case_title":  "TC-001 Standard login",
+    "checklist_business_rules":  [
+                                     "The default password is secret_sauce for all accounts.",
+                                     "locked_out_user must be rejected.",
+                                     "A successful login redirects to /inventory.html."
+                                 ],
+    "external_id":  1
+}

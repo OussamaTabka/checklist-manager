@@ -1,0 +1,24 @@
+{
+  "run_id": "diag-pta-case-1",
+  "external_id": 1,
+  "test_case_title": "Verify valid login reaches the logged-in page",
+  "test_case_description": "Open https://practicetestautomation.com/practice-test-login/, enter username student and password Password123, submit the form, and verify the URL contains logged-in-successfully and a success message is visible.",
+  "test_case_text": "Verify valid login reaches the logged-in page\nOpen https://practicetestautomation.com/practice-test-login/, enter username student and password Password123, submit the form, and verify the URL contains logged-in-successfully and a success message is visible.",
+  "base_url": "https://practicetestautomation.com/practice-test-login/",
+  "use_auth": false,
+  "environment_name": "public-demo",
+  "notes": "Standard positive login test. Expected: URL contains logged-in-successfully, Congratulations text visible.",
+  "priority": "High",
+  "criticality": "Critical",
+  "current_status": "Not Tested",
+  "target_type": "checklist_item",
+  "source_app": "practice_test_automation",
+  "provided_inputs": {
+    "username": "student",
+    "password": "Password123"
+  },
+  "expected_result": {
+    "visible_text_contains": "Congratulations",
+    "assertion_keywords": ["logged-in-successfully", "Congratulations"]
+  }
+}

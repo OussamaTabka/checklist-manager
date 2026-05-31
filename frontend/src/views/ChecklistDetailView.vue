@@ -7,6 +7,7 @@ import { apiRequest } from '@/lib/api'
 import { localizeError, localizeMessage } from '@/lib/localization'
 import { useSettingsStore } from '@/stores/settings'
 import { useToastStore } from '@/stores/toast'
+import TestCaseFormModal from '@/components/checklist/TestCaseFormModal.vue'
 import {
   AlertCircle,
   ArrowLeft,
@@ -45,6 +46,8 @@ const CHECKLIST_RUN_BASE_URL_STORAGE_KEY = 'checklist_item_run_base_url'
 const executionContextLoading = ref(false)
 const projectContextName = ref('')
 const projectContextChecklists = ref([])
+const testCaseModalOpen = ref(false)
+const editingTestCase = ref(null)
 
 const COMMENT_PLACEHOLDER = 'Ajouter une observation, un bug constate ou une information utile pour ce test...'
 const STATUS_OPTIONS = ['Not Tested', 'Passed', 'Failed', 'Blocked']
@@ -63,7 +66,6 @@ const runForm = reactive({
   notes: '',
   useAuth: true,
   watchMode: true,
-  providedInputs: {},
 })
 
 const statusIcons = {
@@ -179,6 +181,27 @@ const checklistStoryDescription = computed(() => {
 
   if (parts.length) return `${parts.join(', ')}.`
   return publicChecklistDescription.value || ''
+})
+
+const checklistProjectContext = computed(() => {
+  const checklistProject = checklist.value?.project
+  const fallbackId = Number(projectContextId.value || 0)
+
+  return {
+    id: Number(checklistProject?.id || fallbackId),
+    name: checklistProject?.name || projectContextName.value || `Projet #${fallbackId || 'N/A'}`,
+    app_url: checklistProject?.app_url || '',
+  }
+})
+
+const checklistUserStoryContext = computed(() => {
+  const story = Array.isArray(checklist.value?.user_stories) ? checklist.value.user_stories[0] : null
+
+  return {
+    id: Number(story?.id || 0),
+    reference: story?.story_id || (story?.id ? `US-${story.id}` : 'US-N/A'),
+    title: story?.title || 'User story parente',
+  }
 })
 function displayStatus(status) {
   return ['Passed', 'Failed', 'Blocked'].includes(status) ? status : 'Not Tested'
@@ -546,15 +569,6 @@ function removePollingItem(itemId) {
   stopPollingIfIdle()
 }
 
-function initializeProvidedInputs(profile) {
-  const next = {}
-  const inputs = Array.isArray(profile?.required_inputs) ? profile.required_inputs : []
-  for (const input of inputs) {
-    next[input.key] = typeof input.value === 'string' ? input.value : ''
-  }
-  runForm.providedInputs = next
-}
-
 async function openRunModal(item) {
   runForm.itemId = item.id
   await refreshExecutionState(item.id)
@@ -564,7 +578,6 @@ async function openRunModal(item) {
   runForm.notes = ''
   runForm.useAuth = true
   runForm.watchMode = true
-  initializeProvidedInputs(runtimeStateByItemId.value[item.id]?.execution_profile || null)
   runModalError.value = ''
   runSubmitBusy.value = false
   runModalOpen.value = true
@@ -579,6 +592,32 @@ function runNextSuggestedItem() {
 function closeRunModal() {
   if (runSubmitBusy.value) return
   runModalOpen.value = false
+}
+
+function openCreateTestCaseModal() {
+  editingTestCase.value = null
+  testCaseModalOpen.value = true
+}
+
+function openEditTestCaseModal(item) {
+  editingTestCase.value = {
+    id: item.id,
+    title: item.title,
+    description: item.description || '',
+    priority: item.priority || 'Medium',
+    criticality: item.criticality || 'Major',
+  }
+  testCaseModalOpen.value = true
+}
+
+function closeTestCaseModal() {
+  testCaseModalOpen.value = false
+  editingTestCase.value = null
+}
+
+async function handleTestCaseSubmitted() {
+  await loadChecklist()
+  toast.success(editingTestCase.value ? 'Cas de test mis a jour avec succes.' : 'Cas de test cree avec succes.')
 }
 
 async function submitRunModal() {
@@ -605,7 +644,8 @@ async function submitRunModal() {
       watch_mode: !!runForm.watchMode,
       environment_name: runForm.environmentName.trim() || null,
       notes: runForm.notes.trim() || null,
-      provided_inputs: { ...runForm.providedInputs },
+      provided_inputs: [],
+      expected_result: null,
     })
 
     runtimeStateByItemId.value = {
@@ -634,19 +674,6 @@ async function submitRunModal() {
     runModalError.value = localizeError(error, 'error_generic', settings.language)
   } finally {
     runSubmitBusy.value = false
-  }
-}
-
-function inputTypeForKind(kind) {
-  switch (kind) {
-    case 'email':
-      return 'email'
-    case 'password':
-      return 'password'
-    case 'file':
-      return 'text'
-    default:
-      return 'text'
   }
 }
 
@@ -1150,7 +1177,16 @@ onBeforeUnmount(() => {
               <h2>Test cases exécutables</h2>
               <span class="tag text-blue-900 border-blue-300 bg-blue-100">{{ scenariosStats.total }}</span>
             </div>
-            <p class="muted test-case-section-note">Lancez les tests, ajustez le statut final et consultez rapidement l’historique et les observations QA.</p>
+            <div class="flex flex-col items-start gap-2 lg:items-end">
+              <p class="muted test-case-section-note">Lancez les tests, ajustez le statut final et consultez rapidement l’historique et les observations QA.</p>
+              <button
+                v-if="auth.canTest"
+                class="btn btn-primary btn-sm"
+                @click="openCreateTestCaseModal"
+              >
+                Ajouter un test case
+              </button>
+            </div>
           </div>
 
         </div>
@@ -1196,6 +1232,14 @@ onBeforeUnmount(() => {
                     <button class="btn btn-primary qa-run-button" :disabled="!auth.canTest || isRunInFlight(item)" @click="openRunModal(item)">
                       <PlayCircle :size="16" />
                       <span>{{ runButtonLabel(item) }}</span>
+                    </button>
+                    <button
+                      v-if="auth.canTest"
+                      class="btn btn-secondary btn-sm"
+                      :disabled="isRunInFlight(item)"
+                      @click="openEditTestCaseModal(item)"
+                    >
+                      Modifier
                     </button>
                   </div>
                 </div>
@@ -1466,26 +1510,8 @@ onBeforeUnmount(() => {
               </ul>
             </div>
 
-            <div v-if="currentRunProfile.required_inputs?.length" class="space-y-3">
-              <p class="text-xs font-semibold uppercase tracking-wider text-slate-600">Required inputs</p>
-              <div v-for="input in currentRunProfile.required_inputs" :key="input.key" class="field">
-                <label>{{ input.label }}<span v-if="input.required"> *</span></label>
-                <textarea
-                  v-if="input.kind === 'textarea'"
-                  v-model="runForm.providedInputs[input.key]"
-                  rows="3"
-                  :disabled="runSubmitBusy"
-                  :placeholder="input.description || input.label"
-                />
-                <input
-                  v-else
-                  v-model="runForm.providedInputs[input.key]"
-                  :type="inputTypeForKind(input.kind)"
-                  :disabled="runSubmitBusy"
-                  :placeholder="input.kind === 'file' ? 'C:\\path\\to\\file.ext' : (input.description || input.label)"
-                />
-                <p v-if="input.description" class="muted text-xs mt-1">{{ input.description }}</p>
-              </div>
+            <div class="rounded-xl border border-blue-200 bg-blue-50 px-3 py-3 text-sm text-blue-800">
+              Les donnees de test sont deduites automatiquement a partir du contexte (user story, regles metier et description du test case).
             </div>
 
             <div v-if="currentRunProfile.last_generated_plan?.steps?.length">
@@ -1544,6 +1570,16 @@ onBeforeUnmount(() => {
         </form>
       </div>
     </div>
+
+    <TestCaseFormModal
+      v-if="testCaseModalOpen && checklist"
+      :project="checklistProjectContext"
+      :user-story="checklistUserStoryContext"
+      :checklist-id="Number(checklist.id)"
+      :existing-test-case="editingTestCase"
+      @close="closeTestCaseModal"
+      @submitted="handleTestCaseSubmitted"
+    />
   </section>
 </template>
 

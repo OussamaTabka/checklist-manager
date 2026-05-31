@@ -1,0 +1,104 @@
+{
+  "schema_version": "1.0",
+  "run_id": "5a90d57f-733b-4f62-bec0-22f263342c7f",
+  "runner_run_id": "runner-1779639963645",
+  "base_url_used": "http://127.0.0.1:4177",
+  "status": "done",
+  "summary": {
+    "passed": 0,
+    "failed": 0,
+    "blocked": 1,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 187,
+      "status": "blocked",
+      "attempt": 1,
+      "duration_ms": 25993,
+      "error_type": "url_unreachable",
+      "error_message": "The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4177/login\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:4177/login\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "generated_plan": {
+        "title": "Cart page requires login",
+        "intent_summary": "Authenticate the user and validate the login outcome described by 'Cart page requires login'.",
+        "coverage_type": "auth_login",
+        "preflight_checks": [
+          {
+            "id": "page-accessible",
+            "kind": "page_accessible",
+            "label": "Initial target page is reachable",
+            "required": true,
+            "failure_message": "The target page could not be reached before executing the generated test plan."
+          }
+        ],
+        "steps": [
+          {
+            "action": "goto",
+            "url": "/login"
+          },
+          {
+            "action": "goto",
+            "url": "/cart.html"
+          },
+          {
+            "action": "wait_for_selector",
+            "selector": {
+              "by": "css",
+              "value": "input[data-test=\"username\"], #user-name, input[name=\"user-name\"]"
+            },
+            "state": "visible",
+            "timeout_ms": 20000
+          },
+          {
+            "action": "screenshot",
+            "name": "protected-route-login-gate"
+          }
+        ],
+        "asserts": [
+          {
+            "type": "expect_visible",
+            "selector": {
+              "by": "css",
+              "value": "input[data-test=\"username\"], #user-name, input[name=\"user-name\"]"
+            }
+          },
+          {
+            "type": "expect_visible",
+            "selector": {
+              "by": "text",
+              "text": "Swag Labs"
+            }
+          }
+        ],
+        "expected_observations": [
+          "A successful post-login destination should be reached and authenticated UI content should become visible."
+        ],
+        "diagnostics": []
+      },
+      "failure_source": {
+        "phase": "initial_navigation",
+        "reference": "url_unreachable",
+        "message": "The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4177/login\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:4177/login\", waiting until \"domcontentloaded\"\u001b[22m\n"
+      },
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      },
+      "execution_trace": [
+        "[chrome] Planning: browser context starting",
+        "[chrome] Planning: Authenticate the user and validate the login outcome described by 'Cart page requires login'.",
+        "[chrome] Planning: precondition -> Target base URL must be reachable: http://127.0.0.1:4177",
+        "[chrome] Planning: precondition -> The login page or authentication form must be available on the target website.",
+        "[chrome] Planning: precondition -> The checklist-manager target routes should be available with the expected test ids or visible UI elements.",
+        "[chrome] Preflight 0: page_accessible -> started (attempt 1/3, url=http://127.0.0.1:4177/login)",
+        "[chrome] Preflight 0: page_accessible -> failed (attempt 1/3, failure_type=initial_navigation_failed, failure_message=page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4177/login\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:4177/login\", waiting until \"domcontentloaded\"\u001b[22m\n)",
+        "[chrome] Preflight 0: page_accessible -> started (attempt 2/3, url=http://127.0.0.1:4177/login)",
+        "[chrome] Preflight 0: page_accessible -> failed (attempt 2/3, failure_type=initial_navigation_failed, failure_message=page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4177/login\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:4177/login\", waiting until \"domcontentloaded\"\u001b[22m\n)",
+        "[chrome] Preflight 0: page_accessible -> started (attempt 3/3, url=http://127.0.0.1:4177/login)",
+        "[chrome] Preflight 0: page_accessible -> failed (attempt 3/3, failure_type=initial_navigation_failed, failure_message=page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4177/login\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:4177/login\", waiting until \"domcontentloaded\"\u001b[22m\n)",
+        "[chrome] Failure analysis: url_unreachable -> The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4177/login\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:4177/login\", waiting until \"domcontentloaded\"\u001b[22m\n"
+      ]
+    }
+  ]
+}

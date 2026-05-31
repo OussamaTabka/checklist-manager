@@ -127,8 +127,6 @@ class ChecklistItemExecutionController extends Controller
             'watch_mode' => ['sometimes', 'boolean'],
             'environment_name' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:2000'],
-            'provided_inputs' => ['nullable', 'array'],
-            'provided_inputs.*' => ['nullable', 'string', 'max:4000'],
         ]);
 
         $watchMode = array_key_exists('watch_mode', $data) ? (bool) $data['watch_mode'] : true;
@@ -138,7 +136,8 @@ class ChecklistItemExecutionController extends Controller
             'watch_mode' => $watchMode,
             'environment_name' => (string) ($data['environment_name'] ?? ''),
             'notes' => (string) ($data['notes'] ?? ''),
-            'provided_inputs' => is_array($data['provided_inputs'] ?? null) ? $data['provided_inputs'] : [],
+            'provided_inputs' => [],
+            'expected_result' => null,
         ]);
 
         return response()->json([

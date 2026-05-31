@@ -1,0 +1,398 @@
+{
+    "schema_version": "1.0",
+    "run_id": "d461083d-ae60-48fa-bed0-37ceeed51df2",
+    "target": {
+        "base_url": "https://www.saucedemo.com"
+    },
+    "runtime": {
+        "headless": false,
+        "slow_mo_ms": 700,
+        "hold_open_ms": 12000,
+        "timeout_ms": 30000,
+        "viewport": {
+            "width": 1280,
+            "height": 720
+        },
+        "trace": "retain-on-failure",
+        "video": "retain-on-failure",
+        "screenshot": "only-on-failure"
+    },
+    "cases": [
+        {
+            "external_id": 179,
+            "title": "Valid user can login",
+            "severity": "critical",
+            "use_auth": false,
+            "execution_profile": {
+                "intent_summary": "Authenticate the user and validate the login outcome described by 'Valid user can login'.",
+                "coverage_type": "auth_login",
+                "preconditions": [
+                    "Target base URL must be reachable: https://www.saucedemo.com",
+                    "The login page or authentication form must be available on the target website."
+                ],
+                "required_inputs": [
+                    {
+                        "key": "email",
+                        "label": "Email or username",
+                        "kind": "email",
+                        "required": true,
+                        "description": "Credential used to authenticate the user.",
+                        "value": "standard_user"
+                    },
+                    {
+                        "key": "password",
+                        "label": "Password",
+                        "kind": "password",
+                        "required": true,
+                        "description": "Password used to authenticate the user.",
+                        "value": "secret_sauce"
+                    }
+                ],
+                "expected_observations": [
+                    "A successful post-login destination should be reached and authenticated UI content should become visible."
+                ],
+                "diagnostics": [],
+                "generation_confidence": 0.8,
+                "last_generated_plan": {
+                    "title": "Valid user can login",
+                    "intent_summary": "Authenticate the user and validate the login outcome described by 'Valid user can login'.",
+                    "coverage_type": "auth_login",
+                    "preflight_checks": [
+                        {
+                            "id": "page-accessible",
+                            "kind": "page_accessible",
+                            "label": "Initial target page is reachable",
+                            "required": true,
+                            "failure_message": "The target page could not be reached before executing the generated test plan."
+                        },
+                        {
+                            "id": "input-email",
+                            "kind": "input_available",
+                            "label": "Input 'Email or username' has a value",
+                            "required": true,
+                            "input_key": "email",
+                            "failure_message": "Missing required test data for 'Email or username'. Provide a value before running the test."
+                        },
+                        {
+                            "id": "input-password",
+                            "kind": "input_available",
+                            "label": "Input 'Password' has a value",
+                            "required": true,
+                            "input_key": "password",
+                            "failure_message": "Missing required test data for 'Password'. Provide a value before running the test."
+                        },
+                        {
+                            "id": "login-user-field",
+                            "kind": "element_visible",
+                            "label": "Login user field is visible",
+                            "required": true,
+                            "selector": {
+                                "by": "css",
+                                "value": "input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i]"
+                            },
+                            "failure_message": "The target page does not expose a visible email or username field required by this login case."
+                        },
+                        {
+                            "id": "login-password-field",
+                            "kind": "element_visible",
+                            "label": "Login password field is visible",
+                            "required": true,
+                            "selector": {
+                                "by": "css",
+                                "value": "input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i]"
+                            },
+                            "failure_message": "The target page does not expose a visible password field required by this login case."
+                        }
+                    ],
+                    "steps": [
+                        {
+                            "action": "goto",
+                            "url": "https://www.saucedemo.com"
+                        },
+                        {
+                            "action": "wait_for_selector",
+                            "selector": {
+                                "by": "css",
+                                "value": "input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i]"
+                            },
+                            "state": "visible",
+                            "timeout_ms": 20000
+                        },
+                        {
+                            "action": "fill",
+                            "selector": {
+                                "by": "css",
+                                "value": "input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i]"
+                            },
+                            "input_key": "email"
+                        },
+                        {
+                            "action": "fill",
+                            "selector": {
+                                "by": "css",
+                                "value": "input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i]"
+                            },
+                            "input_key": "password"
+                        },
+                        {
+                            "action": "click",
+                            "selector": {
+                                "by": "css",
+                                "value": "button[type=\"submit\"], input[type=\"submit\"], button:has-text(\"Login\"), button:has-text(\"Sign in\"), button:has-text(\"Log in\"), [role=\"button\"]:has-text(\"Login\"), [role=\"button\"]:has-text(\"Sign in\")"
+                            }
+                        },
+                        {
+                            "action": "wait_for_url",
+                            "contains": "/inventory.html",
+                            "timeout_ms": 20000
+                        },
+                        {
+                            "action": "screenshot",
+                            "name": "post-login"
+                        }
+                    ],
+                    "asserts": [
+                        {
+                            "type": "expect_url_contains",
+                            "value": "/inventory.html"
+                        },
+                        {
+                            "type": "expect_visible",
+                            "selector": {
+                                "by": "text",
+                                "text": "Products"
+                            }
+                        }
+                    ],
+                    "expected_observations": [
+                        "A successful post-login destination should be reached and authenticated UI content should become visible."
+                    ],
+                    "diagnostics": []
+                }
+            },
+            "generated_plan": {
+                "title": "Valid user can login",
+                "intent_summary": "Authenticate the user and validate the login outcome described by 'Valid user can login'.",
+                "coverage_type": "auth_login",
+                "preflight_checks": [
+                    {
+                        "id": "page-accessible",
+                        "kind": "page_accessible",
+                        "label": "Initial target page is reachable",
+                        "required": true,
+                        "failure_message": "The target page could not be reached before executing the generated test plan."
+                    },
+                    {
+                        "id": "input-email",
+                        "kind": "input_available",
+                        "label": "Input 'Email or username' has a value",
+                        "required": true,
+                        "input_key": "email",
+                        "failure_message": "Missing required test data for 'Email or username'. Provide a value before running the test."
+                    },
+                    {
+                        "id": "input-password",
+                        "kind": "input_available",
+                        "label": "Input 'Password' has a value",
+                        "required": true,
+                        "input_key": "password",
+                        "failure_message": "Missing required test data for 'Password'. Provide a value before running the test."
+                    },
+                    {
+                        "id": "login-user-field",
+                        "kind": "element_visible",
+                        "label": "Login user field is visible",
+                        "required": true,
+                        "selector": {
+                            "by": "css",
+                            "value": "input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i]"
+                        },
+                        "failure_message": "The target page does not expose a visible email or username field required by this login case."
+                    },
+                    {
+                        "id": "login-password-field",
+                        "kind": "element_visible",
+                        "label": "Login password field is visible",
+                        "required": true,
+                        "selector": {
+                            "by": "css",
+                            "value": "input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i]"
+                        },
+                        "failure_message": "The target page does not expose a visible password field required by this login case."
+                    }
+                ],
+                "steps": [
+                    {
+                        "action": "goto",
+                        "url": "https://www.saucedemo.com"
+                    },
+                    {
+                        "action": "wait_for_selector",
+                        "selector": {
+                            "by": "css",
+                            "value": "input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i]"
+                        },
+                        "state": "visible",
+                        "timeout_ms": 20000
+                    },
+                    {
+                        "action": "fill",
+                        "selector": {
+                            "by": "css",
+                            "value": "input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i]"
+                        },
+                        "input_key": "email"
+                    },
+                    {
+                        "action": "fill",
+                        "selector": {
+                            "by": "css",
+                            "value": "input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i]"
+                        },
+                        "input_key": "password"
+                    },
+                    {
+                        "action": "click",
+                        "selector": {
+                            "by": "css",
+                            "value": "button[type=\"submit\"], input[type=\"submit\"], button:has-text(\"Login\"), button:has-text(\"Sign in\"), button:has-text(\"Log in\"), [role=\"button\"]:has-text(\"Login\"), [role=\"button\"]:has-text(\"Sign in\")"
+                        }
+                    },
+                    {
+                        "action": "wait_for_url",
+                        "contains": "/inventory.html",
+                        "timeout_ms": 20000
+                    },
+                    {
+                        "action": "screenshot",
+                        "name": "post-login"
+                    }
+                ],
+                "asserts": [
+                    {
+                        "type": "expect_url_contains",
+                        "value": "/inventory.html"
+                    },
+                    {
+                        "type": "expect_visible",
+                        "selector": {
+                            "by": "text",
+                            "text": "Products"
+                        }
+                    }
+                ],
+                "expected_observations": [
+                    "A successful post-login destination should be reached and authenticated UI content should become visible."
+                ],
+                "diagnostics": []
+            },
+            "preflight_checks": [
+                {
+                    "id": "page-accessible",
+                    "kind": "page_accessible",
+                    "label": "Initial target page is reachable",
+                    "required": true,
+                    "failure_message": "The target page could not be reached before executing the generated test plan."
+                },
+                {
+                    "id": "input-email",
+                    "kind": "input_available",
+                    "label": "Input 'Email or username' has a value",
+                    "required": true,
+                    "input_key": "email",
+                    "failure_message": "Missing required test data for 'Email or username'. Provide a value before running the test."
+                },
+                {
+                    "id": "input-password",
+                    "kind": "input_available",
+                    "label": "Input 'Password' has a value",
+                    "required": true,
+                    "input_key": "password",
+                    "failure_message": "Missing required test data for 'Password'. Provide a value before running the test."
+                },
+                {
+                    "id": "login-user-field",
+                    "kind": "element_visible",
+                    "label": "Login user field is visible",
+                    "required": true,
+                    "selector": {
+                        "by": "css",
+                        "value": "input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i]"
+                    },
+                    "failure_message": "The target page does not expose a visible email or username field required by this login case."
+                },
+                {
+                    "id": "login-password-field",
+                    "kind": "element_visible",
+                    "label": "Login password field is visible",
+                    "required": true,
+                    "selector": {
+                        "by": "css",
+                        "value": "input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i]"
+                    },
+                    "failure_message": "The target page does not expose a visible password field required by this login case."
+                }
+            ],
+            "steps": [
+                {
+                    "action": "goto",
+                    "url": "https://www.saucedemo.com"
+                },
+                {
+                    "action": "wait_for_selector",
+                    "selector": {
+                        "by": "css",
+                        "value": "input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i]"
+                    },
+                    "state": "visible",
+                    "timeout_ms": 20000
+                },
+                {
+                    "action": "fill",
+                    "selector": {
+                        "by": "css",
+                        "value": "input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i]"
+                    },
+                    "input_key": "email"
+                },
+                {
+                    "action": "fill",
+                    "selector": {
+                        "by": "css",
+                        "value": "input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i]"
+                    },
+                    "input_key": "password"
+                },
+                {
+                    "action": "click",
+                    "selector": {
+                        "by": "css",
+                        "value": "button[type=\"submit\"], input[type=\"submit\"], button:has-text(\"Login\"), button:has-text(\"Sign in\"), button:has-text(\"Log in\"), [role=\"button\"]:has-text(\"Login\"), [role=\"button\"]:has-text(\"Sign in\")"
+                    }
+                },
+                {
+                    "action": "wait_for_url",
+                    "contains": "/inventory.html",
+                    "timeout_ms": 20000
+                },
+                {
+                    "action": "screenshot",
+                    "name": "post-login"
+                }
+            ],
+            "asserts": [
+                {
+                    "type": "expect_url_contains",
+                    "value": "/inventory.html"
+                },
+                {
+                    "type": "expect_visible",
+                    "selector": {
+                        "by": "text",
+                        "text": "Products"
+                    }
+                }
+            ]
+        }
+    ]
+}

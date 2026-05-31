@@ -76,6 +76,8 @@ Route::middleware([\Illuminate\Session\Middleware\StartSession::class])->group(f
             Route::get('/checklists', [ChecklistController::class, 'index']);
             Route::get('/checklists/items/available', [ChecklistController::class, 'getAvailableItems']);
             Route::get('/checklists/{checklist}', [ChecklistController::class, 'show']);
+            Route::post('/checklists/{checklist}/items', [ChecklistController::class, 'storeItem']);
+            Route::put('/checklists/{checklist}/items/{item}', [ChecklistController::class, 'updateItem']);
             Route::patch('/checklists/{checklist}/items/{item}/status', [ChecklistController::class, 'updateItemStatus']);
             Route::get('/checklists/{checklist}/items/{item}/history', [ChecklistController::class, 'getItemHistory']);
             Route::get('/checklists/{checklist}/items/{item}/comment', [ChecklistController::class, 'getItemComment']);

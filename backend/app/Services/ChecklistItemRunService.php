@@ -11,11 +11,6 @@ use Illuminate\Support\Str;
 
 class ChecklistItemRunService
 {
-    public function __construct(
-        private readonly ExecutionInputNormalizer $executionInputNormalizer,
-    ) {
-    }
-
     /**
      * @param  array<string, mixed>  $options
      */
@@ -24,9 +19,20 @@ class ChecklistItemRunService
         $baseUrl = rtrim(trim((string) ($options['base_url'] ?? '')), '/');
         $useAuth = array_key_exists('use_auth', $options) ? (bool) $options['use_auth'] : true;
         $watchMode = array_key_exists('watch_mode', $options) ? (bool) $options['watch_mode'] : true;
-        $providedInputs = $this->executionInputNormalizer->normalizeProvidedInputs(
-            is_array($options['provided_inputs'] ?? null) ? $options['provided_inputs'] : []
-        );
+
+        $checklist->loadMissing(['project:id,name,app_url', 'userStories:id,story_id,title,as_a,i_want_that,so_that,acceptance_criteria,business_rules']);
+        $story = $checklist->userStories->first();
+
+        $userStoryContext = $story ? [
+            'id' => (int) $story->id,
+            'story_id' => (string) ($story->story_id ?: ('US-' . $story->id)),
+            'title' => (string) ($story->title ?? ''),
+            'as_a' => (string) ($story->as_a ?? ''),
+            'i_want_that' => (string) ($story->i_want_that ?? ''),
+            'so_that' => (string) ($story->so_that ?? ''),
+            'acceptance_criteria' => (string) ($story->acceptance_criteria ?? ''),
+            'business_rules' => is_array($story->business_rules) ? $story->business_rules : [],
+        ] : null;
 
         $run = TestRun::create([
             'run_id' => (string) Str::uuid(),
@@ -52,8 +58,15 @@ class ChecklistItemRunService
                 'notes' => (string) ($options['notes'] ?? ''),
                 'debug' => (bool) ($options['debug'] ?? false),
                 'source_app' => isset($options['source_app']) ? (string) $options['source_app'] : null,
-                'provided_inputs' => $providedInputs,
-                'expected_result' => is_array($options['expected_result'] ?? null) ? $options['expected_result'] : null,
+                'provided_inputs' => [],
+                'expected_result' => null,
+                'user_story' => $userStoryContext,
+                'checklist_business_rules' => is_array($checklist->business_rules) ? $checklist->business_rules : [],
+                'project' => $checklist->project ? [
+                    'id' => (int) $checklist->project->id,
+                    'name' => (string) ($checklist->project->name ?? ''),
+                    'app_url' => (string) ($checklist->project->app_url ?? ''),
+                ] : null,
                 'priority' => (string) ($item->priority ?? ''),
                 'criticality' => (string) ($item->criticality ?? ''),
                 'current_status' => (string) ($item->status ?? ''),

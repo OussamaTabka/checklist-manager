@@ -1,0 +1,24 @@
+{
+  "run_id": "diag-pta-case-3",
+  "external_id": 3,
+  "test_case_title": "Verify invalid password shows an error",
+  "test_case_description": "Open the practice login page, enter username student and password invalid_password, submit, and verify the page shows an error containing Your password is invalid.",
+  "test_case_text": "Verify invalid password shows an error\nOpen the practice login page, enter username student and password invalid_password, submit, and verify the page shows an error containing Your password is invalid.",
+  "base_url": "https://practicetestautomation.com/practice-test-login/",
+  "use_auth": false,
+  "environment_name": "public-demo",
+  "notes": "NEGATIVE TEST. Expected outcome: login is REJECTED and an error is shown. The user should remain on the login page. Assert that the error message is visible, not that login succeeded.",
+  "priority": "Medium",
+  "criticality": "Major",
+  "current_status": "Not Tested",
+  "target_type": "checklist_item",
+  "source_app": "practice_test_automation",
+  "provided_inputs": {
+    "username": "student",
+    "password": "invalid_password"
+  },
+  "expected_result": {
+    "visible_text_contains": "Your password is invalid",
+    "assertion_keywords": ["password is invalid"]
+  }
+}

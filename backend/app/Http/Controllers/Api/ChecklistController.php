@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreTestCaseRequest;
 use App\Models\Checklist;
 use App\Models\ChecklistItem;
 use App\Models\ChecklistItemHistory;
@@ -165,7 +166,54 @@ class ChecklistController extends Controller
             $this->ensureChecklistAccessible(Project::findOrFail($checklist->project_id));
         }
 
-        return response()->json($checklist->load(['items.tester']));
+        return response()->json($checklist->load([
+            'items.tester',
+            'project:id,name,app_url',
+            'userStories:id,story_id,title,project_id',
+        ]));
+    }
+
+    public function storeItem(StoreTestCaseRequest $request, Checklist $checklist)
+    {
+        $this->ensureChecklistAccess($checklist);
+
+        $payload = $request->validated();
+
+        $nextOrder = ((int) $checklist->items()->max('order')) + 1;
+
+        $item = $checklist->items()->create([
+            'title' => $payload['title'],
+            'description' => $payload['description'],
+            'priority' => $payload['priority'],
+            'criticality' => $payload['criticality'],
+            'status' => 'pending',
+            'order' => $nextOrder,
+        ]);
+
+        return response()->json([
+            'message' => 'Cas de test cree avec succes.',
+            'data' => $item,
+        ], 201);
+    }
+
+    public function updateItem(StoreTestCaseRequest $request, Checklist $checklist, ChecklistItem $item)
+    {
+        $this->ensureChecklistItemBelongsToChecklist($checklist, $item);
+        $this->ensureChecklistAccess($checklist);
+
+        $payload = $request->validated();
+
+        $item->update([
+            'title' => $payload['title'],
+            'description' => $payload['description'],
+            'priority' => $payload['priority'],
+            'criticality' => $payload['criticality'],
+        ]);
+
+        return response()->json([
+            'message' => 'Cas de test mis a jour avec succes.',
+            'data' => $item->fresh(),
+        ]);
     }
 
     public function update(Request $request, Checklist $checklist)

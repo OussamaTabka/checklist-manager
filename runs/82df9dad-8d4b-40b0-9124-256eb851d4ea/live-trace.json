@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "run_id": "82df9dad-8d4b-40b0-9124-256eb851d4ea",
+  "status": "done",
+  "updated_at": "2026-05-24T16:03:52.843Z",
+  "cases": [
+    {
+      "external_id": 187,
+      "title": "Cart page requires login",
+      "status": "passed",
+      "execution_trace": [
+        "[chrome] Planning: browser context starting",
+        "[chrome] Planning: Authenticate the user and validate the login outcome described by 'Cart page requires login'.",
+        "[chrome] Planning: precondition -> Target base URL must be reachable: http://127.0.0.1:4177",
+        "[chrome] Planning: precondition -> The login page or authentication form must be available on the target website.",
+        "[chrome] Planning: precondition -> The checklist-manager target routes should be available with the expected test ids or visible UI elements.",
+        "[chrome] Preflight 0: page_accessible -> started (attempt 1/3, url=http://127.0.0.1:4177/login)",
+        "[chrome] Preflight 0: page_accessible -> ok (attempt 1/3)",
+        "[chrome] Preflight 1: Initial target page is reachable -> started (kind=page_accessible)",
+        "[chrome] Preflight 1: Initial target page is reachable -> ok",
+        "[chrome] Preflight 2: Login user field is visible -> started (kind=element_visible)",
+        "[chrome] Preflight 2: Login user field is visible -> ok",
+        "[chrome] Preflight 3: Login password field is visible -> started (kind=element_visible)",
+        "[chrome] Preflight 3: Login password field is visible -> ok",
+        "[chrome] Preflight 4: Internal route remains aligned with the requested scenario -> started (kind=url_contains)",
+        "[chrome] Preflight 4: Internal route remains aligned with the requested scenario -> ok",
+        "[chrome] Step 2: goto /cart.html -> started",
+        "[chrome] Step 2: goto /cart.html -> ok (747ms)",
+        "[chrome] Step 3: wait_for_selector css=input[data-test=\"username\"], #user-name, input[name=\"user-name\"] state=visible -> started",
+        "[chrome] Step 3: wait_for_selector css=input[data-test=\"username\"], #user-name, input[name=\"user-name\"] state=visible -> ok (20ms)",
+        "[chrome] Step 4: screenshot protected-route-login-gate -> started",
+        "[chrome] Step 4: screenshot protected-route-login-gate -> ok (82ms)",
+        "[chrome] Assert 1: expect_visible css=input[data-test=\"username\"], #user-name, input[name=\"user-name\"] -> started",
+        "[chrome] Assert 1: expect_visible css=input[data-test=\"username\"], #user-name, input[name=\"user-name\"] -> ok (18ms)",
+        "[chrome] Assert 2: expect_visible text=Swag Labs -> started",
+        "[chrome] Assert 2: expect_visible text=Swag Labs -> ok (14ms)",
+        "[chrome] Failure analysis: none",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

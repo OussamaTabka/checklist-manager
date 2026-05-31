@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "run_id": "smoke-tc-005-local",
+  "runner_run_id": "python-runner-1780221392851",
+  "base_url_used": "https://www.saucedemo.com",
+  "status": "done",
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 5,
+      "status": "passed",
+      "attempt": 1,
+      "duration_ms": 6341,
+      "error_type": null,
+      "error_message": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": "final.png",
+        "video_path": null
+      },
+      "execution_trace": []
+    }
+  ]
+}

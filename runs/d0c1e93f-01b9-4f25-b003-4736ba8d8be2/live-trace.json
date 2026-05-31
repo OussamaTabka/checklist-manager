@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "run_id": "d0c1e93f-01b9-4f25-b003-4736ba8d8be2",
+  "status": "done",
+  "updated_at": "2026-05-24T11:54:50.871Z",
+  "cases": [
+    {
+      "external_id": 179,
+      "title": "Valid user can login",
+      "status": "passed",
+      "execution_trace": [
+        "[chrome] Planning: browser context starting",
+        "[chrome] Planning: Authenticate the user and validate the login outcome described by 'Valid user can login'.",
+        "[chrome] Planning: precondition -> Target base URL must be reachable: https://www.saucedemo.com",
+        "[chrome] Planning: precondition -> The login page or authentication form must be available on the target website.",
+        "[chrome] Planning: input email (required, email) -> provided",
+        "[chrome] Planning: input password (required, password) -> provided",
+        "[chrome] Preflight 0: page_accessible -> ok (https://www.saucedemo.com)",
+        "[chrome] Preflight 1: Initial target page is reachable -> ok",
+        "[chrome] Preflight 2: Input 'Email or username' has a value -> ok",
+        "[chrome] Preflight 3: Input 'Password' has a value -> ok",
+        "[chrome] Preflight 4: Login user field is visible -> ok",
+        "[chrome] Preflight 5: Login password field is visible -> ok",
+        "[chrome] Step 2: wait_for_selector css=input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i] state=visible -> ok (9ms)",
+        "[chrome] Step 3: fill css=input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i] -> ok (727ms)",
+        "[chrome] Step 4: fill css=input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i] -> ok (732ms)",
+        "[chrome] Step 5: click css=button[type=\"submit\"], input[type=\"submit\"], button:has-text(\"Login\"), button:has-text(\"Sign in\"), button:has-text(\"Log in\"), [role=\"button\"]:has-text(\"Login\"), [role=\"button\"]:has-text(\"Sign in\") -> ok (827ms)",
+        "[chrome] Step 6: wait_for_url contains '/inventory.html' -> ok (2ms)",
+        "[chrome] Step 7: screenshot post-login -> ok (207ms)",
+        "[chrome] Assert 1: expect_url_contains '/inventory.html' -> ok (0ms)",
+        "[chrome] Assert 2: expect_visible text=Products -> ok (12ms)",
+        "[chrome] Failure analysis: none",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

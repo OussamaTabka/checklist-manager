@@ -5,8 +5,10 @@ use App\Services\AgentBenchmarkRunService;
 use App\Services\AgentBenchmarkDatasetExportService;
 use App\Services\AgentBenchmarkEvaluationService;
 use App\Services\AgentTrainingDatasetExportService;
+use App\Services\StaleTestRunReaper;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 use Symfony\Component\Process\Process;
 
 Artisan::command('inspire', function () {
@@ -120,6 +122,27 @@ Artisan::command('agent:run-benchmark {--source=} {--limit=} {--case-id=} {--dry
     $this->line(sprintf('skipped_count: %d', $result['skipped_count']));
     $this->line(sprintf('failed_to_start_count: %d', $result['failed_to_start_count']));
 })->purpose('Queue real automatic benchmark runs using the existing checklist item execution flow');
+
+Artisan::command('runs:reap {--minutes=20 : Age in minutes after which a still-running run is treated as timed out}', function (StaleTestRunReaper $reaper) {
+    $minutes = (int) $this->option('minutes');
+    if ($minutes < 1) {
+        $minutes = 20;
+    }
+
+    $result = $reaper->reap($minutes);
+
+    $this->info(sprintf('Reaped %d stale test run(s) older than %d minute(s).', $result['reaped'], $minutes));
+    foreach ($result['runs'] as $line) {
+        $this->line('- ' . $line);
+    }
+
+    return 0;
+})->purpose('Mark test runs stuck in created/running past a timeout as blocked (timed out)');
+
+// Safety net for runs whose web-process job was killed before reporting a
+// result. The threshold (20min) stays above the runner's own Symfony timeout
+// (<=15min) so genuinely in-progress runs are never reaped.
+Schedule::command('runs:reap')->everyMinute()->withoutOverlapping();
 
 Artisan::command('agent:diagnose-target-url {url}', function (string $url) {
     $workspaceRoot = realpath(base_path('..'));

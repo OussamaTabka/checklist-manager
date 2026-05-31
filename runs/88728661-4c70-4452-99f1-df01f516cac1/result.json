@@ -1,0 +1,175 @@
+{
+  "schema_version": "1.0",
+  "run_id": "88728661-4c70-4452-99f1-df01f516cac1",
+  "runner_run_id": "runner-1779640211272",
+  "base_url_used": "http://127.0.0.1:4177",
+  "status": "done",
+  "summary": {
+    "passed": 0,
+    "failed": 0,
+    "blocked": 1,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 196,
+      "status": "blocked",
+      "attempt": 1,
+      "duration_ms": 25964,
+      "error_type": "url_unreachable",
+      "error_message": "The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4177/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:4177/\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "generated_plan": {
+        "title": "Sort product names A to Z",
+        "intent_summary": "Interpret the UI-oriented test case 'Sort product names A to Z' and produce the safest executable browser plan possible.",
+        "coverage_type": "generic_ui",
+        "preflight_checks": [
+          {
+            "id": "page-accessible",
+            "kind": "page_accessible",
+            "label": "Initial target page is reachable",
+            "required": true,
+            "failure_message": "The target page could not be reached before executing the generated test plan."
+          },
+          {
+            "id": "input-email",
+            "kind": "input_available",
+            "label": "Input 'Email or username' has a value",
+            "required": true,
+            "input_key": "email",
+            "failure_message": "Missing required test data for 'Email or username'. Provide a value before running the test."
+          },
+          {
+            "id": "input-password",
+            "kind": "input_available",
+            "label": "Input 'Password' has a value",
+            "required": true,
+            "input_key": "password",
+            "failure_message": "Missing required test data for 'Password'. Provide a value before running the test."
+          }
+        ],
+        "steps": [
+          {
+            "action": "goto",
+            "url": "http://127.0.0.1:4177"
+          },
+          {
+            "action": "goto",
+            "url": "/login"
+          },
+          {
+            "action": "wait_for_selector",
+            "selector": {
+              "by": "css",
+              "value": "input[data-test=\"username\"], #user-name, input[name=\"user-name\"]"
+            },
+            "state": "visible",
+            "timeout_ms": 20000
+          },
+          {
+            "action": "fill",
+            "selector": {
+              "by": "css",
+              "value": "input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i]"
+            },
+            "input_key": "email"
+          },
+          {
+            "action": "fill",
+            "selector": {
+              "by": "css",
+              "value": "input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i]"
+            },
+            "input_key": "password"
+          },
+          {
+            "action": "click",
+            "selector": {
+              "by": "css",
+              "value": "button[type=\"submit\"], input[type=\"submit\"], button:has-text(\"Login\"), button:has-text(\"Sign in\"), button:has-text(\"Log in\"), [role=\"button\"]:has-text(\"Login\"), [role=\"button\"]:has-text(\"Sign in\")"
+            }
+          },
+          {
+            "action": "wait_for_url",
+            "contains": "/inventory.html",
+            "timeout_ms": 20000
+          },
+          {
+            "action": "wait_for_selector",
+            "selector": {
+              "by": "css",
+              "value": "[data-test=\"inventory-container\"], .inventory_list"
+            },
+            "state": "visible",
+            "timeout_ms": 20000
+          },
+          {
+            "action": "goto",
+            "url": "/inventory.html?sort=az"
+          },
+          {
+            "action": "wait_for_selector",
+            "selector": {
+              "by": "css",
+              "value": "[data-test=\"product-sort-container\"]"
+            },
+            "state": "visible",
+            "timeout_ms": 20000
+          },
+          {
+            "action": "screenshot",
+            "name": "inventory-sort-az"
+          }
+        ],
+        "asserts": [
+          {
+            "type": "expect_url_contains",
+            "value": "/inventory.html?sort=az"
+          },
+          {
+            "type": "expect_text_contains",
+            "selector": {
+              "by": "css",
+              "value": "[data-test=\"product-sort-container\"]"
+            },
+            "text": "Name (A to Z)"
+          }
+        ],
+        "expected_observations": [
+          "The UI behavior described by 'Sort product names A to Z' should be observable without relying on a generic smoke assertion only."
+        ],
+        "diagnostics": [
+          {
+            "code": "GENERIC_UI_FALLBACK",
+            "message": "The case was only partially actionable, so the generated plan uses a safe generic UI validation instead of a misleading minimal script.",
+            "severity": "info"
+          }
+        ]
+      },
+      "failure_source": {
+        "phase": "initial_navigation",
+        "reference": "url_unreachable",
+        "message": "The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4177/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:4177/\", waiting until \"domcontentloaded\"\u001b[22m\n"
+      },
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      },
+      "execution_trace": [
+        "[chrome] Planning: browser context starting",
+        "[chrome] Planning: Interpret the UI-oriented test case 'Sort product names A to Z' and produce the safest executable browser plan possible.",
+        "[chrome] Planning: precondition -> Target base URL must be reachable: http://127.0.0.1:4177",
+        "[chrome] Planning: precondition -> The checklist-manager target routes should be available with the expected test ids or visible UI elements.",
+        "[chrome] Planning: input email (required, email) -> provided",
+        "[chrome] Planning: input password (required, password) -> provided",
+        "[chrome] Preflight 0: page_accessible -> started (attempt 1/3, url=http://127.0.0.1:4177)",
+        "[chrome] Preflight 0: page_accessible -> failed (attempt 1/3, failure_type=initial_navigation_failed, failure_message=page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4177/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:4177/\", waiting until \"domcontentloaded\"\u001b[22m\n)",
+        "[chrome] Preflight 0: page_accessible -> started (attempt 2/3, url=http://127.0.0.1:4177)",
+        "[chrome] Preflight 0: page_accessible -> failed (attempt 2/3, failure_type=initial_navigation_failed, failure_message=page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4177/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:4177/\", waiting until \"domcontentloaded\"\u001b[22m\n)",
+        "[chrome] Preflight 0: page_accessible -> started (attempt 3/3, url=http://127.0.0.1:4177)",
+        "[chrome] Preflight 0: page_accessible -> failed (attempt 3/3, failure_type=initial_navigation_failed, failure_message=page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4177/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:4177/\", waiting until \"domcontentloaded\"\u001b[22m\n)",
+        "[chrome] Failure analysis: url_unreachable -> The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4177/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:4177/\", waiting until \"domcontentloaded\"\u001b[22m\n"
+      ]
+    }
+  ]
+}

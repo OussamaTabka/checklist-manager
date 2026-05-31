@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "run_id": "9d366d20-c2a5-42e5-8af1-d31f00987884",
+  "runner_run_id": "runner-1779625967253",
+  "base_url_used": "http://127.0.0.1:4177",
+  "status": "done",
+  "summary": {
+    "passed": 0,
+    "failed": 0,
+    "blocked": 1,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 180,
+      "status": "blocked",
+      "attempt": 1,
+      "duration_ms": 0,
+      "error_type": "unexpected_error",
+      "error_message": "[chrome] page.screenshot: Target page, context or browser has been closed",
+      "generated_plan": null,
+      "failure_source": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      },
+      "execution_trace": [
+        "[chrome] Browser launch failed: page.screenshot: Target page, context or browser has been closed"
+      ]
+    }
+  ]
+}

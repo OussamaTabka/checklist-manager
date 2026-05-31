@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "run_id": "b637dc7b-ff34-49ab-8d6f-5a5de8a7b81f",
+  "status": "done",
+  "updated_at": "2026-05-24T15:45:48.091Z",
+  "cases": [
+    {
+      "external_id": 179,
+      "title": "Valid user can login",
+      "status": "passed",
+      "execution_trace": [
+        "[chrome] Planning: browser context starting",
+        "[chrome] Planning: Authenticate the user and validate the login outcome described by 'Valid user can login'.",
+        "[chrome] Planning: precondition -> Target base URL must be reachable: http://127.0.0.1:4177",
+        "[chrome] Planning: precondition -> The login page or authentication form must be available on the target website.",
+        "[chrome] Planning: precondition -> The checklist-manager target routes should be available with the expected test ids or visible UI elements.",
+        "[chrome] Planning: input email (required, email) -> provided",
+        "[chrome] Planning: input password (required, password) -> provided",
+        "[chrome] Preflight 0: page_accessible -> started (attempt 1/3, url=http://127.0.0.1:4177/login)",
+        "[chrome] Preflight 0: page_accessible -> ok (attempt 1/3)",
+        "[chrome] Preflight 1: Initial target page is reachable -> started (kind=page_accessible)",
+        "[chrome] Preflight 1: Initial target page is reachable -> ok",
+        "[chrome] Preflight 2: Input 'Email or username' has a value -> started (kind=input_available)",
+        "[chrome] Preflight 2: Input 'Email or username' has a value -> ok",
+        "[chrome] Preflight 3: Input 'Password' has a value -> started (kind=input_available)",
+        "[chrome] Preflight 3: Input 'Password' has a value -> ok",
+        "[chrome] Preflight 4: Login user field is visible -> started (kind=element_visible)",
+        "[chrome] Preflight 4: Login user field is visible -> ok",
+        "[chrome] Preflight 5: Login password field is visible -> started (kind=element_visible)",
+        "[chrome] Preflight 5: Login password field is visible -> ok",
+        "[chrome] Step 2: wait_for_selector css=input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i] state=visible -> started",
+        "[chrome] Step 2: wait_for_selector css=input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i] state=visible -> ok (18ms)",
+        "[chrome] Step 3: fill css=input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i] -> started",
+        "[chrome] Step 3: fill css=input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i] -> ok (732ms)",
+        "[chrome] Step 4: fill css=input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i] -> started",
+        "[chrome] Step 4: fill css=input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i] -> ok (726ms)",
+        "[chrome] Step 5: click css=button[type=\"submit\"], input[type=\"submit\"], button:has-text(\"Login\"), button:has-text(\"Sign in\"), button:has-text(\"Log in\"), [role=\"button\"]:has-text(\"Login\"), [role=\"button\"]:has-text(\"Sign in\") -> started",
+        "[chrome] Step 5: click css=button[type=\"submit\"], input[type=\"submit\"], button:has-text(\"Login\"), button:has-text(\"Sign in\"), button:has-text(\"Log in\"), [role=\"button\"]:has-text(\"Login\"), [role=\"button\"]:has-text(\"Sign in\") -> ok (804ms)",
+        "[chrome] Step 6: wait_for_url contains '/inventory.html' -> started",
+        "[chrome] Step 6: wait_for_url contains '/inventory.html' -> ok (5ms)",
+        "[chrome] Step 7: screenshot post-login -> started",
+        "[chrome] Step 7: screenshot post-login -> ok (122ms)",
+        "[chrome] Assert 1: expect_url_contains '/inventory.html' -> started",
+        "[chrome] Assert 1: expect_url_contains '/inventory.html' -> ok (1ms)",
+        "[chrome] Assert 2: expect_visible text=Products -> started",
+        "[chrome] Assert 2: expect_visible text=Products -> ok (18ms)",
+        "[chrome] Failure analysis: none",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

@@ -24,6 +24,9 @@ const InputSchema = z.object({
   project_version_id: z.number().int().positive().optional(),
   target_type: z.string().optional().default('version_item'),
   source_app: z.string().optional().default(''),
+  user_story: z.record(z.string(), z.any()).nullable().optional(),
+  checklist_business_rules: z.array(z.string()).optional().default([]),
+  project: z.record(z.string(), z.any()).nullable().optional(),
   provided_inputs: z.record(z.string(), z.any()).optional().default({}),
   expected_result: z.record(z.string(), z.any()).optional().default({}),
 })

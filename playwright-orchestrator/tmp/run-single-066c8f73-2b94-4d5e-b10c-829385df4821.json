@@ -1,0 +1,555 @@
+{
+    "schema_version": "1.0",
+    "run_id": "066c8f73-2b94-4d5e-b10c-829385df4821",
+    "target": {
+        "base_url": "http://127.0.0.1:4177"
+    },
+    "runtime": {
+        "headless": false,
+        "slow_mo_ms": 700,
+        "hold_open_ms": 12000,
+        "timeout_ms": 30000,
+        "viewport": {
+            "width": 1280,
+            "height": 720
+        },
+        "trace": "retain-on-failure",
+        "video": "retain-on-failure",
+        "screenshot": "only-on-failure"
+    },
+    "cases": [
+        {
+            "external_id": 192,
+            "title": "Remove backpack from cart page",
+            "severity": "critical",
+            "use_auth": false,
+            "execution_profile": {
+                "intent_summary": "Verify that the expected table or listing content is reachable and visible for 'Remove backpack from cart page'.",
+                "coverage_type": "table_listing",
+                "preconditions": [
+                    "Target base URL must be reachable: http://127.0.0.1:4177",
+                    "The target page must render at least one table, grid, or list-like structure.",
+                    "The checklist-manager target routes should be available with the expected test ids or visible UI elements."
+                ],
+                "required_inputs": [
+                    {
+                        "key": "email",
+                        "label": "Email or username",
+                        "kind": "email",
+                        "required": true,
+                        "description": "Credential used to authenticate the user.",
+                        "value": "standard_user"
+                    },
+                    {
+                        "key": "password",
+                        "label": "Password",
+                        "kind": "password",
+                        "required": true,
+                        "description": "Password used to authenticate the user.",
+                        "value": "secret_sauce"
+                    }
+                ],
+                "expected_observations": [
+                    "The UI behavior described by 'Remove backpack from cart page' should be observable without relying on a generic smoke assertion only."
+                ],
+                "diagnostics": [],
+                "generation_confidence": 0.8,
+                "last_generated_plan": {
+                    "title": "Remove backpack from cart page",
+                    "intent_summary": "Verify that the expected table or listing content is reachable and visible for 'Remove backpack from cart page'.",
+                    "coverage_type": "table_listing",
+                    "preflight_checks": [
+                        {
+                            "id": "page-accessible",
+                            "kind": "page_accessible",
+                            "label": "Initial target page is reachable",
+                            "required": true,
+                            "failure_message": "The target page could not be reached before executing the generated test plan."
+                        },
+                        {
+                            "id": "input-email",
+                            "kind": "input_available",
+                            "label": "Input 'Email or username' has a value",
+                            "required": true,
+                            "input_key": "email",
+                            "failure_message": "Missing required test data for 'Email or username'. Provide a value before running the test."
+                        },
+                        {
+                            "id": "input-password",
+                            "kind": "input_available",
+                            "label": "Input 'Password' has a value",
+                            "required": true,
+                            "input_key": "password",
+                            "failure_message": "Missing required test data for 'Password'. Provide a value before running the test."
+                        }
+                    ],
+                    "steps": [
+                        {
+                            "action": "goto",
+                            "url": "http://127.0.0.1:4177"
+                        },
+                        {
+                            "action": "goto",
+                            "url": "/login"
+                        },
+                        {
+                            "action": "wait_for_selector",
+                            "selector": {
+                                "by": "css",
+                                "value": "input[data-test=\"username\"], #user-name, input[name=\"user-name\"]"
+                            },
+                            "state": "visible",
+                            "timeout_ms": 20000
+                        },
+                        {
+                            "action": "fill",
+                            "selector": {
+                                "by": "css",
+                                "value": "input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i]"
+                            },
+                            "input_key": "email"
+                        },
+                        {
+                            "action": "fill",
+                            "selector": {
+                                "by": "css",
+                                "value": "input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i]"
+                            },
+                            "input_key": "password"
+                        },
+                        {
+                            "action": "click",
+                            "selector": {
+                                "by": "css",
+                                "value": "button[type=\"submit\"], input[type=\"submit\"], button:has-text(\"Login\"), button:has-text(\"Sign in\"), button:has-text(\"Log in\"), [role=\"button\"]:has-text(\"Login\"), [role=\"button\"]:has-text(\"Sign in\")"
+                            }
+                        },
+                        {
+                            "action": "wait_for_url",
+                            "contains": "/inventory.html",
+                            "timeout_ms": 20000
+                        },
+                        {
+                            "action": "wait_for_selector",
+                            "selector": {
+                                "by": "css",
+                                "value": "[data-test=\"inventory-container\"], .inventory_list"
+                            },
+                            "state": "visible",
+                            "timeout_ms": 20000
+                        },
+                        {
+                            "action": "click",
+                            "selector": {
+                                "by": "css",
+                                "value": "[data-test=\"add-to-cart-sauce-labs-backpack\"]"
+                            }
+                        },
+                        {
+                            "action": "wait_for_selector",
+                            "selector": {
+                                "by": "css",
+                                "value": "[data-test=\"shopping-cart-badge\"], .shopping_cart_badge, .cart-badge"
+                            },
+                            "state": "visible",
+                            "timeout_ms": 20000
+                        },
+                        {
+                            "action": "click",
+                            "selector": {
+                                "by": "css",
+                                "value": "[data-test=\"shopping-cart-link\"]"
+                            }
+                        },
+                        {
+                            "action": "wait_for_url",
+                            "contains": "/cart.html",
+                            "timeout_ms": 20000
+                        },
+                        {
+                            "action": "wait_for_selector",
+                            "selector": {
+                                "by": "css",
+                                "value": "[data-test=\"remove-sauce-labs-backpack\"]"
+                            },
+                            "state": "visible",
+                            "timeout_ms": 20000
+                        },
+                        {
+                            "action": "click",
+                            "selector": {
+                                "by": "css",
+                                "value": "[data-test=\"remove-sauce-labs-backpack\"]"
+                            }
+                        },
+                        {
+                            "action": "wait_for_selector",
+                            "selector": {
+                                "by": "css",
+                                "value": "[data-test=\"empty-cart\"]"
+                            },
+                            "state": "visible",
+                            "timeout_ms": 20000
+                        },
+                        {
+                            "action": "screenshot",
+                            "name": "cart-item-removed"
+                        }
+                    ],
+                    "asserts": [
+                        {
+                            "type": "expect_url_contains",
+                            "value": "/cart.html"
+                        },
+                        {
+                            "type": "expect_text_contains",
+                            "selector": {
+                                "by": "text",
+                                "text": "Your Cart"
+                            },
+                            "text": "Your Cart"
+                        },
+                        {
+                            "type": "expect_visible",
+                            "selector": {
+                                "by": "css",
+                                "value": "[data-test=\"empty-cart\"]"
+                            }
+                        }
+                    ],
+                    "expected_observations": [
+                        "The UI behavior described by 'Remove backpack from cart page' should be observable without relying on a generic smoke assertion only."
+                    ],
+                    "diagnostics": []
+                }
+            },
+            "generated_plan": {
+                "title": "Remove backpack from cart page",
+                "intent_summary": "Verify that the expected table or listing content is reachable and visible for 'Remove backpack from cart page'.",
+                "coverage_type": "table_listing",
+                "preflight_checks": [
+                    {
+                        "id": "page-accessible",
+                        "kind": "page_accessible",
+                        "label": "Initial target page is reachable",
+                        "required": true,
+                        "failure_message": "The target page could not be reached before executing the generated test plan."
+                    },
+                    {
+                        "id": "input-email",
+                        "kind": "input_available",
+                        "label": "Input 'Email or username' has a value",
+                        "required": true,
+                        "input_key": "email",
+                        "failure_message": "Missing required test data for 'Email or username'. Provide a value before running the test."
+                    },
+                    {
+                        "id": "input-password",
+                        "kind": "input_available",
+                        "label": "Input 'Password' has a value",
+                        "required": true,
+                        "input_key": "password",
+                        "failure_message": "Missing required test data for 'Password'. Provide a value before running the test."
+                    }
+                ],
+                "steps": [
+                    {
+                        "action": "goto",
+                        "url": "http://127.0.0.1:4177"
+                    },
+                    {
+                        "action": "goto",
+                        "url": "/login"
+                    },
+                    {
+                        "action": "wait_for_selector",
+                        "selector": {
+                            "by": "css",
+                            "value": "input[data-test=\"username\"], #user-name, input[name=\"user-name\"]"
+                        },
+                        "state": "visible",
+                        "timeout_ms": 20000
+                    },
+                    {
+                        "action": "fill",
+                        "selector": {
+                            "by": "css",
+                            "value": "input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i]"
+                        },
+                        "input_key": "email"
+                    },
+                    {
+                        "action": "fill",
+                        "selector": {
+                            "by": "css",
+                            "value": "input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i]"
+                        },
+                        "input_key": "password"
+                    },
+                    {
+                        "action": "click",
+                        "selector": {
+                            "by": "css",
+                            "value": "button[type=\"submit\"], input[type=\"submit\"], button:has-text(\"Login\"), button:has-text(\"Sign in\"), button:has-text(\"Log in\"), [role=\"button\"]:has-text(\"Login\"), [role=\"button\"]:has-text(\"Sign in\")"
+                        }
+                    },
+                    {
+                        "action": "wait_for_url",
+                        "contains": "/inventory.html",
+                        "timeout_ms": 20000
+                    },
+                    {
+                        "action": "wait_for_selector",
+                        "selector": {
+                            "by": "css",
+                            "value": "[data-test=\"inventory-container\"], .inventory_list"
+                        },
+                        "state": "visible",
+                        "timeout_ms": 20000
+                    },
+                    {
+                        "action": "click",
+                        "selector": {
+                            "by": "css",
+                            "value": "[data-test=\"add-to-cart-sauce-labs-backpack\"]"
+                        }
+                    },
+                    {
+                        "action": "wait_for_selector",
+                        "selector": {
+                            "by": "css",
+                            "value": "[data-test=\"shopping-cart-badge\"], .shopping_cart_badge, .cart-badge"
+                        },
+                        "state": "visible",
+                        "timeout_ms": 20000
+                    },
+                    {
+                        "action": "click",
+                        "selector": {
+                            "by": "css",
+                            "value": "[data-test=\"shopping-cart-link\"]"
+                        }
+                    },
+                    {
+                        "action": "wait_for_url",
+                        "contains": "/cart.html",
+                        "timeout_ms": 20000
+                    },
+                    {
+                        "action": "wait_for_selector",
+                        "selector": {
+                            "by": "css",
+                            "value": "[data-test=\"remove-sauce-labs-backpack\"]"
+                        },
+                        "state": "visible",
+                        "timeout_ms": 20000
+                    },
+                    {
+                        "action": "click",
+                        "selector": {
+                            "by": "css",
+                            "value": "[data-test=\"remove-sauce-labs-backpack\"]"
+                        }
+                    },
+                    {
+                        "action": "wait_for_selector",
+                        "selector": {
+                            "by": "css",
+                            "value": "[data-test=\"empty-cart\"]"
+                        },
+                        "state": "visible",
+                        "timeout_ms": 20000
+                    },
+                    {
+                        "action": "screenshot",
+                        "name": "cart-item-removed"
+                    }
+                ],
+                "asserts": [
+                    {
+                        "type": "expect_url_contains",
+                        "value": "/cart.html"
+                    },
+                    {
+                        "type": "expect_text_contains",
+                        "selector": {
+                            "by": "text",
+                            "text": "Your Cart"
+                        },
+                        "text": "Your Cart"
+                    },
+                    {
+                        "type": "expect_visible",
+                        "selector": {
+                            "by": "css",
+                            "value": "[data-test=\"empty-cart\"]"
+                        }
+                    }
+                ],
+                "expected_observations": [
+                    "The UI behavior described by 'Remove backpack from cart page' should be observable without relying on a generic smoke assertion only."
+                ],
+                "diagnostics": []
+            },
+            "preflight_checks": [
+                {
+                    "id": "page-accessible",
+                    "kind": "page_accessible",
+                    "label": "Initial target page is reachable",
+                    "required": true,
+                    "failure_message": "The target page could not be reached before executing the generated test plan."
+                },
+                {
+                    "id": "input-email",
+                    "kind": "input_available",
+                    "label": "Input 'Email or username' has a value",
+                    "required": true,
+                    "input_key": "email",
+                    "failure_message": "Missing required test data for 'Email or username'. Provide a value before running the test."
+                },
+                {
+                    "id": "input-password",
+                    "kind": "input_available",
+                    "label": "Input 'Password' has a value",
+                    "required": true,
+                    "input_key": "password",
+                    "failure_message": "Missing required test data for 'Password'. Provide a value before running the test."
+                }
+            ],
+            "steps": [
+                {
+                    "action": "goto",
+                    "url": "http://127.0.0.1:4177"
+                },
+                {
+                    "action": "goto",
+                    "url": "/login"
+                },
+                {
+                    "action": "wait_for_selector",
+                    "selector": {
+                        "by": "css",
+                        "value": "input[data-test=\"username\"], #user-name, input[name=\"user-name\"]"
+                    },
+                    "state": "visible",
+                    "timeout_ms": 20000
+                },
+                {
+                    "action": "fill",
+                    "selector": {
+                        "by": "css",
+                        "value": "input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i]"
+                    },
+                    "input_key": "email"
+                },
+                {
+                    "action": "fill",
+                    "selector": {
+                        "by": "css",
+                        "value": "input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i]"
+                    },
+                    "input_key": "password"
+                },
+                {
+                    "action": "click",
+                    "selector": {
+                        "by": "css",
+                        "value": "button[type=\"submit\"], input[type=\"submit\"], button:has-text(\"Login\"), button:has-text(\"Sign in\"), button:has-text(\"Log in\"), [role=\"button\"]:has-text(\"Login\"), [role=\"button\"]:has-text(\"Sign in\")"
+                    }
+                },
+                {
+                    "action": "wait_for_url",
+                    "contains": "/inventory.html",
+                    "timeout_ms": 20000
+                },
+                {
+                    "action": "wait_for_selector",
+                    "selector": {
+                        "by": "css",
+                        "value": "[data-test=\"inventory-container\"], .inventory_list"
+                    },
+                    "state": "visible",
+                    "timeout_ms": 20000
+                },
+                {
+                    "action": "click",
+                    "selector": {
+                        "by": "css",
+                        "value": "[data-test=\"add-to-cart-sauce-labs-backpack\"]"
+                    }
+                },
+                {
+                    "action": "wait_for_selector",
+                    "selector": {
+                        "by": "css",
+                        "value": "[data-test=\"shopping-cart-badge\"], .shopping_cart_badge, .cart-badge"
+                    },
+                    "state": "visible",
+                    "timeout_ms": 20000
+                },
+                {
+                    "action": "click",
+                    "selector": {
+                        "by": "css",
+                        "value": "[data-test=\"shopping-cart-link\"]"
+                    }
+                },
+                {
+                    "action": "wait_for_url",
+                    "contains": "/cart.html",
+                    "timeout_ms": 20000
+                },
+                {
+                    "action": "wait_for_selector",
+                    "selector": {
+                        "by": "css",
+                        "value": "[data-test=\"remove-sauce-labs-backpack\"]"
+                    },
+                    "state": "visible",
+                    "timeout_ms": 20000
+                },
+                {
+                    "action": "click",
+                    "selector": {
+                        "by": "css",
+                        "value": "[data-test=\"remove-sauce-labs-backpack\"]"
+                    }
+                },
+                {
+                    "action": "wait_for_selector",
+                    "selector": {
+                        "by": "css",
+                        "value": "[data-test=\"empty-cart\"]"
+                    },
+                    "state": "visible",
+                    "timeout_ms": 20000
+                },
+                {
+                    "action": "screenshot",
+                    "name": "cart-item-removed"
+                }
+            ],
+            "asserts": [
+                {
+                    "type": "expect_url_contains",
+                    "value": "/cart.html"
+                },
+                {
+                    "type": "expect_text_contains",
+                    "selector": {
+                        "by": "text",
+                        "text": "Your Cart"
+                    },
+                    "text": "Your Cart"
+                },
+                {
+                    "type": "expect_visible",
+                    "selector": {
+                        "by": "css",
+                        "value": "[data-test=\"empty-cart\"]"
+                    }
+                }
+            ]
+        }
+    ]
+}

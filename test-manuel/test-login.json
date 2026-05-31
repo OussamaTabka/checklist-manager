@@ -1,0 +1,15 @@
+﻿{
+  "run_id": "manual-test-001",
+  "external_id": 1,
+  "test_case_title": "L'utilisateur peut se connecter avec des identifiants valides",
+  "test_case_description": "Verifier qu'un utilisateur avec des identifiants valides accede a la page connectee",
+  "test_case_text": "Login valide sur practice test automation",
+  "base_url": "https://practicetestautomation.com/practice-test-login/",
+  "use_auth": false,
+  "criticality": "High",
+  "provided_inputs": {
+    "username": "student",
+    "password": "Password123"
+  },
+  "expected_result": {}
+}

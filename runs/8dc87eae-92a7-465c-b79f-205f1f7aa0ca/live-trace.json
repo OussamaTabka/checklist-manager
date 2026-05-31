@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "run_id": "8dc87eae-92a7-465c-b79f-205f1f7aa0ca",
+  "status": "done",
+  "updated_at": "2026-05-24T16:03:02.645Z",
+  "cases": [
+    {
+      "external_id": 182,
+      "title": "Missing password prevents login",
+      "status": "blocked",
+      "execution_trace": [
+        "[chrome] Planning: browser context starting",
+        "[chrome] Planning: Authenticate the user and validate the login outcome described by 'Missing password prevents login'.",
+        "[chrome] Planning: precondition -> Target base URL must be reachable: http://127.0.0.1:4177",
+        "[chrome] Planning: precondition -> The login page or authentication form must be available on the target website.",
+        "[chrome] Planning: precondition -> The checklist-manager target routes should be available with the expected test ids or visible UI elements.",
+        "[chrome] Planning: input email (required, email) -> provided",
+        "[chrome] Planning: input password (required, password) -> missing",
+        "[chrome] Preflight 0: page_accessible -> started (attempt 1/3, url=http://127.0.0.1:4177/login)",
+        "[chrome] Preflight 0: page_accessible -> ok (attempt 1/3)",
+        "[chrome] Preflight 1: Initial target page is reachable -> started (kind=page_accessible)",
+        "[chrome] Preflight 1: Initial target page is reachable -> ok",
+        "[chrome] Preflight 2: Input 'Email or username' has a value -> started (kind=input_available)",
+        "[chrome] Preflight 2: Input 'Email or username' has a value -> ok",
+        "[chrome] Preflight 3: Input 'Password' has a value -> started (kind=input_available)",
+        "[chrome] Preflight 3: Input 'Password' has a value -> failed (failure_type=preflight_check_failed, failure_message=Le champ 'Password' est requis mais aucune valeur n'a ete fournie.)",
+        "[chrome] Failure analysis: input_data_missing -> Le champ 'Password' est requis mais aucune valeur n'a ete fournie."
+      ]
+    }
+  ]
+}

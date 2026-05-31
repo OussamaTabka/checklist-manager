@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "run_id": "1950e123-11dd-44ec-bbd9-34518ab0c762",
+  "status": "done",
+  "updated_at": "2026-05-24T16:05:01.937Z",
+  "cases": [
+    {
+      "external_id": 194,
+      "title": "Product detail page opens from inventory",
+      "status": "passed",
+      "execution_trace": [
+        "[chrome] Planning: browser context starting",
+        "[chrome] Planning: Interpret the UI-oriented test case 'Product detail page opens from inventory' and produce the safest executable browser plan possible.",
+        "[chrome] Planning: precondition -> Target base URL must be reachable: http://127.0.0.1:4177",
+        "[chrome] Planning: precondition -> The checklist-manager target routes should be available with the expected test ids or visible UI elements.",
+        "[chrome] Preflight 0: page_accessible -> started (attempt 1/3, url=http://127.0.0.1:4177)",
+        "[chrome] Preflight 0: page_accessible -> ok (attempt 1/3)",
+        "[chrome] Preflight 1: Initial target page is reachable -> started (kind=page_accessible)",
+        "[chrome] Preflight 1: Initial target page is reachable -> ok",
+        "[chrome] Step 2: wait_for_selector css=body state=visible -> started",
+        "[chrome] Step 2: wait_for_selector css=body state=visible -> ok (31ms)",
+        "[chrome] Step 3: screenshot generic-ui-baseline -> started",
+        "[chrome] Step 3: screenshot generic-ui-baseline -> ok (80ms)",
+        "[chrome] Assert 1: expect_visible css=body -> started",
+        "[chrome] Assert 1: expect_visible css=body -> ok (18ms)",
+        "[chrome] Failure analysis: none",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

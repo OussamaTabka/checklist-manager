@@ -1,0 +1,181 @@
+{
+  "schema_version": "1.0",
+  "run_id": "28a63d36-d107-40a7-a418-94a9cbaae4fc",
+  "runner_run_id": "runner-1779638584018",
+  "base_url_used": "http://127.0.0.1:4177",
+  "status": "done",
+  "summary": {
+    "passed": 0,
+    "failed": 0,
+    "blocked": 1,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 183,
+      "status": "blocked",
+      "attempt": 1,
+      "duration_ms": 13846,
+      "error_type": "input_data_missing",
+      "error_message": "Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.",
+      "generated_plan": {
+        "title": "Missing username and password prevents login",
+        "intent_summary": "Authenticate the user and validate the login outcome described by 'Missing username and password prevents login'.",
+        "coverage_type": "auth_login",
+        "preflight_checks": [
+          {
+            "id": "page-accessible",
+            "kind": "page_accessible",
+            "label": "Initial target page is reachable",
+            "required": true,
+            "failure_message": "The target page could not be reached before executing the generated test plan."
+          },
+          {
+            "id": "input-email",
+            "kind": "input_available",
+            "label": "Input 'Email or username' has a value",
+            "required": true,
+            "input_key": "email",
+            "failure_message": "Missing required test data for 'Email or username'. Provide a value before running the test."
+          },
+          {
+            "id": "input-password",
+            "kind": "input_available",
+            "label": "Input 'Password' has a value",
+            "required": true,
+            "input_key": "password",
+            "failure_message": "Missing required test data for 'Password'. Provide a value before running the test."
+          },
+          {
+            "id": "login-user-field",
+            "kind": "element_visible",
+            "label": "Login user field is visible",
+            "required": true,
+            "selector": {
+              "by": "css",
+              "value": "input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i]"
+            },
+            "failure_message": "The target page does not expose a visible email or username field required by this login case."
+          },
+          {
+            "id": "login-password-field",
+            "kind": "element_visible",
+            "label": "Login password field is visible",
+            "required": true,
+            "selector": {
+              "by": "css",
+              "value": "input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i]"
+            },
+            "failure_message": "The target page does not expose a visible password field required by this login case."
+          },
+          {
+            "id": "scenario-url",
+            "kind": "url_contains",
+            "label": "Internal route remains aligned with the requested scenario",
+            "required": false,
+            "expected": "/login",
+            "failure_message": "The current internal route does not align with the inferred scenario 'login'."
+          }
+        ],
+        "steps": [
+          {
+            "action": "goto",
+            "url": "/login"
+          },
+          {
+            "action": "wait_for_selector",
+            "selector": {
+              "by": "css",
+              "value": "input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i]"
+            },
+            "state": "visible",
+            "timeout_ms": 20000
+          },
+          {
+            "action": "fill",
+            "selector": {
+              "by": "css",
+              "value": "input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i]"
+            },
+            "input_key": "email"
+          },
+          {
+            "action": "fill",
+            "selector": {
+              "by": "css",
+              "value": "input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i]"
+            },
+            "input_key": "password"
+          },
+          {
+            "action": "click",
+            "selector": {
+              "by": "css",
+              "value": "button[type=\"submit\"], input[type=\"submit\"], button:has-text(\"Login\"), button:has-text(\"Sign in\"), button:has-text(\"Log in\"), [role=\"button\"]:has-text(\"Login\"), [role=\"button\"]:has-text(\"Sign in\")"
+            }
+          },
+          {
+            "action": "wait_for_selector",
+            "selector": {
+              "by": "css",
+              "value": "[role=\"alert\"], [data-test=\"error\"], h3[data-test=\"error\"], .error-message-container, .error-message-container.error, button.error-button, .error, .alert, .invalid-feedback, .field-error, .toast, .notification, .success"
+            },
+            "state": "visible",
+            "timeout_ms": 20000
+          },
+          {
+            "action": "screenshot",
+            "name": "login-error-state"
+          }
+        ],
+        "asserts": [
+          {
+            "type": "expect_visible",
+            "selector": {
+              "by": "css",
+              "value": "[role=\"alert\"], [data-test=\"error\"], h3[data-test=\"error\"], .error-message-container, .error-message-container.error, button.error-button, .error, .alert, .invalid-feedback, .field-error, .toast, .notification, .success"
+            }
+          },
+          {
+            "type": "expect_text_contains",
+            "selector": {
+              "by": "css",
+              "value": "[role=\"alert\"], [data-test=\"error\"], h3[data-test=\"error\"], .error-message-container, .error-message-container.error, button.error-button, .error, .alert, .invalid-feedback, .field-error, .toast, .notification, .success"
+            },
+            "text": "Username is required"
+          }
+        ],
+        "expected_observations": [
+          "A successful post-login destination should be reached and authenticated UI content should become visible."
+        ],
+        "diagnostics": []
+      },
+      "failure_source": {
+        "phase": "preflight",
+        "reference": "input_data_missing",
+        "message": "Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie."
+      },
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      },
+      "execution_trace": [
+        "[chrome] Planning: browser context starting",
+        "[chrome] Planning: Authenticate the user and validate the login outcome described by 'Missing username and password prevents login'.",
+        "[chrome] Planning: precondition -> Target base URL must be reachable: http://127.0.0.1:4177",
+        "[chrome] Planning: precondition -> The login page or authentication form must be available on the target website.",
+        "[chrome] Planning: precondition -> The checklist-manager target routes should be available with the expected test ids or visible UI elements.",
+        "[chrome] Planning: input email (required, email) -> missing",
+        "[chrome] Planning: input password (required, password) -> missing",
+        "[chrome] Preflight 0: page_accessible -> started (attempt 1/3, url=http://127.0.0.1:4177/login)",
+        "[chrome] Preflight 0: page_accessible -> ok (attempt 1/3)",
+        "[chrome] Preflight 1: Initial target page is reachable -> started (kind=page_accessible)",
+        "[chrome] Preflight 1: Initial target page is reachable -> ok",
+        "[chrome] Preflight 2: Input 'Email or username' has a value -> started (kind=input_available)",
+        "[chrome] Preflight 2: Input 'Email or username' has a value -> failed (failure_type=preflight_check_failed, failure_message=Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.)",
+        "[chrome] Failure analysis: input_data_missing -> Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie."
+      ]
+    }
+  ]
+}

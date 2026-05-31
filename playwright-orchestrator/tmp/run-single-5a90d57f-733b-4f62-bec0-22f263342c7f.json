@@ -1,0 +1,205 @@
+{
+    "schema_version": "1.0",
+    "run_id": "5a90d57f-733b-4f62-bec0-22f263342c7f",
+    "target": {
+        "base_url": "http://127.0.0.1:4177"
+    },
+    "runtime": {
+        "headless": false,
+        "slow_mo_ms": 700,
+        "hold_open_ms": 12000,
+        "timeout_ms": 30000,
+        "viewport": {
+            "width": 1280,
+            "height": 720
+        },
+        "trace": "retain-on-failure",
+        "video": "retain-on-failure",
+        "screenshot": "only-on-failure"
+    },
+    "cases": [
+        {
+            "external_id": 187,
+            "title": "Cart page requires login",
+            "severity": "critical",
+            "use_auth": false,
+            "execution_profile": {
+                "intent_summary": "Authenticate the user and validate the login outcome described by 'Cart page requires login'.",
+                "coverage_type": "auth_login",
+                "preconditions": [
+                    "Target base URL must be reachable: http://127.0.0.1:4177",
+                    "The login page or authentication form must be available on the target website.",
+                    "The checklist-manager target routes should be available with the expected test ids or visible UI elements."
+                ],
+                "required_inputs": [],
+                "expected_observations": [
+                    "A successful post-login destination should be reached and authenticated UI content should become visible."
+                ],
+                "diagnostics": [],
+                "generation_confidence": 0.8,
+                "last_generated_plan": {
+                    "title": "Cart page requires login",
+                    "intent_summary": "Authenticate the user and validate the login outcome described by 'Cart page requires login'.",
+                    "coverage_type": "auth_login",
+                    "preflight_checks": [
+                        {
+                            "id": "page-accessible",
+                            "kind": "page_accessible",
+                            "label": "Initial target page is reachable",
+                            "required": true,
+                            "failure_message": "The target page could not be reached before executing the generated test plan."
+                        }
+                    ],
+                    "steps": [
+                        {
+                            "action": "goto",
+                            "url": "/login"
+                        },
+                        {
+                            "action": "goto",
+                            "url": "/cart.html"
+                        },
+                        {
+                            "action": "wait_for_selector",
+                            "selector": {
+                                "by": "css",
+                                "value": "input[data-test=\"username\"], #user-name, input[name=\"user-name\"]"
+                            },
+                            "state": "visible",
+                            "timeout_ms": 20000
+                        },
+                        {
+                            "action": "screenshot",
+                            "name": "protected-route-login-gate"
+                        }
+                    ],
+                    "asserts": [
+                        {
+                            "type": "expect_visible",
+                            "selector": {
+                                "by": "css",
+                                "value": "input[data-test=\"username\"], #user-name, input[name=\"user-name\"]"
+                            }
+                        },
+                        {
+                            "type": "expect_visible",
+                            "selector": {
+                                "by": "text",
+                                "text": "Swag Labs"
+                            }
+                        }
+                    ],
+                    "expected_observations": [
+                        "A successful post-login destination should be reached and authenticated UI content should become visible."
+                    ],
+                    "diagnostics": []
+                }
+            },
+            "generated_plan": {
+                "title": "Cart page requires login",
+                "intent_summary": "Authenticate the user and validate the login outcome described by 'Cart page requires login'.",
+                "coverage_type": "auth_login",
+                "preflight_checks": [
+                    {
+                        "id": "page-accessible",
+                        "kind": "page_accessible",
+                        "label": "Initial target page is reachable",
+                        "required": true,
+                        "failure_message": "The target page could not be reached before executing the generated test plan."
+                    }
+                ],
+                "steps": [
+                    {
+                        "action": "goto",
+                        "url": "/login"
+                    },
+                    {
+                        "action": "goto",
+                        "url": "/cart.html"
+                    },
+                    {
+                        "action": "wait_for_selector",
+                        "selector": {
+                            "by": "css",
+                            "value": "input[data-test=\"username\"], #user-name, input[name=\"user-name\"]"
+                        },
+                        "state": "visible",
+                        "timeout_ms": 20000
+                    },
+                    {
+                        "action": "screenshot",
+                        "name": "protected-route-login-gate"
+                    }
+                ],
+                "asserts": [
+                    {
+                        "type": "expect_visible",
+                        "selector": {
+                            "by": "css",
+                            "value": "input[data-test=\"username\"], #user-name, input[name=\"user-name\"]"
+                        }
+                    },
+                    {
+                        "type": "expect_visible",
+                        "selector": {
+                            "by": "text",
+                            "text": "Swag Labs"
+                        }
+                    }
+                ],
+                "expected_observations": [
+                    "A successful post-login destination should be reached and authenticated UI content should become visible."
+                ],
+                "diagnostics": []
+            },
+            "preflight_checks": [
+                {
+                    "id": "page-accessible",
+                    "kind": "page_accessible",
+                    "label": "Initial target page is reachable",
+                    "required": true,
+                    "failure_message": "The target page could not be reached before executing the generated test plan."
+                }
+            ],
+            "steps": [
+                {
+                    "action": "goto",
+                    "url": "/login"
+                },
+                {
+                    "action": "goto",
+                    "url": "/cart.html"
+                },
+                {
+                    "action": "wait_for_selector",
+                    "selector": {
+                        "by": "css",
+                        "value": "input[data-test=\"username\"], #user-name, input[name=\"user-name\"]"
+                    },
+                    "state": "visible",
+                    "timeout_ms": 20000
+                },
+                {
+                    "action": "screenshot",
+                    "name": "protected-route-login-gate"
+                }
+            ],
+            "asserts": [
+                {
+                    "type": "expect_visible",
+                    "selector": {
+                        "by": "css",
+                        "value": "input[data-test=\"username\"], #user-name, input[name=\"user-name\"]"
+                    }
+                },
+                {
+                    "type": "expect_visible",
+                    "selector": {
+                        "by": "text",
+                        "text": "Swag Labs"
+                    }
+                }
+            ]
+        }
+    ]
+}

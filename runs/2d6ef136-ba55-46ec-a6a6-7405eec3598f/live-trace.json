@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "run_id": "2d6ef136-ba55-46ec-a6a6-7405eec3598f",
+  "status": "done",
+  "updated_at": "2026-05-24T17:44:31.629Z",
+  "cases": [
+    {
+      "external_id": 180,
+      "title": "Locked out user cannot login",
+      "status": "failed",
+      "execution_trace": [
+        "[chrome] Planning: browser context starting",
+        "[chrome] Planning: Authenticate the user and validate the login outcome described by 'Locked out user cannot login'.",
+        "[chrome] Planning: precondition -> Target base URL must be reachable: https://www.saucedemo.com",
+        "[chrome] Planning: precondition -> The login page or authentication form must be available on the target website.",
+        "[chrome] Planning: input email (required, email) -> provided",
+        "[chrome] Planning: input password (required, password) -> provided",
+        "[chrome] Preflight 0: page_accessible -> started (attempt 1/3, url=https://www.saucedemo.com)",
+        "[chrome] Preflight 0: page_accessible -> ok (attempt 1/3)",
+        "[chrome] Preflight 0: page_accessible -> redirected to https://www.saucedemo.com/",
+        "[chrome] Preflight 1: Initial target page is reachable -> started (kind=page_accessible)",
+        "[chrome] Preflight 1: Initial target page is reachable -> ok",
+        "[chrome] Preflight 2: Input 'Email or username' has a value -> started (kind=input_available)",
+        "[chrome] Preflight 2: Input 'Email or username' has a value -> ok",
+        "[chrome] Preflight 3: Input 'Password' has a value -> started (kind=input_available)",
+        "[chrome] Preflight 3: Input 'Password' has a value -> ok",
+        "[chrome] Preflight 4: Login user field is visible -> started (kind=element_visible)",
+        "[chrome] Preflight 4: Login user field is visible -> ok",
+        "[chrome] Preflight 5: Login password field is visible -> started (kind=element_visible)",
+        "[chrome] Preflight 5: Login password field is visible -> ok",
+        "[chrome] Step 2: wait_for_selector css=input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i] state=visible -> started",
+        "[chrome] Step 2: wait_for_selector css=input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i] state=visible -> ok (12ms)",
+        "[chrome] Step 3: fill css=input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i] -> started",
+        "[chrome] Step 3: fill css=input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i] -> ok (733ms)",
+        "[chrome] Step 4: fill css=input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i] -> started",
+        "[chrome] Step 4: fill css=input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i] -> ok (732ms)",
+        "[chrome] Step 5: click css=button[type=\"submit\"], input[type=\"submit\"], button:has-text(\"Login\"), button:has-text(\"Sign in\"), button:has-text(\"Log in\"), [role=\"button\"]:has-text(\"Login\"), [role=\"button\"]:has-text(\"Sign in\") -> started",
+        "[chrome] Step 5: click css=button[type=\"submit\"], input[type=\"submit\"], button:has-text(\"Login\"), button:has-text(\"Sign in\"), button:has-text(\"Log in\"), [role=\"button\"]:has-text(\"Login\"), [role=\"button\"]:has-text(\"Sign in\") -> ok (791ms)",
+        "[chrome] Step 6: wait_for_selector css=[role=\"alert\"], [data-test=\"error\"], h3[data-test=\"error\"], .error-message-container, .error-message-container.error, button.error-button, .error, .alert, .invalid-feedback, .field-error, .toast, .notification, .success state=visible -> started",
+        "[chrome] Step 6: wait_for_selector css=[role=\"alert\"], [data-test=\"error\"], h3[data-test=\"error\"], .error-message-container, .error-message-container.error, button.error-button, .error, .alert, .invalid-feedback, .field-error, .toast, .notification, .success state=visible -> ok (46ms)",
+        "[chrome] Step 7: screenshot login-error-state -> started",
+        "[chrome] Step 7: screenshot login-error-state -> ok (86ms)",
+        "[chrome] Assert 1: expect_visible css=[role=\"alert\"], [data-test=\"error\"], h3[data-test=\"error\"], .error-message-container, .error-message-container.error, button.error-button, .error, .alert, .invalid-feedback, .field-error, .toast, .notification, .success -> started",
+        "[chrome] Assert 1: expect_visible css=[role=\"alert\"], [data-test=\"error\"], h3[data-test=\"error\"], .error-message-container, .error-message-container.error, button.error-button, .error, .alert, .invalid-feedback, .field-error, .toast, .notification, .success -> ok (45ms)",
+        "[chrome] Assert 2: expect_text_contains css=[role=\"alert\"], [data-test=\"error\"], h3[data-test=\"error\"], .error-message-container, .error-message-container.error, button.error-button, .error, .alert, .invalid-feedback, .field-error, .toast, .notification, .success -> started",
+        "[chrome] Assert 2: expect_text_contains css=[role=\"alert\"], [data-test=\"error\"], h3[data-test=\"error\"], .error-message-container, .error-message-container.error, button.error-button, .error, .alert, .invalid-feedback, .field-error, .toast, .notification, .success -> failed (failure_type=assertion_failed, failure_message=Expected text containing 'locked out' but got '' for css=[role=\"alert\"], [data-test=\"error\"], h3[data-test=\"error\"], .error-message-container, .error-message-container.error, button.error-button, .error, .alert, .invalid-feedback, .field-error, .toast, .notification, .success)",
+        "[chrome] Failure analysis: assertion_failed -> Expected text containing 'locked out' but got '' for css=[role=\"alert\"], [data-test=\"error\"], h3[data-test=\"error\"], .error-message-container, .error-message-container.error, button.error-button, .error, .alert, .invalid-feedback, .field-error, .toast, .notification, .success"
+      ]
+    }
+  ]
+}

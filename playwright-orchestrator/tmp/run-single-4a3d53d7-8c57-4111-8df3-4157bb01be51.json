@@ -1,0 +1,438 @@
+{
+    "schema_version": "1.0",
+    "run_id": "4a3d53d7-8c57-4111-8df3-4157bb01be51",
+    "target": {
+        "base_url": "http://127.0.0.1:4177"
+    },
+    "runtime": {
+        "headless": false,
+        "slow_mo_ms": 700,
+        "hold_open_ms": 12000,
+        "timeout_ms": 30000,
+        "viewport": {
+            "width": 1280,
+            "height": 720
+        },
+        "trace": "retain-on-failure",
+        "video": "retain-on-failure",
+        "screenshot": "only-on-failure"
+    },
+    "cases": [
+        {
+            "external_id": 195,
+            "title": "Back to products returns inventory list",
+            "severity": "critical",
+            "use_auth": false,
+            "execution_profile": {
+                "intent_summary": "Verify that the expected table or listing content is reachable and visible for 'Back to products returns inventory list'.",
+                "coverage_type": "table_listing",
+                "preconditions": [
+                    "Target base URL must be reachable: http://127.0.0.1:4177",
+                    "The target page must render at least one table, grid, or list-like structure.",
+                    "The checklist-manager target routes should be available with the expected test ids or visible UI elements."
+                ],
+                "required_inputs": [
+                    {
+                        "key": "email",
+                        "label": "Email or username",
+                        "kind": "email",
+                        "required": true,
+                        "description": "Credential used to authenticate the user.",
+                        "value": "standard_user"
+                    },
+                    {
+                        "key": "password",
+                        "label": "Password",
+                        "kind": "password",
+                        "required": true,
+                        "description": "Password used to authenticate the user.",
+                        "value": "secret_sauce"
+                    }
+                ],
+                "expected_observations": [
+                    "The UI behavior described by 'Back to products returns inventory list' should be observable without relying on a generic smoke assertion only."
+                ],
+                "diagnostics": [],
+                "generation_confidence": 0.8,
+                "last_generated_plan": {
+                    "title": "Back to products returns inventory list",
+                    "intent_summary": "Verify that the expected table or listing content is reachable and visible for 'Back to products returns inventory list'.",
+                    "coverage_type": "table_listing",
+                    "preflight_checks": [
+                        {
+                            "id": "page-accessible",
+                            "kind": "page_accessible",
+                            "label": "Initial target page is reachable",
+                            "required": true,
+                            "failure_message": "The target page could not be reached before executing the generated test plan."
+                        },
+                        {
+                            "id": "input-email",
+                            "kind": "input_available",
+                            "label": "Input 'Email or username' has a value",
+                            "required": true,
+                            "input_key": "email",
+                            "failure_message": "Missing required test data for 'Email or username'. Provide a value before running the test."
+                        },
+                        {
+                            "id": "input-password",
+                            "kind": "input_available",
+                            "label": "Input 'Password' has a value",
+                            "required": true,
+                            "input_key": "password",
+                            "failure_message": "Missing required test data for 'Password'. Provide a value before running the test."
+                        }
+                    ],
+                    "steps": [
+                        {
+                            "action": "goto",
+                            "url": "http://127.0.0.1:4177"
+                        },
+                        {
+                            "action": "goto",
+                            "url": "/login"
+                        },
+                        {
+                            "action": "wait_for_selector",
+                            "selector": {
+                                "by": "css",
+                                "value": "input[data-test=\"username\"], #user-name, input[name=\"user-name\"]"
+                            },
+                            "state": "visible",
+                            "timeout_ms": 20000
+                        },
+                        {
+                            "action": "fill",
+                            "selector": {
+                                "by": "css",
+                                "value": "input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i]"
+                            },
+                            "input_key": "email"
+                        },
+                        {
+                            "action": "fill",
+                            "selector": {
+                                "by": "css",
+                                "value": "input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i]"
+                            },
+                            "input_key": "password"
+                        },
+                        {
+                            "action": "click",
+                            "selector": {
+                                "by": "css",
+                                "value": "button[type=\"submit\"], input[type=\"submit\"], button:has-text(\"Login\"), button:has-text(\"Sign in\"), button:has-text(\"Log in\"), [role=\"button\"]:has-text(\"Login\"), [role=\"button\"]:has-text(\"Sign in\")"
+                            }
+                        },
+                        {
+                            "action": "wait_for_url",
+                            "contains": "/inventory.html",
+                            "timeout_ms": 20000
+                        },
+                        {
+                            "action": "wait_for_selector",
+                            "selector": {
+                                "by": "css",
+                                "value": "[data-test=\"inventory-container\"], .inventory_list"
+                            },
+                            "state": "visible",
+                            "timeout_ms": 20000
+                        },
+                        {
+                            "action": "click",
+                            "selector": {
+                                "by": "css",
+                                "value": "[data-test=\"item-sauce-labs-backpack-title\"]"
+                            }
+                        },
+                        {
+                            "action": "wait_for_url",
+                            "contains": "/inventory-item.html?id=sauce-labs-backpack",
+                            "timeout_ms": 20000
+                        },
+                        {
+                            "action": "wait_for_selector",
+                            "selector": {
+                                "by": "css",
+                                "value": "[data-test=\"back-to-products\"]"
+                            },
+                            "state": "visible",
+                            "timeout_ms": 20000
+                        },
+                        {
+                            "action": "screenshot",
+                            "name": "product-detail-page"
+                        }
+                    ],
+                    "asserts": [
+                        {
+                            "type": "expect_url_contains",
+                            "value": "/inventory-item.html?id=sauce-labs-backpack"
+                        },
+                        {
+                            "type": "expect_text_contains",
+                            "selector": {
+                                "by": "css",
+                                "value": "[data-test=\"back-to-products\"]"
+                            },
+                            "text": "Back to products"
+                        }
+                    ],
+                    "expected_observations": [
+                        "The UI behavior described by 'Back to products returns inventory list' should be observable without relying on a generic smoke assertion only."
+                    ],
+                    "diagnostics": []
+                }
+            },
+            "generated_plan": {
+                "title": "Back to products returns inventory list",
+                "intent_summary": "Verify that the expected table or listing content is reachable and visible for 'Back to products returns inventory list'.",
+                "coverage_type": "table_listing",
+                "preflight_checks": [
+                    {
+                        "id": "page-accessible",
+                        "kind": "page_accessible",
+                        "label": "Initial target page is reachable",
+                        "required": true,
+                        "failure_message": "The target page could not be reached before executing the generated test plan."
+                    },
+                    {
+                        "id": "input-email",
+                        "kind": "input_available",
+                        "label": "Input 'Email or username' has a value",
+                        "required": true,
+                        "input_key": "email",
+                        "failure_message": "Missing required test data for 'Email or username'. Provide a value before running the test."
+                    },
+                    {
+                        "id": "input-password",
+                        "kind": "input_available",
+                        "label": "Input 'Password' has a value",
+                        "required": true,
+                        "input_key": "password",
+                        "failure_message": "Missing required test data for 'Password'. Provide a value before running the test."
+                    }
+                ],
+                "steps": [
+                    {
+                        "action": "goto",
+                        "url": "http://127.0.0.1:4177"
+                    },
+                    {
+                        "action": "goto",
+                        "url": "/login"
+                    },
+                    {
+                        "action": "wait_for_selector",
+                        "selector": {
+                            "by": "css",
+                            "value": "input[data-test=\"username\"], #user-name, input[name=\"user-name\"]"
+                        },
+                        "state": "visible",
+                        "timeout_ms": 20000
+                    },
+                    {
+                        "action": "fill",
+                        "selector": {
+                            "by": "css",
+                            "value": "input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i]"
+                        },
+                        "input_key": "email"
+                    },
+                    {
+                        "action": "fill",
+                        "selector": {
+                            "by": "css",
+                            "value": "input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i]"
+                        },
+                        "input_key": "password"
+                    },
+                    {
+                        "action": "click",
+                        "selector": {
+                            "by": "css",
+                            "value": "button[type=\"submit\"], input[type=\"submit\"], button:has-text(\"Login\"), button:has-text(\"Sign in\"), button:has-text(\"Log in\"), [role=\"button\"]:has-text(\"Login\"), [role=\"button\"]:has-text(\"Sign in\")"
+                        }
+                    },
+                    {
+                        "action": "wait_for_url",
+                        "contains": "/inventory.html",
+                        "timeout_ms": 20000
+                    },
+                    {
+                        "action": "wait_for_selector",
+                        "selector": {
+                            "by": "css",
+                            "value": "[data-test=\"inventory-container\"], .inventory_list"
+                        },
+                        "state": "visible",
+                        "timeout_ms": 20000
+                    },
+                    {
+                        "action": "click",
+                        "selector": {
+                            "by": "css",
+                            "value": "[data-test=\"item-sauce-labs-backpack-title\"]"
+                        }
+                    },
+                    {
+                        "action": "wait_for_url",
+                        "contains": "/inventory-item.html?id=sauce-labs-backpack",
+                        "timeout_ms": 20000
+                    },
+                    {
+                        "action": "wait_for_selector",
+                        "selector": {
+                            "by": "css",
+                            "value": "[data-test=\"back-to-products\"]"
+                        },
+                        "state": "visible",
+                        "timeout_ms": 20000
+                    },
+                    {
+                        "action": "screenshot",
+                        "name": "product-detail-page"
+                    }
+                ],
+                "asserts": [
+                    {
+                        "type": "expect_url_contains",
+                        "value": "/inventory-item.html?id=sauce-labs-backpack"
+                    },
+                    {
+                        "type": "expect_text_contains",
+                        "selector": {
+                            "by": "css",
+                            "value": "[data-test=\"back-to-products\"]"
+                        },
+                        "text": "Back to products"
+                    }
+                ],
+                "expected_observations": [
+                    "The UI behavior described by 'Back to products returns inventory list' should be observable without relying on a generic smoke assertion only."
+                ],
+                "diagnostics": []
+            },
+            "preflight_checks": [
+                {
+                    "id": "page-accessible",
+                    "kind": "page_accessible",
+                    "label": "Initial target page is reachable",
+                    "required": true,
+                    "failure_message": "The target page could not be reached before executing the generated test plan."
+                },
+                {
+                    "id": "input-email",
+                    "kind": "input_available",
+                    "label": "Input 'Email or username' has a value",
+                    "required": true,
+                    "input_key": "email",
+                    "failure_message": "Missing required test data for 'Email or username'. Provide a value before running the test."
+                },
+                {
+                    "id": "input-password",
+                    "kind": "input_available",
+                    "label": "Input 'Password' has a value",
+                    "required": true,
+                    "input_key": "password",
+                    "failure_message": "Missing required test data for 'Password'. Provide a value before running the test."
+                }
+            ],
+            "steps": [
+                {
+                    "action": "goto",
+                    "url": "http://127.0.0.1:4177"
+                },
+                {
+                    "action": "goto",
+                    "url": "/login"
+                },
+                {
+                    "action": "wait_for_selector",
+                    "selector": {
+                        "by": "css",
+                        "value": "input[data-test=\"username\"], #user-name, input[name=\"user-name\"]"
+                    },
+                    "state": "visible",
+                    "timeout_ms": 20000
+                },
+                {
+                    "action": "fill",
+                    "selector": {
+                        "by": "css",
+                        "value": "input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i]"
+                    },
+                    "input_key": "email"
+                },
+                {
+                    "action": "fill",
+                    "selector": {
+                        "by": "css",
+                        "value": "input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i]"
+                    },
+                    "input_key": "password"
+                },
+                {
+                    "action": "click",
+                    "selector": {
+                        "by": "css",
+                        "value": "button[type=\"submit\"], input[type=\"submit\"], button:has-text(\"Login\"), button:has-text(\"Sign in\"), button:has-text(\"Log in\"), [role=\"button\"]:has-text(\"Login\"), [role=\"button\"]:has-text(\"Sign in\")"
+                    }
+                },
+                {
+                    "action": "wait_for_url",
+                    "contains": "/inventory.html",
+                    "timeout_ms": 20000
+                },
+                {
+                    "action": "wait_for_selector",
+                    "selector": {
+                        "by": "css",
+                        "value": "[data-test=\"inventory-container\"], .inventory_list"
+                    },
+                    "state": "visible",
+                    "timeout_ms": 20000
+                },
+                {
+                    "action": "click",
+                    "selector": {
+                        "by": "css",
+                        "value": "[data-test=\"item-sauce-labs-backpack-title\"]"
+                    }
+                },
+                {
+                    "action": "wait_for_url",
+                    "contains": "/inventory-item.html?id=sauce-labs-backpack",
+                    "timeout_ms": 20000
+                },
+                {
+                    "action": "wait_for_selector",
+                    "selector": {
+                        "by": "css",
+                        "value": "[data-test=\"back-to-products\"]"
+                    },
+                    "state": "visible",
+                    "timeout_ms": 20000
+                },
+                {
+                    "action": "screenshot",
+                    "name": "product-detail-page"
+                }
+            ],
+            "asserts": [
+                {
+                    "type": "expect_url_contains",
+                    "value": "/inventory-item.html?id=sauce-labs-backpack"
+                },
+                {
+                    "type": "expect_text_contains",
+                    "selector": {
+                        "by": "css",
+                        "value": "[data-test=\"back-to-products\"]"
+                    },
+                    "text": "Back to products"
+                }
+            ]
+        }
+    ]
+}

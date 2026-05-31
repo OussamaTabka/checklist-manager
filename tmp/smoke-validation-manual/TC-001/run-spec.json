@@ -1,0 +1,83 @@
+{
+    "generation_metadata":  {
+                                "engine":  "manual-fallback",
+                                "requested_engine":  "none"
+                            },
+    "runtime":  {
+                    "hold_open_ms":  0,
+                    "headless":  true,
+                    "timeout_ms":  45000,
+                    "video":  "off",
+                    "slow_mo_ms":  0,
+                    "trace":  "off",
+                    "screenshot":  "off",
+                    "viewport":  {
+                                     "height":  720,
+                                     "width":  1280
+                                 }
+                },
+    "schema_version":  "1.0",
+    "generation_mode":  "python_script",
+    "cases":  [
+                  {
+                      "execution_profile":  {
+                                                "diagnostics":  [
+
+                                                                ],
+                                                "coverage_type":  "auth_login",
+                                                "intent_summary":  "Manual smoke validation fallback for the Sauce Demo login flow.",
+                                                "preconditions":  [
+                                                                      "Target base URL must be reachable: https://www.saucedemo.com",
+                                                                      "The login page or authentication form must be available on the target website."
+                                                                  ],
+                                                "expected_observations":  [
+                                                                              "The login outcome described by the case title should occur."
+                                                                          ],
+                                                "required_inputs":  [
+                                                                        {
+                                                                            "label":  "Username",
+                                                                            "key":  "username",
+                                                                            "description":  "Account username.",
+                                                                            "required":  true,
+                                                                            "kind":  "text"
+                                                                        },
+                                                                        {
+                                                                            "label":  "Password",
+                                                                            "key":  "password",
+                                                                            "description":  "Account password.",
+                                                                            "required":  true,
+                                                                            "kind":  "password"
+                                                                        }
+                                                                    ]
+                                            },
+                      "provided_inputs":  {
+
+                                          },
+                      "python_script_body":  "username = inputs.get(\u0027username\u0027, \u0027standard_user\u0027)\npassword = inputs.get(\u0027password\u0027, \u0027secret_sauce\u0027)\n\nawait page.locator(\u0027#user-name\u0027).fill(username)\nawait page.locator(\u0027#password\u0027).fill(password)\nawait page.locator(\u0027#login-button\u0027).click()\n\nawait page.wait_for_url(\u0027**/inventory.html\u0027, timeout=30000)\nawait expect(page.locator(\u0027.app_logo\u0027)).to_contain_text(\u0027Swag Labs\u0027)\nawait expect(page.locator(\u0027.inventory_item\u0027)).to_have_count(6)",
+                      "severity":  "major",
+                      "external_id":  1,
+                      "preflight_checks":  [
+
+                                           ],
+                      "human_readable_steps":  [
+                                                   "Open the Sauce Demo login page.",
+                                                   "Submit the credentials for the target case.",
+                                                   "Verify the expected login outcome."
+                                               ],
+                      "use_auth":  false,
+                      "asserts":  [
+
+                                  ],
+                      "title":  "TC-001 Standard login",
+                      "steps":  [
+                                    {
+                                        "action":  "manual-fallback"
+                                    }
+                                ]
+                  }
+              ],
+    "target":  {
+                   "base_url":  "https://www.saucedemo.com"
+               },
+    "run_id":  "smoke-tc-001-local"
+}

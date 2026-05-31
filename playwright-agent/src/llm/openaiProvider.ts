@@ -80,6 +80,12 @@ function looksLikeRawPlaywrightCode(text: string): boolean {
     return false
   }
 
+  // A response that starts with "{" or "[" is JSON — never flag it as raw code,
+  // even if its string values contain Playwright expressions like "await page.".
+  if (normalized.startsWith('{') || normalized.startsWith('[')) {
+    return false
+  }
+
   return /(?:import\s+\{[^}]*test[^}]*\}\s+from\s+['"]@playwright\/test['"]|await\s+page\.|page\.(?:goto|click|fill|locator|getByRole|getByText|getByTestId)|test\(['"`])/.test(normalized)
 }
 

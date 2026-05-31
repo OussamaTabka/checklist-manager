@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "run_id": "c625a60d-85fb-40de-bd24-1002cc781585",
+  "status": "done",
+  "updated_at": "2026-05-24T13:13:03.147Z",
+  "cases": [
+    {
+      "external_id": 179,
+      "title": "Valid user can login",
+      "status": "failed",
+      "execution_trace": [
+        "[chrome] Planning: browser context starting",
+        "[chrome] Planning: Authenticate the user and validate the login outcome described by 'Valid user can login'.",
+        "[chrome] Planning: precondition -> Target base URL must be reachable: http://127.0.0.1:4177",
+        "[chrome] Planning: precondition -> The login page or authentication form must be available on the target website.",
+        "[chrome] Planning: precondition -> The checklist-manager target routes should be available with the expected test ids or visible UI elements.",
+        "[chrome] Planning: input email (required, email) -> provided",
+        "[chrome] Planning: input password (required, password) -> provided",
+        "[chrome] Preflight 0: page_accessible -> started (attempt 1/3, url=http://127.0.0.1:4177/login)",
+        "[chrome] Preflight 0: page_accessible -> ok (attempt 1/3)",
+        "[chrome] Preflight 1: Initial target page is reachable -> started (kind=page_accessible)",
+        "[chrome] Preflight 1: Initial target page is reachable -> ok",
+        "[chrome] Preflight 2: Input 'Email or username' has a value -> started (kind=input_available)",
+        "[chrome] Preflight 2: Input 'Email or username' has a value -> ok",
+        "[chrome] Preflight 3: Input 'Password' has a value -> started (kind=input_available)",
+        "[chrome] Preflight 3: Input 'Password' has a value -> ok",
+        "[chrome] Preflight 4: Login user field is visible -> started (kind=element_visible)",
+        "[chrome] Preflight 4: Login user field is visible -> ok",
+        "[chrome] Preflight 5: Login password field is visible -> started (kind=element_visible)",
+        "[chrome] Preflight 5: Login password field is visible -> ok",
+        "[chrome] Step 2: wait_for_selector css=input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i] state=visible -> started",
+        "[chrome] Step 2: wait_for_selector css=input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i] state=visible -> ok (14ms)",
+        "[chrome] Step 3: fill css=input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i] -> started",
+        "[chrome] Step 3: fill css=input[type=\"email\"], input[name*=\"email\" i], input[id*=\"email\" i], input[name*=\"user\" i], input[id*=\"user\" i] -> ok (737ms)",
+        "[chrome] Step 4: fill css=input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i] -> started",
+        "[chrome] Step 4: fill css=input[type=\"password\"], input[name*=\"password\" i], input[id*=\"password\" i] -> ok (726ms)",
+        "[chrome] Step 5: click css=button[type=\"submit\"], input[type=\"submit\"], button:has-text(\"Login\"), button:has-text(\"Sign in\"), button:has-text(\"Log in\"), [role=\"button\"]:has-text(\"Login\"), [role=\"button\"]:has-text(\"Sign in\") -> started",
+        "[chrome] Step 5: click css=button[type=\"submit\"], input[type=\"submit\"], button:has-text(\"Login\"), button:has-text(\"Sign in\"), button:has-text(\"Log in\"), [role=\"button\"]:has-text(\"Login\"), [role=\"button\"]:has-text(\"Sign in\") -> ok (778ms)",
+        "[chrome] Step 6: wait_for_url contains '/dashboard' -> started",
+        "[chrome] Step 6: wait_for_url contains '/dashboard' -> failed (failure_type=navigation_timeout, failure_message=page.waitForURL: Timeout 20000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation until \"load\"\n============================================================)",
+        "[chrome] Failure analysis: navigation_timeout -> The page navigation did not finish in time."
+      ]
+    }
+  ]
+}

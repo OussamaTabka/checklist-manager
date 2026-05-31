@@ -1,0 +1,229 @@
+{
+    "schema_version": "1.0",
+    "run_id": "17383bbb-40e2-4ed8-b2f6-b357f890ed22",
+    "target": {
+        "base_url": "http://127.0.0.1:4177"
+    },
+    "runtime": {
+        "headless": false,
+        "slow_mo_ms": 700,
+        "hold_open_ms": 12000,
+        "timeout_ms": 30000,
+        "viewport": {
+            "width": 1280,
+            "height": 720
+        },
+        "trace": "retain-on-failure",
+        "video": "retain-on-failure",
+        "screenshot": "only-on-failure"
+    },
+    "cases": [
+        {
+            "external_id": 195,
+            "title": "Back to products returns inventory list",
+            "severity": "critical",
+            "use_auth": false,
+            "execution_profile": {
+                "intent_summary": "Verify that the expected table or listing content is reachable and visible for 'Back to products returns inventory list'.",
+                "coverage_type": "table_listing",
+                "preconditions": [
+                    "Target base URL must be reachable: http://127.0.0.1:4177",
+                    "The target page must render at least one table, grid, or list-like structure.",
+                    "The checklist-manager target routes should be available with the expected test ids or visible UI elements."
+                ],
+                "required_inputs": [],
+                "expected_observations": [
+                    "The UI behavior described by 'Back to products returns inventory list' should be observable without relying on a generic smoke assertion only."
+                ],
+                "diagnostics": [],
+                "generation_confidence": 0.8,
+                "last_generated_plan": {
+                    "title": "Back to products returns inventory list",
+                    "intent_summary": "Verify that the expected table or listing content is reachable and visible for 'Back to products returns inventory list'.",
+                    "coverage_type": "table_listing",
+                    "preflight_checks": [
+                        {
+                            "id": "page-accessible",
+                            "kind": "page_accessible",
+                            "label": "Initial target page is reachable",
+                            "required": true,
+                            "failure_message": "The target page could not be reached before executing the generated test plan."
+                        },
+                        {
+                            "id": "table-visible",
+                            "kind": "element_visible",
+                            "label": "A table or listing is visible on the page",
+                            "required": true,
+                            "selector": {
+                                "by": "css",
+                                "value": "table, [role=\"table\"], [role=\"grid\"], ul, ol"
+                            },
+                            "failure_message": "The test case expects a table or listing, but none was visible on the target page."
+                        },
+                        {
+                            "id": "scenario-url",
+                            "kind": "url_contains",
+                            "label": "Internal route remains aligned with the requested scenario",
+                            "required": false,
+                            "expected": "/users",
+                            "failure_message": "The current internal route does not align with the inferred scenario 'users'."
+                        }
+                    ],
+                    "steps": [
+                        {
+                            "action": "goto",
+                            "url": "http://127.0.0.1:4177"
+                        },
+                        {
+                            "action": "wait_for_selector",
+                            "selector": {
+                                "by": "css",
+                                "value": "table, [role=\"table\"], [role=\"grid\"], ul, ol, [data-testid*=\"list\"], [data-testid*=\"table\"]"
+                            },
+                            "state": "visible",
+                            "timeout_ms": 15000
+                        },
+                        {
+                            "action": "screenshot",
+                            "name": "table-listing"
+                        }
+                    ],
+                    "asserts": [
+                        {
+                            "type": "expect_visible",
+                            "selector": {
+                                "by": "css",
+                                "value": "table, [role=\"table\"], [role=\"grid\"], ul, ol, [data-testid*=\"list\"], [data-testid*=\"table\"]"
+                            }
+                        }
+                    ],
+                    "expected_observations": [
+                        "The UI behavior described by 'Back to products returns inventory list' should be observable without relying on a generic smoke assertion only."
+                    ],
+                    "diagnostics": []
+                }
+            },
+            "generated_plan": {
+                "title": "Back to products returns inventory list",
+                "intent_summary": "Verify that the expected table or listing content is reachable and visible for 'Back to products returns inventory list'.",
+                "coverage_type": "table_listing",
+                "preflight_checks": [
+                    {
+                        "id": "page-accessible",
+                        "kind": "page_accessible",
+                        "label": "Initial target page is reachable",
+                        "required": true,
+                        "failure_message": "The target page could not be reached before executing the generated test plan."
+                    },
+                    {
+                        "id": "table-visible",
+                        "kind": "element_visible",
+                        "label": "A table or listing is visible on the page",
+                        "required": true,
+                        "selector": {
+                            "by": "css",
+                            "value": "table, [role=\"table\"], [role=\"grid\"], ul, ol"
+                        },
+                        "failure_message": "The test case expects a table or listing, but none was visible on the target page."
+                    },
+                    {
+                        "id": "scenario-url",
+                        "kind": "url_contains",
+                        "label": "Internal route remains aligned with the requested scenario",
+                        "required": false,
+                        "expected": "/users",
+                        "failure_message": "The current internal route does not align with the inferred scenario 'users'."
+                    }
+                ],
+                "steps": [
+                    {
+                        "action": "goto",
+                        "url": "http://127.0.0.1:4177"
+                    },
+                    {
+                        "action": "wait_for_selector",
+                        "selector": {
+                            "by": "css",
+                            "value": "table, [role=\"table\"], [role=\"grid\"], ul, ol, [data-testid*=\"list\"], [data-testid*=\"table\"]"
+                        },
+                        "state": "visible",
+                        "timeout_ms": 15000
+                    },
+                    {
+                        "action": "screenshot",
+                        "name": "table-listing"
+                    }
+                ],
+                "asserts": [
+                    {
+                        "type": "expect_visible",
+                        "selector": {
+                            "by": "css",
+                            "value": "table, [role=\"table\"], [role=\"grid\"], ul, ol, [data-testid*=\"list\"], [data-testid*=\"table\"]"
+                        }
+                    }
+                ],
+                "expected_observations": [
+                    "The UI behavior described by 'Back to products returns inventory list' should be observable without relying on a generic smoke assertion only."
+                ],
+                "diagnostics": []
+            },
+            "preflight_checks": [
+                {
+                    "id": "page-accessible",
+                    "kind": "page_accessible",
+                    "label": "Initial target page is reachable",
+                    "required": true,
+                    "failure_message": "The target page could not be reached before executing the generated test plan."
+                },
+                {
+                    "id": "table-visible",
+                    "kind": "element_visible",
+                    "label": "A table or listing is visible on the page",
+                    "required": true,
+                    "selector": {
+                        "by": "css",
+                        "value": "table, [role=\"table\"], [role=\"grid\"], ul, ol"
+                    },
+                    "failure_message": "The test case expects a table or listing, but none was visible on the target page."
+                },
+                {
+                    "id": "scenario-url",
+                    "kind": "url_contains",
+                    "label": "Internal route remains aligned with the requested scenario",
+                    "required": false,
+                    "expected": "/users",
+                    "failure_message": "The current internal route does not align with the inferred scenario 'users'."
+                }
+            ],
+            "steps": [
+                {
+                    "action": "goto",
+                    "url": "http://127.0.0.1:4177"
+                },
+                {
+                    "action": "wait_for_selector",
+                    "selector": {
+                        "by": "css",
+                        "value": "table, [role=\"table\"], [role=\"grid\"], ul, ol, [data-testid*=\"list\"], [data-testid*=\"table\"]"
+                    },
+                    "state": "visible",
+                    "timeout_ms": 15000
+                },
+                {
+                    "action": "screenshot",
+                    "name": "table-listing"
+                }
+            ],
+            "asserts": [
+                {
+                    "type": "expect_visible",
+                    "selector": {
+                        "by": "css",
+                        "value": "table, [role=\"table\"], [role=\"grid\"], ul, ol, [data-testid*=\"list\"], [data-testid*=\"table\"]"
+                    }
+                }
+            ]
+        }
+    ]
+}
