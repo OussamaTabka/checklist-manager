@@ -6,13 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Checklist;
 use App\Models\Project;
 use App\Models\UserStory;
-use App\Services\ChecklistAdaptationService;
 use App\Services\ChecklistGenerationAgentService;
 use App\Services\ChecklistGenerationTextService;
 use App\Services\ChecklistRecommendationService;
-use App\Services\ChecklistSuggestionReviewService;
 use App\Services\NotificationService;
 use App\Services\TestCaseGenerationService;
+use Throwable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -24,9 +23,7 @@ class UserStoryController extends Controller
     public function __construct(
         private TestCaseGenerationService $testCaseGenerator,
         private ChecklistRecommendationService $checklistRecommendations,
-        private ChecklistGenerationAgentService $checklistGenerationAgent,
-        private ChecklistSuggestionReviewService $checklistSuggestionReview,
-        private ChecklistAdaptationService $checklistAdaptation,
+        private ChecklistGenerationAgentService $checklistGenerator,
         private ChecklistGenerationTextService $generationText,
         private NotificationService $notificationService,
     ) {
@@ -161,10 +158,15 @@ class UserStoryController extends Controller
 
     public function generateChecklistFromArxis(Request $request, Project $project, UserStory $userStory)
     {
-        return $this->generateChecklistWithAgent($request, $project, $userStory);
+        return $this->generateChecklist($request, $project, $userStory);
     }
 
     public function generateChecklistWithAgent(Request $request, Project $project, UserStory $userStory)
+    {
+        return $this->generateChecklist($request, $project, $userStory);
+    }
+
+    public function generateChecklist(Request $request, Project $project, UserStory $userStory)
     {
         $this->authorize('view', $project);
         $this->ensureExecutionAccess($project);
@@ -174,7 +176,7 @@ class UserStoryController extends Controller
         }
 
         try {
-            $result = $this->checklistGenerationAgent->generateDraftForUserStory(
+            $result = $this->checklistGenerator->generateDraftForUserStory(
                 $userStory,
                 $this->generationText->normalizeLanguage($request->header('X-App-Language'))
             );
@@ -183,12 +185,16 @@ class UserStoryController extends Controller
                 ...$result,
                 'user_story' => $this->buildUserStoryPayload($userStory->fresh()),
             ], 201);
-        } catch (\Exception $e) {
+        } catch (Throwable $e) {
+            $status = $this->resolveChecklistGenerationStatus($e);
+
             return response()->json([
-                'error' => 'Failed to generate checklist with agent',
+                'error' => $status === 500
+                    ? 'Failed to generate checklist'
+                    : 'Checklist generation is currently unavailable for this story',
                 'message' => $e->getMessage(),
                 'available_generators' => $this->testCaseGenerator->getAvailableGenerators(),
-            ], 500);
+            ], $status);
         }
     }
 
@@ -244,7 +250,7 @@ class UserStoryController extends Controller
             $userStory->checklists()->attach($checklist->id, [
                 'is_generated_from_arxis' => true,
                 'relevance_score' => null,
-                'link_type' => 'agent_validated_by_chef',
+                'link_type' => 'generator_validated_by_chef',
             ]);
         }
 
@@ -280,71 +286,6 @@ class UserStoryController extends Controller
         ]);
     }
 
-    public function previewSuggestedChecklist(Project $project, UserStory $userStory, \App\Models\Checklist $checklist)
-    {
-        $this->authorize('view', $project);
-
-        if ($userStory->project_id !== $project->id) {
-            return response()->json(['error' => 'User story not found in this project'], 404);
-        }
-
-        $suggestion = $this->checklistRecommendations->findSuggestionForChecklist($userStory, $checklist);
-
-        if (!$suggestion) {
-            return response()->json(['error' => 'Checklist is not relevant enough for preview'], 404);
-        }
-
-        return response()->json(
-            $this->checklistSuggestionReview->buildPreview($userStory, $checklist, $suggestion)
-        );
-    }
-
-    public function adaptChecklist(Request $request, Project $project, UserStory $userStory, \App\Models\Checklist $checklist)
-    {
-        $this->authorize('view', $project);
-        $this->ensureExecutionAccess($project);
-
-        if ($userStory->project_id !== $project->id) {
-            return response()->json(['error' => 'User story not found in this project'], 404);
-        }
-
-        $validated = $request->validate([
-            'reviewed' => 'required|accepted',
-            'name' => 'nullable|string|max:255',
-            'description' => 'nullable|string',
-            'category' => 'nullable|string|max:255',
-            'priority' => 'nullable|in:low,medium,high,critical',
-            'status' => 'nullable|in:backlog,in_progress,ready_for_test,completed',
-            'items' => 'required|array|min:1',
-            'items.*.title' => 'required|string|max:255',
-            'items.*.description' => 'nullable|string',
-            'items.*.priority' => 'required|in:Low,Medium,High',
-            'items.*.criticality' => 'required|in:Minor,Major,Critical',
-            'items.*.status' => 'nullable|in:pending,passed,failed',
-        ]);
-
-        $suggestion = $this->checklistRecommendations->findSuggestionForChecklist($userStory, $checklist);
-
-        $draft = $this->checklistAdaptation->createDraftForStory(
-            $project,
-            $userStory,
-            $checklist,
-            [
-                ...$validated,
-                'relevance_score' => $suggestion['score'] ?? null,
-            ]
-        );
-
-        return response()->json([
-            'action' => 'CREATE_DRAFT',
-            'source_checklist_id' => sprintf('CL-%03d', $checklist->id),
-            'project_id' => $project->id,
-            'draft' => $draft,
-            'pending_validation' => true,
-            'user_story' => $this->buildUserStoryPayload($userStory->fresh()),
-        ], 201);
-    }
-
     public function detachChecklist(Project $project, UserStory $userStory, $checklistId)
     {
         $this->authorize('view', $project);
@@ -368,19 +309,6 @@ class UserStoryController extends Controller
             'configured_provider' => config('services.test_generation.provider', 'local-llm'),
             'configured_model' => config('services.test_generation.llm_model', 'mistral'),
         ]);
-    }
-
-    public function suggestChecklists(Project $project, UserStory $userStory)
-    {
-        $this->authorize('view', $project);
-
-        if ($userStory->project_id !== $project->id) {
-            return response()->json(['error' => 'User story not found in this project'], 404);
-        }
-
-        return response()->json(
-            $this->checklistRecommendations->suggestForUserStory($userStory)
-        );
     }
 
     private function buildUserStoryPayload(UserStory $userStory): UserStory
@@ -409,6 +337,29 @@ class UserStoryController extends Controller
             403,
             'Only assigned testers can generate or attach execution checklists.'
         );
+    }
+
+    private function resolveChecklistGenerationStatus(Throwable $exception): int
+    {
+        $message = strtolower($exception->getMessage());
+
+        $expectedGenerationFailures = [
+            'generator could not build items',
+            'générateur de checklists n’a pas pu construire',
+            'générateur de checklists n\'a pas pu construire',
+            'no test case generator available',
+            'api key is missing',
+            'no test cases generated',
+            'failed to generate test cases with openai/codex',
+        ];
+
+        foreach ($expectedGenerationFailures as $fragment) {
+            if (str_contains($message, $fragment)) {
+                return 422;
+            }
+        }
+
+        return 500;
     }
 
     private function ensureUniqueStoryReference(Project $project, ?string $reference, ?UserStory $ignoredStory = null): void

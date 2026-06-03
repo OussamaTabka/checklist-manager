@@ -171,10 +171,10 @@ const PHRASES = {
     ar: 'هل تريد حقا حذف هذه القصة؟',
   },
   title_delete: { en: 'Delete', fr: 'Supprimer', ar: 'حذف' },
-  confirm_run_generation_agent: {
-    en: 'Launch the generation agent? It will reuse approved checklists and generate the missing items.',
-    fr: "Lancer l'agent de generation ? Il reutilisera les checklists approuvees puis generera les elements manquants.",
-    ar: 'هل تريد تشغيل وكيل التوليد؟ سيعيد استخدام القوائم المعتمدة ويولد العناصر الناقصة.',
+  confirm_run_checklist_generator: {
+    en: 'Launch the checklist generator? It will reuse approved checklists and generate the missing items.',
+    fr: 'Lancer le generateur de checklist ? Il reutilisera les checklists approuvees puis generera les elements manquants.',
+    ar: 'هل تريد تشغيل مولد قائمة التحقق؟ سيعيد استخدام القوائم المعتمدة ويولد العناصر الناقصة.',
   },
   confirm_detach_checklist: {
     en: 'Detach this checklist?',

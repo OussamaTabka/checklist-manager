@@ -14,7 +14,7 @@ export const useUserStoriesStore = defineStore('userStories', () => {
   })
   const suggestionsByStoryId = ref({})
   const previewByStoryId = ref({})
-  const agentResultsByStoryId = ref({})
+  const generatorResultsByStoryId = ref({})
   const isGenerating = ref(false)
 
   const groupedByStatus = computed(() => {
@@ -157,8 +157,8 @@ export const useUserStoriesStore = defineStore('userStories', () => {
         }
       }
 
-      agentResultsByStoryId.value = {
-        ...agentResultsByStoryId.value,
+      generatorResultsByStoryId.value = {
+        ...generatorResultsByStoryId.value,
         [storyId]: {
           decision: response?.decision || null,
           reuse_summary: response?.reuse_summary || null,
@@ -459,7 +459,7 @@ export const useUserStoriesStore = defineStore('userStories', () => {
     generatorStatus,
     suggestionsByStoryId,
     previewByStoryId,
-    agentResultsByStoryId,
+    generatorResultsByStoryId,
     
     // Computed
     groupedByStatus,
@@ -471,6 +471,7 @@ export const useUserStoriesStore = defineStore('userStories', () => {
     createStory,
     updateStory,
     deleteStory,
+    generateChecklist: generateChecklistWithAgent,
     generateChecklistFromLLM,
     generateChecklistWithAgent,
     fetchChecklistSuggestions,

@@ -40,15 +40,23 @@ return [
     ],
 
     'test_generation' => [
-        // Provider: 'local-llm' (default), 'evomaster', or 'fallback'
-        'provider' => env('TEST_GENERATION_PROVIDER', 'local-llm'),
-        
+        // Provider: 'openai' (default), 'local-llm', 'evomaster', or 'fallback'
+        'provider' => env('TEST_GENERATION_PROVIDER', 'openai'),
+
+        // OpenAI / Codex Configuration
+        'openai_api_key' => env('AGENT_CODEX_API_KEY', ''),
+        'openai_model' => env('AGENT_OPENAI_MODEL', 'gpt-5.3-codex'),
+        'openai_api_url' => env('AGENT_OPENAI_API_URL', 'https://codex.sale/v1'),
+        'openai_timeout' => env('AGENT_OPENAI_TIMEOUT_MS', 60000) / 1000,
+        'openai_max_tokens' => (int) env('AGENT_OPENAI_MAX_TOKENS', 4096),
+        'openai_temperature' => env('TEST_GENERATION_TEMPERATURE', 0.1),
+
         // Local LLM Configuration (Ollama, LM Studio, etc.)
         'llm_url' => env('LLM_API_URL', 'http://localhost:11434'),
-        'llm_model' => env('LLM_MODEL', 'mistral'), // mistral, llama2, neural-chat, etc.
+        'llm_model' => env('LLM_MODEL', 'mistral'),
         'llm_timeout' => env('LLM_TIMEOUT', 5),
         'llm_temperature' => env('LLM_TEMPERATURE', 0.2),
-        
+
         // EvoMaster Configuration
         'evomaster_url' => env('EVOMASTER_URL', 'http://localhost'),
         'evomaster_port' => env('EVOMASTER_PORT', '40898'),

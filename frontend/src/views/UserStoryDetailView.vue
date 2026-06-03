@@ -7,9 +7,8 @@ import { useSettingsStore } from '@/stores/settings'
 import { useToastStore } from '@/stores/toast'
 import { apiRequest } from '@/lib/api'
 import { localizeError, localizeMessage, tr } from '@/lib/localization'
-import { AlertCircle, ArrowLeft, Ellipsis, FileText, FlaskConical, Link, Plus, Sparkles, Trash2, WandSparkles, Zap } from 'lucide-vue-next'
+import { AlertCircle, ArrowLeft, Ellipsis, FileText, FlaskConical, Link, Plus, Sparkles, Trash2, WandSparkles } from 'lucide-vue-next'
 import StoryTabs from '@/components/story/StoryTabs.vue'
-import SuggestionCard from '@/components/story/SuggestionCard.vue'
 import ChecklistAccordion from '@/components/story/ChecklistAccordion.vue'
 import WorkflowStepper from '@/components/story/WorkflowStepper.vue'
 
@@ -48,63 +47,11 @@ const criticalities = {
   Minor: 'bg-slate-100 text-slate-800',
 }
 
-const currentSuggestions = computed(() => storiesStore.suggestionsByStoryId?.[storyId] || null)
-const currentAgentResult = computed(() => storiesStore.agentResultsByStoryId?.[storyId] || null)
-const currentPreview = computed(() => storiesStore.previewByStoryId?.[storyId] || null)
+const currentGeneratorResult = computed(() => storiesStore.generatorResultsByStoryId?.[storyId] || null)
 const pendingDrafts = computed(() => storiesStore.currentStory?.pending_drafts || [])
 const attachedChecklists = computed(() => storiesStore.currentStory?.checklists || [])
 const attachedChecklistCount = computed(() => attachedChecklists.value.length)
 const attachedChecklistIds = computed(() => new Set(attachedChecklists.value.map((checklist) => Number(checklist.id))))
-const attachedChecklistLookup = computed(() => {
-  const ids = new Set()
-  const names = new Set()
-
-  for (const checklist of attachedChecklists.value) {
-    for (const candidate of [checklist?.id, checklist?.checklist_id, checklist?.source_checklist_id]) {
-      if (candidate !== null && candidate !== undefined && candidate !== '') {
-        ids.add(String(candidate))
-      }
-    }
-
-    const normalizedName = normalizeChecklistName(checklist?.name || checklist?.title)
-    if (normalizedName) {
-      names.add(normalizedName)
-    }
-  }
-
-  return { ids, names }
-})
-const visibleSuggestions = computed(() => {
-  const suggestions = Array.isArray(currentSuggestions.value?.suggestions)
-    ? currentSuggestions.value.suggestions
-    : []
-  const dedupedSuggestions = new Map()
-
-  for (const suggestion of suggestions) {
-    const suggestionId = suggestionIdentifier(suggestion)
-    const normalizedName = suggestionNameKey(suggestion)
-
-    if (
-      (suggestionId && attachedChecklistLookup.value.ids.has(String(suggestionId))) ||
-      (normalizedName && attachedChecklistLookup.value.names.has(normalizedName))
-    ) {
-      continue
-    }
-
-    const uniqueKey = suggestionId ? `id:${suggestionId}` : normalizedName ? `name:${normalizedName}` : null
-    if (!uniqueKey) {
-      continue
-    }
-
-    const existing = dedupedSuggestions.get(uniqueKey)
-    if (!existing || scoreValue(suggestion) > scoreValue(existing)) {
-      dedupedSuggestions.set(uniqueKey, suggestion)
-    }
-  }
-
-  return Array.from(dedupedSuggestions.values())
-})
-const suggestedChecklistCount = computed(() => visibleSuggestions.value.length || 0)
 const isAdminReadonly = computed(() => auth.isSystemAdmin && !auth.isProjectManager && !auth.isTester)
 const storyStatusLabel = computed(() => statusLabels[storiesStore.currentStory?.status] || storiesStore.currentStory?.status || '-')
 const storyPriorityLabel = computed(() => {
@@ -136,14 +83,11 @@ const selectedExistingChecklists = computed(() =>
 const businessRules = computed(() => Array.isArray(storiesStore.currentStory?.business_rules) ? storiesStore.currentStory.business_rules : [])
 const businessScenarios = computed(() => Array.isArray(storiesStore.currentStory?.scenarios) ? storiesStore.currentStory.scenarios : [])
 const projectLabel = computed(() => projectSummary.value?.name || `Projet #${projectId.value || '-'}`)
-const hasSuggestions = computed(() => visibleSuggestions.value.length > 0)
 const hasDrafts = computed(() => pendingDrafts.value.length > 0)
 const hasAttachedChecklists = computed(() => attachedChecklists.value.length > 0)
 const activeStoryTab = ref('description')
 const openHeaderActions = ref(false)
-const previewIntent = ref('details')
 const prepareSection = ref(null)
-const suggestionsSection = ref(null)
 const workflowSteps = [
   { id: 1, label: 'Analyser' },
   { id: 2, label: 'Adapter checklist' },
@@ -153,13 +97,12 @@ const workflowSteps = [
 const workflowCurrentStep = computed(() => {
   if (hasAttachedChecklists.value) return 4
   if (hasDrafts.value) return 3
-  if (hasSuggestions.value || currentAgentResult.value) return 2
+  if (currentGeneratorResult.value) return 2
   return 1
 })
 const summaryChips = computed(() => [
   { label: 'Statut', value: storyStatusLabel.value, tone: 'neutral' },
   { label: 'Priorite', value: storyPriorityLabel.value, tone: 'warning' },
-  { label: 'Suggestions', value: String(suggestedChecklistCount.value), tone: 'info' },
   { label: 'Checklists associees', value: String(attachedChecklistCount.value), tone: 'success' },
 ])
 const storyTabs = computed(() => [
@@ -197,7 +140,7 @@ const primaryAction = computed(() => {
   }
   return { key: 'prepare', label: 'Preparer une checklist' }
 })
-const agentStatus = computed(() => {
+const generatorStatus = computed(() => {
   if (storiesStore.isGenerating) {
     return {
       label: 'Generation...',
@@ -214,7 +157,7 @@ const agentStatus = computed(() => {
     }
   }
 
-  if (currentAgentResult.value?.checklist || currentAgentResult.value?.reuse_summary) {
+  if (currentGeneratorResult.value?.checklist || currentGeneratorResult.value?.reuse_summary) {
     return {
       label: 'Termine',
       description: 'Une proposition de checklist est disponible.',
@@ -229,41 +172,12 @@ const agentStatus = computed(() => {
   }
 })
 
-const suggestionStatus = computed(() => {
-  if (loadingSuggestions.value) {
-    return {
-      title: 'Recherche...',
-      description: 'Le systeme recherche les checklists les plus proches de cette User Story.',
-    }
-  }
-
-  return {
-    title: 'Checklists suggerées',
-    description: 'Checklists existantes proches de cette User Story.',
-  }
-})
 const interactionLockState = computed(() => {
   if (storiesStore.isGenerating) {
     return {
       active: true,
       title: 'Generation de checklist en cours',
       description: 'Veuillez patienter pendant que le systeme prepare la checklist.',
-    }
-  }
-
-  if (lockingSuggestionRefresh.value) {
-    return {
-      active: true,
-      title: 'Recherche des recommandations en cours',
-      description: 'Le systeme analyse les checklists existantes pour trouver les meilleures correspondances.',
-    }
-  }
-
-  if (previewLoading.value) {
-    return {
-      active: true,
-      title: 'Ouverture de la recommandation',
-      description: 'Les details de la checklist suggeree sont en cours de chargement.',
     }
   }
 
@@ -276,17 +190,13 @@ const interactionLockState = computed(() => {
 const isInteractionLocked = computed(() => interactionLockState.value.active)
 
 const previewOpen = ref(false)
-const previewLoading = ref(false)
 const adapting = ref(false)
-const attaching = ref(false)
 const loadingAvailableChecklists = ref(false)
 const loadingAvailableItems = ref(false)
-const loadingSuggestions = ref(false)
-const lockingSuggestionRefresh = ref(false)
 const attachingExistingChecklist = ref(false)
 const approvingDraftId = ref(null)
 const collapsedDrafts = ref({})
-const previewMode = ref('suggestion')
+const previewMode = ref('manual')
 const previewChecklistId = ref(null)
 const availableChecklists = ref([])
 const availableItems = ref([])
@@ -328,30 +238,9 @@ async function loadStory() {
   await Promise.all([
     storiesStore.fetchStory(projectId.value, storyId),
     auth.isTester ? storiesStore.fetchGeneratorStatus(projectId.value) : Promise.resolve(),
-    auth.isTester ? refreshSuggestedChecklists() : Promise.resolve(),
     loadProjectSummary(),
     auth.isTester ? loadAvailableChecklists() : Promise.resolve(),
   ])
-}
-
-async function refreshSuggestedChecklists(options = {}) {
-  const { notifyIfEmpty = false, lockUi = false } = options
-
-  if (!projectId.value) {
-    return
-  }
-
-  try {
-    lockingSuggestionRefresh.value = lockUi
-    loadingSuggestions.value = true
-    await storiesStore.fetchChecklistSuggestions(projectId.value, storyId)
-    if (notifyIfEmpty && visibleSuggestions.value.length === 0) {
-      toast.info('Aucune checklist correspondante n a ete trouvee pour cette user story.')
-    }
-  } finally {
-    loadingSuggestions.value = false
-    lockingSuggestionRefresh.value = false
-  }
 }
 
 async function loadAvailableChecklists() {
@@ -406,7 +295,7 @@ function scrollToSection(target) {
 }
 
 async function generateChecklist() {
-  if (!confirm(localizeMessage('Launch the checklist agent? It will reuse approved checklists first, then generate missing coverage.', currentLanguage.value))) {
+  if (!confirm(localizeMessage('Launch the checklist generator? It will reuse approved checklists first, then generate missing coverage.', currentLanguage.value))) {
     return
   }
   if (!projectId.value) {
@@ -414,7 +303,7 @@ async function generateChecklist() {
   }
 
   try {
-    await storiesStore.generateChecklistWithAgent(projectId.value, storyId)
+    await storiesStore.generateChecklist(projectId.value, storyId)
     await loadStory()
   } catch (err) {
     alert(`${tr('error_prefix', {}, currentLanguage.value)}: ${localizeError(err, 'error_generic', currentLanguage.value)}`)
@@ -431,7 +320,7 @@ async function detachChecklist(checklistId) {
 
   try {
     await storiesStore.detachChecklist(projectId.value, storyId, checklistId)
-    await refreshSuggestedChecklists()
+    await loadAvailableChecklists()
     toast.success(localizeMessage('Checklist detachee de la User Story.', currentLanguage.value))
   } catch (err) {
     alert(`${tr('error_prefix', {}, currentLanguage.value)}: ${localizeError(err, 'error_generic', currentLanguage.value)}`)
@@ -463,10 +352,7 @@ async function attachExistingChecklist() {
     await Promise.all(
       checklistIds.map((checklistId) => storiesStore.attachChecklist(projectId.value, storyId, checklistId)),
     )
-    await Promise.all([
-      refreshSuggestedChecklists(),
-      loadAvailableChecklists(),
-    ])
+    await loadAvailableChecklists()
 
     toast.success(
       checklistIds.length > 1
@@ -497,37 +383,6 @@ async function attachExistingChecklist() {
     toast.error(localizeError(err, 'error_generic', currentLanguage.value))
   } finally {
     attachingExistingChecklist.value = false
-  }
-}
-
-async function viewSuggestedChecklist(checklistId) {
-  if (!projectId.value) {
-    return
-  }
-
-  try {
-    previewLoading.value = true
-    await loadAvailableItems()
-    const preview = await storiesStore.previewSuggestedChecklist(projectId.value, storyId, checklistId)
-    previewForm.value = {
-      name: preview?.checklist?.title || '',
-      description: preview?.checklist?.description || '',
-      category: preview?.checklist?.category || '',
-      items: Array.isArray(preview?.checklist?.items)
-        ? preview.checklist.items.map((item) => ({
-            ...item,
-            status: String(item.status || 'Pending').toLowerCase(),
-          }))
-        : [],
-    }
-    selectedExistingItemId.value = ''
-    previewMode.value = 'suggestion'
-    previewChecklistId.value = checklistId
-    previewOpen.value = true
-  } catch (err) {
-    alert(`${tr('error_prefix', {}, currentLanguage.value)}: ${localizeError(err, 'error_generic', currentLanguage.value)}`)
-  } finally {
-    previewLoading.value = false
   }
 }
 
@@ -600,25 +455,7 @@ async function rejectPendingDraft(checklistId) {
   }
 }
 
-function removeSuggestedChecklist(checklistId) {
-  const current = storiesStore.suggestionsByStoryId?.[storyId]
-  if (!current?.suggestions) {
-    return
-  }
-
-  storiesStore.suggestionsByStoryId = {
-    ...storiesStore.suggestionsByStoryId,
-    [storyId]: {
-      ...current,
-      suggestions: current.suggestions.filter(
-        (suggestion) => String(suggestion.source_checklist_id || suggestion.id) !== String(checklistId),
-      ),
-    },
-  }
-}
-
 function openManualDraft() {
-  previewIntent.value = 'manual'
   previewMode.value = 'manual'
   previewChecklistId.value = null
   loadAvailableItems()
@@ -642,7 +479,6 @@ function openManualDraft() {
 }
 
 function editPendingDraft(draft) {
-  previewIntent.value = 'draft'
   previewMode.value = 'draft'
   previewChecklistId.value = draft.id
   loadAvailableItems()
@@ -662,7 +498,7 @@ function editPendingDraft(draft) {
 }
 
 function closePreview() {
-  if (previewLoading.value || adapting.value || attaching.value) {
+  if (adapting.value) {
     return
   }
   previewOpen.value = false
@@ -738,43 +574,6 @@ function handlePrimaryAction() {
   scrollToSection(prepareSection)
 }
 
-async function openSuggestionPreview(checklistId, intent = 'details') {
-  previewIntent.value = intent
-  await viewSuggestedChecklist(checklistId)
-}
-
-function normalizeChecklistName(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-}
-
-function suggestionIdentifier(suggestion) {
-  const candidates = [suggestion?.checklist_id, suggestion?.source_checklist_id, suggestion?.id]
-
-  for (const candidate of candidates) {
-    if (candidate !== null && candidate !== undefined && candidate !== '') {
-      return String(candidate)
-    }
-  }
-
-  return ''
-}
-
-function suggestionNameKey(suggestion) {
-  return normalizeChecklistName(
-    suggestion?.title ||
-    suggestion?.name ||
-    suggestion?.checklist?.title ||
-    suggestion?.checklist?.name,
-  )
-}
-
-function suggestionRenderKey(suggestion) {
-  return suggestionIdentifier(suggestion) || suggestionNameKey(suggestion)
-}
-
 function localizeGeneratedText(text) {
   return String(text || '')
     .replace(/Ã©/g, 'é')
@@ -825,93 +624,6 @@ function provenanceSourceText(item) {
     : `Réutilisé depuis ${item.source_checklist_name}`
 }
 
-function scoreValue(suggestion) {
-  return Number(suggestion?.score || 0)
-}
-
-function scoreLabel(suggestion) {
-  return `${scoreValue(suggestion)} / 100`
-}
-
-function confidenceLabel(suggestion) {
-  const score = scoreValue(suggestion)
-  if (score >= 85) return 'Correspondance elevee'
-  if (score >= 60) return 'Correspondance moyenne'
-  return 'Correspondance faible'
-}
-
-function recommendationLabel(recommendation) {
-  const labels = {
-    reuse: 'Réutilisation recommandée',
-    review: 'Relecture recommandée',
-    adapt: 'Adaptation recommandée',
-    create_draft: 'Création de brouillon recommandée',
-    create_new_draft: 'Création de brouillon recommandée',
-    generate_new: 'Génération recommandée',
-    generate_new_draft: 'Génération recommandée',
-  }
-
-  const normalized = String(recommendation || '').trim().toLowerCase()
-  return labels[normalized] || 'Préparation recommandée'
-}
-
-function coveredCount(suggestion) {
-  return Array.isArray(suggestion?.coverage) ? suggestion.coverage.length : 0
-}
-
-function missingCount(suggestion) {
-  return Array.isArray(suggestion?.missing) ? suggestion.missing.length : 0
-}
-
-function suggestionItemCount(suggestion) {
-  if (typeof suggestion?.items_count === 'number') return suggestion.items_count
-  if (typeof suggestion?.test_cases_count === 'number') return suggestion.test_cases_count
-  if (typeof suggestion?.test_case_count === 'number') return suggestion.test_case_count
-  if (typeof suggestion?.checklist_items_count === 'number') return suggestion.checklist_items_count
-  if (Array.isArray(suggestion?.items)) return suggestion.items.length
-  if (Array.isArray(suggestion?.checklist?.items)) return suggestion.checklist.items.length
-  if (coveredCount(suggestion) > 0) return coveredCount(suggestion)
-  return 0
-}
-
-function suggestionStatusText(suggestion) {
-  if (suggestion?.lifecycle_status) {
-    return lifecycleLabel(suggestion.lifecycle_status)
-  }
-
-  return suggestion?.status || 'Active'
-}
-
-function suggestionCriticality(suggestion) {
-  if (suggestion?.criticality) return suggestion.criticality
-  if (suggestion?.global_criticality) return suggestion.global_criticality
-  if (suggestion?.checklist?.global_criticality) return suggestion.checklist.global_criticality
-
-  const items = Array.isArray(suggestion?.items)
-    ? suggestion.items
-    : Array.isArray(suggestion?.checklist?.items)
-      ? suggestion.checklist.items
-      : []
-  const rank = { Critical: 4, High: 3, Major: 3, Medium: 2, Low: 1, Minor: 1 }
-  let current = ''
-
-  for (const item of items) {
-    if (!current || (rank[item?.criticality] || 0) > (rank[current] || 0)) {
-      current = item?.criticality || current
-    }
-  }
-
-  return current
-}
-
-function humanizeTechnicalLabel(value) {
-  return String(value || '')
-    .replaceAll('_', ' ')
-    .replaceAll('-', ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
 function generatedSourceLabel(value) {
   const labels = {
     ai: 'Génération automatique',
@@ -940,10 +652,6 @@ function lifecycleLabel(value) {
   return labels[value] || value || '-'
 }
 
-function suggestionStatusLabel() {
-  return 'Suggestion'
-}
-
 function summaryChipClass(tone) {
   switch (tone) {
     case 'warning':
@@ -957,7 +665,7 @@ function summaryChipClass(tone) {
   }
 }
 
-function agentStatusClass(tone) {
+function generatorStatusClass(tone) {
   switch (tone) {
     case 'info':
       return 'border-sky-200 bg-sky-50 text-sky-800'
@@ -1005,13 +713,6 @@ async function adaptSuggestedChecklist() {
       }
     } else if (previewMode.value === 'draft' && previewChecklistId.value) {
       await storiesStore.updateDraftChecklist(previewChecklistId.value, payload)
-    } else if (currentPreview.value?.source_checklist_id) {
-      await storiesStore.adaptChecklist(
-        projectId.value,
-        storyId,
-        currentPreview.value.source_checklist_id,
-        payload,
-      )
     }
 
     previewOpen.value = false
@@ -1281,12 +982,12 @@ onBeforeUnmount(() => {
           <div class="space-y-3">
             <div class="flex flex-wrap items-center gap-2">
               <h2 class="text-xl font-semibold text-slate-950">Preparer une checklist</h2>
-              <span :class="['rounded-full border px-3 py-1 text-xs font-semibold', agentStatusClass(agentStatus.tone)]">
-                {{ agentStatus.label }}
+              <span :class="['rounded-full border px-3 py-1 text-xs font-semibold', generatorStatusClass(generatorStatus.tone)]">
+                {{ generatorStatus.label }}
               </span>
             </div>
             <p class="max-w-3xl text-sm leading-7 text-slate-600">
-              {{ agentStatus.description }}
+              {{ generatorStatus.description }}
             </p>
           </div>
           <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
@@ -1323,12 +1024,12 @@ onBeforeUnmount(() => {
               </span>
               <div>
                 <p class="font-semibold text-slate-900">
-                  {{ storiesStore.isGenerating ? "Génération..." : "Générer avec l'agent" }}
+                  {{ storiesStore.isGenerating ? "Génération..." : "Générer la checklist" }}
                 </p>
                 <p class="text-sm text-slate-500">
                   {{ storiesStore.isGenerating
                     ? 'Veuillez patienter pendant que le systeme prepare la checklist.'
-                    : 'L agent privilegie la reutilisation avant de completer la couverture manquante.' }}
+                    : 'Le generateur privilegie la reutilisation avant de completer la couverture manquante.' }}
                 </p>
               </div>
             </div>
@@ -1514,59 +1215,6 @@ onBeforeUnmount(() => {
       </section>
 
       <section
-        v-if="auth.isTester"
-        ref="suggestionsSection"
-        class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm md:p-6"
-      >
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h2 class="text-xl font-semibold text-slate-950">{{ suggestionStatus.title }}</h2>
-            <p class="text-sm text-slate-500">{{ suggestionStatus.description }}</p>
-          </div>
-          <button
-            type="button"
-            class="btn btn-secondary btn-sm self-start"
-            :disabled="loadingSuggestions"
-            @click="refreshSuggestedChecklists({ notifyIfEmpty: true, lockUi: true })"
-          >
-            <Zap :size="14" />
-            <span>{{ loadingSuggestions ? 'Recherche...' : 'Recommander' }}</span>
-          </button>
-        </div>
-
-        <div v-if="hasSuggestions" class="mt-5 flex flex-col gap-4">
-          <SuggestionCard
-            v-for="suggestion in visibleSuggestions"
-            :key="suggestionRenderKey(suggestion)"
-            :title="suggestion.title || suggestion.name || 'Checklist suggeree'"
-            :description="suggestion.description || 'Aucune description disponible.'"
-            :score-label="scoreLabel(suggestion)"
-            :item-count="suggestionItemCount(suggestion)"
-            :status-label="suggestionStatusText(suggestion)"
-            :criticality-label="suggestionCriticality(suggestion)"
-            :can-create-draft="auth.canCurateStoryChecklists"
-            :actions-disabled="!suggestionIdentifier(suggestion)"
-            :loading="previewLoading"
-            @view-details="openSuggestionPreview(suggestionIdentifier(suggestion), 'details')"
-            @adapt="openSuggestionPreview(suggestionIdentifier(suggestion), 'adapt')"
-            @create-draft="openSuggestionPreview(suggestionIdentifier(suggestion), 'draft')"
-          />
-        </div>
-
-        <div v-else class="mt-5 rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 py-9 text-center">
-          <AlertCircle :size="30" class="mx-auto mb-3 text-slate-400" />
-          <p class="font-medium text-slate-900">
-            {{ loadingSuggestions ? 'Recherche en cours...' : 'Aucune checklist similaire trouvee' }}
-          </p>
-          <p class="mt-2 text-sm text-slate-500">
-            {{ loadingSuggestions
-              ? 'Veuillez patienter pendant que le systeme analyse les checklists existantes.'
-              : 'Vous pouvez creer une checklist manuellement ou lancer l agent de generation.' }}
-          </p>
-        </div>
-      </section>
-
-      <section
         ref="attachedSection"
         class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm md:p-6"
       >
@@ -1626,8 +1274,8 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-if="previewOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
-      <div class="max-h-[88vh] w-full max-w-6xl overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl">
-        <div class="flex flex-col gap-3 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+      <div class="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl">
+        <div class="flex flex-none flex-col gap-3 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h3 class="text-xl font-semibold text-slate-900">
               {{
@@ -1635,7 +1283,7 @@ onBeforeUnmount(() => {
                   ? 'Nouveau brouillon manuel'
                   : previewMode === 'draft'
                     ? previewForm.name || 'Brouillon de checklist'
-                    : currentPreview?.checklist?.title || previewForm.name || 'Checklist suggeree'
+                    : previewForm.name || 'Checklist'
               }}
             </h3>
             <p class="text-sm text-slate-500">
@@ -1644,11 +1292,7 @@ onBeforeUnmount(() => {
                   ? 'Preparez un brouillon manuel avant validation.'
                   : previewMode === 'draft'
                     ? 'Relisez et ajustez le brouillon avant association.'
-                    : previewIntent === 'adapt'
-                      ? 'Adaptez la suggestion retenue avant creation du brouillon.'
-                      : previewIntent === 'draft'
-                        ? 'Creez un brouillon a partir de cette suggestion.'
-                        : 'Consultez les details de la suggestion puis decidez de la suite.'
+                    : 'Preparez la checklist avant association.'
               }}
             </p>
           </div>
@@ -1657,49 +1301,18 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
-        <div class="grid max-h-[calc(88vh-5.5rem)] grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)]">
-          <aside class="border-r border-slate-200 bg-slate-50/80 p-5">
+        <div class="grid flex-1 overflow-hidden grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <aside class="overflow-y-auto border-r border-slate-200 bg-slate-50/80 p-5">
             <div class="space-y-4">
               <div class="rounded-2xl border border-slate-200 bg-white p-4">
                 <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Synthese</p>
                 <div class="mt-3 space-y-2 text-sm text-slate-600">
-                  <p v-if="previewMode === 'suggestion'">Decision : {{ recommendationLabel(currentPreview?.suggestion?.recommendation) }}</p>
-                  <p v-if="previewMode === 'suggestion'">Correspondance : {{ confidenceLabel(currentPreview?.suggestion) }}</p>
-                  <p>Source : {{ previewMode === 'manual' ? generatedSourceLabel('manual') : previewMode === 'draft' ? generatedSourceLabel('reuse') : generatedSourceLabel('ai') }}</p>
-                </div>
-              </div>
-
-              <div v-if="previewMode === 'suggestion'" class="rounded-2xl border border-slate-200 bg-white p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Couverture</p>
-                <div class="mt-3 flex flex-wrap gap-2">
-                  <span
-                    v-for="item in currentPreview?.suggestion?.coverage || []"
-                    :key="item"
-                    class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
-                  >
-                    {{ humanizeTechnicalLabel(item) }}
-                  </span>
-                </div>
-              </div>
-
-              <div v-if="previewMode === 'suggestion'" class="rounded-2xl border border-slate-200 bg-white p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Couverture manquante</p>
-                <div class="mt-3 flex flex-wrap gap-2">
-                  <span
-                    v-for="item in currentPreview?.suggestion?.missing || []"
-                    :key="item"
-                    class="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700"
-                  >
-                    {{ humanizeTechnicalLabel(item) }}
-                  </span>
+                  <p>Source : {{ previewMode === 'manual' ? generatedSourceLabel('manual') : generatedSourceLabel('reuse') }}</p>
                 </div>
               </div>
 
               <div class="rounded-2xl bg-sky-50 px-4 py-4 text-sm leading-6 text-sky-900">
-                <template v-if="previewMode === 'suggestion'">
-                  {{ currentPreview?.suggestion?.explanation || 'Cette suggestion peut etre adaptee avant validation.' }}
-                </template>
-                <template v-else-if="previewMode === 'draft'">
+                <template v-if="previewMode === 'draft'">
                   Ajustez librement le brouillon avant de l associer a la user story.
                 </template>
                 <template v-else>
@@ -1709,7 +1322,7 @@ onBeforeUnmount(() => {
 
               <button
                 class="w-full rounded-2xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:opacity-50"
-                :disabled="adapting || attaching || previewForm.items.length === 0"
+                :disabled="adapting || previewForm.items.length === 0"
                 @click="adaptSuggestedChecklist"
               >
                 {{
@@ -1719,15 +1332,13 @@ onBeforeUnmount(() => {
                       ? 'Associer'
                       : previewMode === 'draft'
                         ? 'Enregistrer les modifications'
-                        : previewIntent === 'adapt'
-                          ? 'Créer un brouillon adapté'
-                          : 'Créer un brouillon de validation'
+                        : 'Associer'
                 }}
               </button>
             </div>
           </aside>
 
-          <div class="space-y-5 overflow-auto p-6">
+          <div class="space-y-5 overflow-y-auto p-6">
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
               <label class="block">
                 <span class="text-sm font-medium text-slate-700">Nom de la checklist</span>
@@ -1795,7 +1406,7 @@ onBeforeUnmount(() => {
               </p>
             </div>
 
-            <div class="max-h-[26rem] space-y-4 overflow-y-auto pr-2">
+            <div class="space-y-4 pr-2">
               <div
                 v-for="(item, index) in previewForm.items"
                 :key="item.id || index"
