@@ -18,6 +18,10 @@ $testRun = TestRun::create([
     'status' => 'created',
     'triggered_by' => 'validation',
     'requested_by' => 1,  // Admin Système user
+    'request_payload' => json_encode([
+        'test_case_id' => 279,
+        'target_type' => 'checklist_item',
+    ]),
 ]);
 
 echo "✓ Created TestRun:\n";
