@@ -825,8 +825,11 @@ async function executeCase(
 
     const caseStorageStatePath = runCase.use_auth === false ? undefined : storageStatePath
 
+    // Use case-specific viewport if defined, otherwise use runtime default
+    const viewportConfig = runCase.viewport ?? request.runtime.viewport
+
     context = await browser.newContext({
-      viewport: request.runtime.viewport,
+      viewport: viewportConfig,
       storageState: caseStorageStatePath,
       recordVideo:
         request.runtime.video === 'retain-on-failure'
@@ -1185,7 +1188,10 @@ export async function executeRun(
 
       const browserResults: BrowserCaseResult[] = []
 
-      for (const browserTarget of browserTargets) {
+      // Use case-specific browser if defined, otherwise use runtime targets
+      const caseBrowserTargets = runCase.browser ? [runCase.browser] : browserTargets
+
+      for (const browserTarget of caseBrowserTargets) {
         const browserLabel = getBrowserLabel(browserTarget)
         let caseBrowser: Browser | undefined
 

@@ -197,6 +197,11 @@ export interface RunCaseDsl {
   preflight_checks?: PreflightCheckDsl[]
   steps: StepDsl[]
   asserts: AssertDsl[]
+  viewport?: {
+    width: number
+    height: number
+  }
+  browser?: RunBrowserTarget
 }
 
 export interface RunRuntimeDsl {

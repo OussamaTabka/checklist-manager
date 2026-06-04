@@ -275,6 +275,14 @@ export const RunCaseDslSchema = z
     preflight_checks: z.array(PreflightCheckDslSchema).optional(),
     steps: z.array(StepDslSchema),
     asserts: z.array(AssertDslSchema),
+    viewport: z
+      .object({
+        width: z.number().int().positive(),
+        height: z.number().int().positive(),
+      })
+      .strict()
+      .optional(),
+    browser: RunBrowserTargetSchema.optional(),
   })
   .strict()
 
