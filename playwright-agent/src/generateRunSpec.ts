@@ -1423,33 +1423,6 @@ function buildCasePlan(input: GeneratorInput, scenarioOverride?: Scenario) {
   }
 }
 
-function buildRunSpecFromPlan(input: GeneratorInput, scenarioOverride?: Scenario) {
-  const normalizedBaseUrl = normalizeBaseUrl(input.base_url)
-  const plan = buildCasePlan(input, scenarioOverride)
-
-  return {
-    schema_version: '1.0' as const,
-    run_id: input.run_id,
-    target: {
-      base_url: normalizedBaseUrl,
-    },
-    runtime: buildRuntimeConfig(input),
-    cases: [
-      {
-        external_id: input.external_id,
-        title: input.test_case_title,
-        severity: 'critical' as const,
-        use_auth: plan.useAuth,
-        execution_profile: plan.executionProfile,
-        generated_plan: plan.generatedPlan,
-        preflight_checks: plan.preflightChecks,
-        steps: plan.steps,
-        asserts: plan.asserts,
-      },
-    ],
-  }
-}
-
 function buildLLMChecklistItem(input: GeneratorInput): GeneratorChecklistItem {
   return {
     external_id: input.external_id,
@@ -1545,7 +1518,7 @@ async function main(): Promise<void> {
       throw error
     }
   } else {
-    runSpec = buildRunSpecFromPlan(parsedInput)
+    throw new Error(`[LOCKED] Generation engine must be "openai". No fallback heuristic generator is allowed. Got: ${generationEngine}`)
   }
 
   const validatedRunSpec = RunSpecDslV1Schema.parse(runSpec)
