@@ -1,0 +1,172 @@
+{
+  "schema_version": "1.0",
+  "run_id": "direct-run-202606041412415",
+  "target": {
+    "base_url": "https://www.saucedemo.com"
+  },
+  "runtime": {
+    "headless": false,
+    "timeout_ms": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "trace": "retain-on-failure",
+    "video": "retain-on-failure",
+    "screenshot": "only-on-failure"
+  },
+  "cases": [
+    {
+      "external_id": 1002,
+      "title": "Responsive rendering across viewports (Mobile 390x844)",
+      "severity": "critical",
+      "use_auth": false,
+      "execution_profile": {
+        "intent_summary": "Verify page renders correctly on Mobile (390x844)",
+        "coverage_type": "generic_ui",
+        "expected_observations": [
+          "Page loads and displays correctly on Mobile viewport"
+        ]
+      },
+      "steps": [
+        {
+          "action": "goto",
+          "url": "https://www.saucedemo.com"
+        },
+        {
+          "action": "wait_for_selector",
+          "selector": {
+            "by": "css",
+            "value": "body"
+          },
+          "state": "visible",
+          "timeout_ms": 15000
+        },
+        {
+          "action": "screenshot",
+          "name": "responsive-mobile"
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_url_contains",
+          "value": "www.saucedemo.com"
+        },
+        {
+          "type": "expect_visible",
+          "selector": {
+            "by": "css",
+            "value": "body"
+          }
+        }
+      ],
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "external_id": 1003,
+      "title": "Responsive rendering across viewports (Tablet 768x1024)",
+      "severity": "critical",
+      "use_auth": false,
+      "execution_profile": {
+        "intent_summary": "Verify page renders correctly on Tablet (768x1024)",
+        "coverage_type": "generic_ui",
+        "expected_observations": [
+          "Page loads and displays correctly on Tablet viewport"
+        ]
+      },
+      "steps": [
+        {
+          "action": "goto",
+          "url": "https://www.saucedemo.com"
+        },
+        {
+          "action": "wait_for_selector",
+          "selector": {
+            "by": "css",
+            "value": "body"
+          },
+          "state": "visible",
+          "timeout_ms": 15000
+        },
+        {
+          "action": "screenshot",
+          "name": "responsive-tablet"
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_url_contains",
+          "value": "www.saucedemo.com"
+        },
+        {
+          "type": "expect_visible",
+          "selector": {
+            "by": "css",
+            "value": "body"
+          }
+        }
+      ],
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      }
+    },
+    {
+      "external_id": 1004,
+      "title": "Responsive rendering across viewports (Desktop 1280x800)",
+      "severity": "critical",
+      "use_auth": false,
+      "execution_profile": {
+        "intent_summary": "Verify page renders correctly on Desktop (1280x800)",
+        "coverage_type": "generic_ui",
+        "expected_observations": [
+          "Page loads and displays correctly on Desktop viewport"
+        ]
+      },
+      "steps": [
+        {
+          "action": "goto",
+          "url": "https://www.saucedemo.com"
+        },
+        {
+          "action": "wait_for_selector",
+          "selector": {
+            "by": "css",
+            "value": "body"
+          },
+          "state": "visible",
+          "timeout_ms": 15000
+        },
+        {
+          "action": "screenshot",
+          "name": "responsive-desktop"
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_url_contains",
+          "value": "www.saucedemo.com"
+        },
+        {
+          "type": "expect_visible",
+          "selector": {
+            "by": "css",
+            "value": "body"
+          }
+        }
+      ],
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      }
+    }
+  ],
+  "generation_metadata": {
+    "engine": "manual",
+    "model": "template",
+    "fallback_used": false
+  }
+}

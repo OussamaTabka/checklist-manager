@@ -1,0 +1,30 @@
+{
+    "timestamp": "2026-06-04T15:40:01+00:00",
+    "us_id": 26,
+    "story_id": "HR-US-001",
+    "title": "Demande de conge",
+    "checklist_draft": {
+        "id": 119,
+        "name": "Checklist QA générée - Demande de conge",
+        "lifecycle_status": "draft",
+        "items_count": 6
+    },
+    "generation_result_summary": {
+        "has_decision": true,
+        "coverage_ratio": 100
+    },
+    "metrics": {
+        "us_id": 26,
+        "story_id": "HR-US-001",
+        "title": "Demande de conge",
+        "priority": "critical",
+        "status": "success",
+        "ttft_ms": 15637.09,
+        "total_duration_ms": 15637.09,
+        "prompt_tokens_estimated": 53,
+        "completion_tokens_estimated": 2548,
+        "tokens_per_second": 162.91,
+        "items_generated": 6,
+        "timestamp": "2026-06-04T15:40:01+00:00"
+    }
+}

@@ -1,0 +1,30 @@
+{
+    "timestamp": "2026-06-04T15:40:40+00:00",
+    "us_id": 35,
+    "story_id": "SAUCE-US-002",
+    "title": "Browse products and maintain cart state",
+    "checklist_draft": {
+        "id": 121,
+        "name": "Checklist QA générée - Browse products and maintain cart state",
+        "lifecycle_status": "draft",
+        "items_count": 6
+    },
+    "generation_result_summary": {
+        "has_decision": true,
+        "coverage_ratio": 44
+    },
+    "metrics": {
+        "us_id": 35,
+        "story_id": "SAUCE-US-002",
+        "title": "Browse products and maintain cart state",
+        "priority": "high",
+        "status": "success",
+        "ttft_ms": 23670.65,
+        "total_duration_ms": 23670.65,
+        "prompt_tokens_estimated": 120,
+        "completion_tokens_estimated": 4098,
+        "tokens_per_second": 173.1,
+        "items_generated": 6,
+        "timestamp": "2026-06-04T15:40:40+00:00"
+    }
+}

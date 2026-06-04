@@ -1,0 +1,30 @@
+{
+    "timestamp": "2026-06-04T15:39:45+00:00",
+    "us_id": 24,
+    "story_id": "ECOM-US-001",
+    "title": "Creation de produit",
+    "checklist_draft": {
+        "id": 118,
+        "name": "Checklist QA générée - Creation de produit",
+        "lifecycle_status": "draft",
+        "items_count": 6
+    },
+    "generation_result_summary": {
+        "has_decision": true,
+        "coverage_ratio": 83
+    },
+    "metrics": {
+        "us_id": 24,
+        "story_id": "ECOM-US-001",
+        "title": "Creation de produit",
+        "priority": "critical",
+        "status": "success",
+        "ttft_ms": 14676.3,
+        "total_duration_ms": 14676.3,
+        "prompt_tokens_estimated": 52,
+        "completion_tokens_estimated": 2670,
+        "tokens_per_second": 181.91,
+        "items_generated": 6,
+        "timestamp": "2026-06-04T15:39:45+00:00"
+    }
+}

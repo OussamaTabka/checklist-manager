@@ -1,0 +1,231 @@
+{
+  "schema_version": "1.0",
+  "run_id": "direct-run-202606041412415",
+  "runner_run_id": "runner-1780582364558",
+  "base_url_used": "https://www.saucedemo.com",
+  "status": "done",
+  "summary": {
+    "passed": 3,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 1002,
+      "status": "passed",
+      "attempt": 1,
+      "duration_ms": 1483,
+      "error_type": null,
+      "error_message": null,
+      "generated_plan": {
+        "title": "Responsive rendering across viewports (Mobile 390x844)",
+        "intent_summary": "Verify page renders correctly on Mobile (390x844)",
+        "coverage_type": "generic_ui",
+        "preflight_checks": [],
+        "steps": [
+          {
+            "action": "goto",
+            "url": "https://www.saucedemo.com"
+          },
+          {
+            "action": "wait_for_selector",
+            "selector": {
+              "by": "css",
+              "value": "body"
+            },
+            "state": "visible",
+            "timeout_ms": 15000
+          },
+          {
+            "action": "screenshot",
+            "name": "responsive-mobile"
+          }
+        ],
+        "asserts": [
+          {
+            "type": "expect_url_contains",
+            "value": "www.saucedemo.com"
+          },
+          {
+            "type": "expect_visible",
+            "selector": {
+              "by": "css",
+              "value": "body"
+            }
+          }
+        ],
+        "expected_observations": [
+          "Page loads and displays correctly on Mobile viewport"
+        ]
+      },
+      "failure_source": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      },
+      "execution_trace": [
+        "[chrome] Planning: browser context starting",
+        "[chrome] Planning: Verify page renders correctly on Mobile (390x844)",
+        "[chrome] Preflight 0: page_accessible -> started (attempt 1/3, url=https://www.saucedemo.com)",
+        "[chrome] Preflight 0: page_accessible -> ok (attempt 1/3)",
+        "[chrome] Preflight 0: page_accessible -> redirected to https://www.saucedemo.com/",
+        "[chrome] Step 2: wait_for_selector css=body state=visible -> started",
+        "[chrome] Step 2: wait_for_selector css=body state=visible -> ok (68ms)",
+        "[chrome] Step 3: screenshot responsive-mobile -> started",
+        "[chrome] Step 3: screenshot responsive-mobile -> ok (215ms)",
+        "[chrome] Assert 1: expect_url_contains 'www.saucedemo.com' -> started",
+        "[chrome] Assert 1: expect_url_contains 'www.saucedemo.com' -> ok (0ms)",
+        "[chrome] Assert 2: expect_visible css=body -> started",
+        "[chrome] Assert 2: expect_visible css=body -> ok (18ms)",
+        "[chrome] Failure analysis: none",
+        "[chrome] Run completed successfully"
+      ]
+    },
+    {
+      "external_id": 1003,
+      "status": "passed",
+      "attempt": 1,
+      "duration_ms": 1345,
+      "error_type": null,
+      "error_message": null,
+      "generated_plan": {
+        "title": "Responsive rendering across viewports (Tablet 768x1024)",
+        "intent_summary": "Verify page renders correctly on Tablet (768x1024)",
+        "coverage_type": "generic_ui",
+        "preflight_checks": [],
+        "steps": [
+          {
+            "action": "goto",
+            "url": "https://www.saucedemo.com"
+          },
+          {
+            "action": "wait_for_selector",
+            "selector": {
+              "by": "css",
+              "value": "body"
+            },
+            "state": "visible",
+            "timeout_ms": 15000
+          },
+          {
+            "action": "screenshot",
+            "name": "responsive-tablet"
+          }
+        ],
+        "asserts": [
+          {
+            "type": "expect_url_contains",
+            "value": "www.saucedemo.com"
+          },
+          {
+            "type": "expect_visible",
+            "selector": {
+              "by": "css",
+              "value": "body"
+            }
+          }
+        ],
+        "expected_observations": [
+          "Page loads and displays correctly on Tablet viewport"
+        ]
+      },
+      "failure_source": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      },
+      "execution_trace": [
+        "[chrome] Planning: browser context starting",
+        "[chrome] Planning: Verify page renders correctly on Tablet (768x1024)",
+        "[chrome] Preflight 0: page_accessible -> started (attempt 1/3, url=https://www.saucedemo.com)",
+        "[chrome] Preflight 0: page_accessible -> ok (attempt 1/3)",
+        "[chrome] Preflight 0: page_accessible -> redirected to https://www.saucedemo.com/",
+        "[chrome] Step 2: wait_for_selector css=body state=visible -> started",
+        "[chrome] Step 2: wait_for_selector css=body state=visible -> ok (44ms)",
+        "[chrome] Step 3: screenshot responsive-tablet -> started",
+        "[chrome] Step 3: screenshot responsive-tablet -> ok (259ms)",
+        "[chrome] Assert 1: expect_url_contains 'www.saucedemo.com' -> started",
+        "[chrome] Assert 1: expect_url_contains 'www.saucedemo.com' -> ok (0ms)",
+        "[chrome] Assert 2: expect_visible css=body -> started",
+        "[chrome] Assert 2: expect_visible css=body -> ok (18ms)",
+        "[chrome] Failure analysis: none",
+        "[chrome] Run completed successfully"
+      ]
+    },
+    {
+      "external_id": 1004,
+      "status": "passed",
+      "attempt": 1,
+      "duration_ms": 1213,
+      "error_type": null,
+      "error_message": null,
+      "generated_plan": {
+        "title": "Responsive rendering across viewports (Desktop 1280x800)",
+        "intent_summary": "Verify page renders correctly on Desktop (1280x800)",
+        "coverage_type": "generic_ui",
+        "preflight_checks": [],
+        "steps": [
+          {
+            "action": "goto",
+            "url": "https://www.saucedemo.com"
+          },
+          {
+            "action": "wait_for_selector",
+            "selector": {
+              "by": "css",
+              "value": "body"
+            },
+            "state": "visible",
+            "timeout_ms": 15000
+          },
+          {
+            "action": "screenshot",
+            "name": "responsive-desktop"
+          }
+        ],
+        "asserts": [
+          {
+            "type": "expect_url_contains",
+            "value": "www.saucedemo.com"
+          },
+          {
+            "type": "expect_visible",
+            "selector": {
+              "by": "css",
+              "value": "body"
+            }
+          }
+        ],
+        "expected_observations": [
+          "Page loads and displays correctly on Desktop viewport"
+        ]
+      },
+      "failure_source": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      },
+      "execution_trace": [
+        "[chrome] Planning: browser context starting",
+        "[chrome] Planning: Verify page renders correctly on Desktop (1280x800)",
+        "[chrome] Preflight 0: page_accessible -> started (attempt 1/3, url=https://www.saucedemo.com)",
+        "[chrome] Preflight 0: page_accessible -> ok (attempt 1/3)",
+        "[chrome] Preflight 0: page_accessible -> redirected to https://www.saucedemo.com/",
+        "[chrome] Step 2: wait_for_selector css=body state=visible -> started",
+        "[chrome] Step 2: wait_for_selector css=body state=visible -> ok (42ms)",
+        "[chrome] Step 3: screenshot responsive-desktop -> started",
+        "[chrome] Step 3: screenshot responsive-desktop -> ok (213ms)",
+        "[chrome] Assert 1: expect_url_contains 'www.saucedemo.com' -> started",
+        "[chrome] Assert 1: expect_url_contains 'www.saucedemo.com' -> ok (0ms)",
+        "[chrome] Assert 2: expect_visible css=body -> started",
+        "[chrome] Assert 2: expect_visible css=body -> ok (14ms)",
+        "[chrome] Failure analysis: none",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

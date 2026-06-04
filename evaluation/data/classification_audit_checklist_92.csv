@@ -1,0 +1,7 @@
+item_id,order,item_title,final_category,trigger_patterns,has_multiple_matches
+471,0,"Accès à la page de connexion Swag Labs",NÉGATIF,"positif=happy path | négatif=erreur",1
+472,1,"Connexion réussie avec standard_user et secret_sauce",POSITIF,positif=réussi,0
+473,2,"Blocage de locked_out_user malgré mot de passe correct",NÉGATIF,"positif=redirection | négatif=erreur",1
+474,3,"Mot de passe invalide pour un utilisateur existant",NÉGATIF,négatif=invalid,0
+475,4,"Déconnexion’après authentification réussie",NÉGATIF,"positif=réussi | négatif=refus | edge=après",1
+476,5,"Isolation de session entre deux onglets après déconnexion",NÉGATIF,"négatif=invalid | edge=après",1

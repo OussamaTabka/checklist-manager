@@ -605,8 +605,10 @@ async function executeCase(browser, runCase, request, options, storageStatePath,
     try {
         await pushTrace('Planning: browser context starting');
         const caseStorageStatePath = runCase.use_auth === false ? undefined : storageStatePath;
+        // Use case-specific viewport if defined, otherwise use runtime default
+        const viewportConfig = runCase.viewport ?? request.runtime.viewport;
         context = await browser.newContext({
-            viewport: request.runtime.viewport,
+            viewport: viewportConfig,
             storageState: caseStorageStatePath,
             recordVideo: request.runtime.video === 'retain-on-failure'
                 ? {
@@ -909,7 +911,9 @@ async function executeRun(request, options) {
                 await flushLiveTrace(options.liveTracePath, liveTraceState);
             }
             const browserResults = [];
-            for (const browserTarget of browserTargets) {
+            // Use case-specific browser if defined, otherwise use runtime targets
+            const caseBrowserTargets = runCase.browser ? [runCase.browser] : browserTargets;
+            for (const browserTarget of caseBrowserTargets) {
                 const browserLabel = getBrowserLabel(browserTarget);
                 let caseBrowser;
                 try {

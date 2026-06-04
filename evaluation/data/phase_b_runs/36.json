@@ -1,0 +1,30 @@
+{
+    "timestamp": "2026-06-04T15:38:56+00:00",
+    "us_id": 36,
+    "story_id": "SAUCE-US-003",
+    "title": "Complete checkout safely",
+    "checklist_draft": {
+        "id": 115,
+        "name": "Checklist QA générée - Complete checkout safely",
+        "lifecycle_status": "draft",
+        "items_count": 6
+    },
+    "generation_result_summary": {
+        "has_decision": true,
+        "coverage_ratio": 73
+    },
+    "metrics": {
+        "us_id": 36,
+        "story_id": "SAUCE-US-003",
+        "title": "Complete checkout safely",
+        "priority": "critical",
+        "status": "success",
+        "ttft_ms": 17178.06,
+        "total_duration_ms": 17178.06,
+        "prompt_tokens_estimated": 138,
+        "completion_tokens_estimated": 3547,
+        "tokens_per_second": 206.46,
+        "items_generated": 6,
+        "timestamp": "2026-06-04T15:38:56+00:00"
+    }
+}

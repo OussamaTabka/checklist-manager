@@ -1,0 +1,188 @@
+{
+    "timestamp": "2026-06-04T16:20:33+00:00",
+    "phase": "A",
+    "methodology": {
+        "description": "Correspondance par mots-clés (≥2 mots-clés entre règle et items)",
+        "limitation": "Peut sous-estimer la couverture pour règles formulées différemment",
+        "stopwords": "56 mots vides exclus"
+    },
+    "global": {
+        "us_count": 11,
+        "avg_rules_coverage_pct": 90.9,
+        "avg_criteria_coverage_pct": 88.6,
+        "avg_global_coverage_pct": 89.8
+    },
+    "by_priority": [
+        {
+            "priority": "critical",
+            "us_count": 3,
+            "avg_coverage_pct": 79.2
+        },
+        {
+            "priority": "high",
+            "us_count": 5,
+            "avg_coverage_pct": 100
+        },
+        {
+            "priority": "medium",
+            "us_count": 3,
+            "avg_coverage_pct": 83.3
+        }
+    ],
+    "detailed_results": {
+        "34": {
+            "us_id": 34,
+            "story_id": "SAUCE-US-001",
+            "title": "Authenticate into Swag Labs",
+            "priority": "critical",
+            "nb_rules": 3,
+            "rules_covered": 3,
+            "rules_coverage_pct": 100,
+            "nb_criteria": 4,
+            "criteria_covered": 4,
+            "criteria_coverage_pct": 100,
+            "coverage_global": 100,
+            "rules_not_covered_count": 0
+        },
+        "36": {
+            "us_id": 36,
+            "story_id": "SAUCE-US-003",
+            "title": "Complete checkout safely",
+            "priority": "critical",
+            "nb_rules": 3,
+            "rules_covered": 3,
+            "rules_coverage_pct": 100,
+            "nb_criteria": 4,
+            "criteria_covered": 3,
+            "criteria_coverage_pct": 75,
+            "coverage_global": 87.5,
+            "rules_not_covered_count": 0
+        },
+        "1": {
+            "us_id": 1,
+            "story_id": "US-001",
+            "title": "Authentification utilisateur",
+            "priority": "critical",
+            "nb_rules": 4,
+            "rules_covered": 2,
+            "rules_coverage_pct": 50,
+            "nb_criteria": 4,
+            "criteria_covered": 2,
+            "criteria_coverage_pct": 50,
+            "coverage_global": 50,
+            "rules_not_covered_count": 2
+        },
+        "35": {
+            "us_id": 35,
+            "story_id": "SAUCE-US-002",
+            "title": "Browse products and maintain cart state",
+            "priority": "high",
+            "nb_rules": 3,
+            "rules_covered": 3,
+            "rules_coverage_pct": 100,
+            "nb_criteria": 3,
+            "criteria_covered": 3,
+            "criteria_coverage_pct": 100,
+            "coverage_global": 100,
+            "rules_not_covered_count": 0
+        },
+        "37": {
+            "us_id": 37,
+            "story_id": "PTA-US-001",
+            "title": "Authenticate on the practice login page",
+            "priority": "high",
+            "nb_rules": 2,
+            "rules_covered": 2,
+            "rules_coverage_pct": 100,
+            "nb_criteria": 3,
+            "criteria_covered": 3,
+            "criteria_coverage_pct": 100,
+            "coverage_global": 100,
+            "rules_not_covered_count": 0
+        },
+        "39": {
+            "us_id": 39,
+            "story_id": "ATP-US-001",
+            "title": "Fill and validate playground forms",
+            "priority": "high",
+            "nb_rules": 2,
+            "rules_covered": 2,
+            "rules_coverage_pct": 100,
+            "nb_criteria": 3,
+            "criteria_covered": 3,
+            "criteria_coverage_pct": 100,
+            "coverage_global": 100,
+            "rules_not_covered_count": 0
+        },
+        "42": {
+            "us_id": 42,
+            "story_id": "AE-US-001",
+            "title": "Navigate key storefront entry points",
+            "priority": "high",
+            "nb_rules": 2,
+            "rules_covered": 2,
+            "rules_coverage_pct": 100,
+            "nb_criteria": 3,
+            "criteria_covered": 3,
+            "criteria_coverage_pct": 100,
+            "coverage_global": 100,
+            "rules_not_covered_count": 0
+        },
+        "43": {
+            "us_id": 43,
+            "story_id": "AE-US-002",
+            "title": "Discover products and add them to the cart",
+            "priority": "high",
+            "nb_rules": 2,
+            "rules_covered": 2,
+            "rules_coverage_pct": 100,
+            "nb_criteria": 3,
+            "criteria_covered": 3,
+            "criteria_coverage_pct": 100,
+            "coverage_global": 100,
+            "rules_not_covered_count": 0
+        },
+        "38": {
+            "us_id": 38,
+            "story_id": "PTA-US-002",
+            "title": "Exit the logged-in page cleanly",
+            "priority": "medium",
+            "nb_rules": 2,
+            "rules_covered": 1,
+            "rules_coverage_pct": 50,
+            "nb_criteria": 2,
+            "criteria_covered": 1,
+            "criteria_coverage_pct": 50,
+            "coverage_global": 50,
+            "rules_not_covered_count": 1
+        },
+        "40": {
+            "us_id": 40,
+            "story_id": "ATP-US-002",
+            "title": "Review tables and pagination",
+            "priority": "medium",
+            "nb_rules": 2,
+            "rules_covered": 2,
+            "rules_coverage_pct": 100,
+            "nb_criteria": 2,
+            "criteria_covered": 2,
+            "criteria_coverage_pct": 100,
+            "coverage_global": 100,
+            "rules_not_covered_count": 0
+        },
+        "41": {
+            "us_id": 41,
+            "story_id": "ATP-US-003",
+            "title": "Exercise alerts and dynamic controls",
+            "priority": "medium",
+            "nb_rules": 2,
+            "rules_covered": 2,
+            "rules_coverage_pct": 100,
+            "nb_criteria": 2,
+            "criteria_covered": 2,
+            "criteria_coverage_pct": 100,
+            "coverage_global": 100,
+            "rules_not_covered_count": 0
+        }
+    }
+}

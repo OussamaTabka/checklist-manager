@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.0",
+  "run_id": "direct-run-202606041401294",
+  "target": {
+    "base_url": "https://www.saucedemo.com"
+  },
+  "runtime": {
+    "headless": false,
+    "slow_mo_ms": 700,
+    "hold_open_ms": 12000,
+    "timeout_ms": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "trace": "retain-on-failure",
+    "video": "retain-on-failure",
+    "screenshot": "only-on-failure"
+  },
+  "cases": [
+    {
+      "external_id": 1001,
+      "title": "Page loads successfully",
+      "severity": "critical",
+      "use_auth": false,
+      "execution_profile": {
+        "intent_summary": "Verify that the base URL is reachable and the initial page renders visible DOM content.",
+        "coverage_type": "loading_state_behavior",
+        "expected_observations": [
+          "Navigating to the base URL displays the initial application page.",
+          "The page title shows Swag Labs.",
+          "A visible body element confirms the DOM rendered successfully."
+        ],
+        "required_inputs": []
+      },
+      "steps": [
+        {
+          "action": "goto",
+          "url": "https://www.saucedemo.com/"
+        },
+        {
+          "action": "wait_for_selector",
+          "selector": {
+            "by": "css",
+            "value": "body"
+          },
+          "state": "visible",
+          "timeout_ms": 15000
+        },
+        {
+          "action": "wait_for_selector",
+          "selector": {
+            "by": "text",
+            "text": "Swag Labs",
+            "exact": true
+          },
+          "state": "visible",
+          "timeout_ms": 15000
+        },
+        {
+          "action": "screenshot",
+          "name": "baseline-page-load"
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_title",
+          "value": "Swag Labs"
+        },
+        {
+          "type": "expect_visible",
+          "selector": {
+            "by": "css",
+            "value": "body"
+          }
+        },
+        {
+          "type": "expect_visible",
+          "selector": {
+            "by": "text",
+            "text": "Swag Labs",
+            "exact": true
+          }
+        }
+      ],
+      "browser": "chromium"
+    }
+  ],
+  "generation_metadata": {
+    "engine": "openai",
+    "requested_engine": "openai",
+    "model": "gpt-5.4",
+    "fallback_used": false
+  }
+}

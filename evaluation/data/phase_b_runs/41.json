@@ -1,0 +1,30 @@
+{
+    "timestamp": "2026-06-04T15:42:54+00:00",
+    "us_id": 41,
+    "story_id": "ATP-US-003",
+    "title": "Exercise alerts and dynamic controls",
+    "checklist_draft": {
+        "id": 128,
+        "name": "Automation Testing Practice Playground - Checklist QA générée - Exercise alerts and dynamic controls",
+        "lifecycle_status": "draft",
+        "items_count": 6
+    },
+    "generation_result_summary": {
+        "has_decision": true,
+        "coverage_ratio": 67
+    },
+    "metrics": {
+        "us_id": 41,
+        "story_id": "ATP-US-003",
+        "title": "Exercise alerts and dynamic controls",
+        "priority": "medium",
+        "status": "success",
+        "ttft_ms": 22956.09,
+        "total_duration_ms": 22956.09,
+        "prompt_tokens_estimated": 108,
+        "completion_tokens_estimated": 3780,
+        "tokens_per_second": 164.66,
+        "items_generated": 6,
+        "timestamp": "2026-06-04T15:42:54+00:00"
+    }
+}

@@ -1,0 +1,30 @@
+{
+    "timestamp": "2026-06-04T15:41:19+00:00",
+    "us_id": 39,
+    "story_id": "ATP-US-001",
+    "title": "Fill and validate playground forms",
+    "checklist_draft": {
+        "id": 123,
+        "name": "Automation Testing Practice Playground - Checklist QA générée - Fill and validate playground forms",
+        "lifecycle_status": "draft",
+        "items_count": 6
+    },
+    "generation_result_summary": {
+        "has_decision": true,
+        "coverage_ratio": 77
+    },
+    "metrics": {
+        "us_id": 39,
+        "story_id": "ATP-US-001",
+        "title": "Fill and validate playground forms",
+        "priority": "high",
+        "status": "success",
+        "ttft_ms": 20040.03,
+        "total_duration_ms": 20040.03,
+        "prompt_tokens_estimated": 110,
+        "completion_tokens_estimated": 3584,
+        "tokens_per_second": 178.85,
+        "items_generated": 6,
+        "timestamp": "2026-06-04T15:41:19+00:00"
+    }
+}

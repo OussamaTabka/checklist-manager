@@ -1,0 +1,30 @@
+{
+    "timestamp": "2026-06-04T15:42:31+00:00",
+    "us_id": 40,
+    "story_id": "ATP-US-002",
+    "title": "Review tables and pagination",
+    "checklist_draft": {
+        "id": 127,
+        "name": "Automation Testing Practice Playground - Checklist QA générée - Review tables and pagination",
+        "lifecycle_status": "draft",
+        "items_count": 5
+    },
+    "generation_result_summary": {
+        "has_decision": true,
+        "coverage_ratio": 55
+    },
+    "metrics": {
+        "us_id": 40,
+        "story_id": "ATP-US-002",
+        "title": "Review tables and pagination",
+        "priority": "medium",
+        "status": "success",
+        "ttft_ms": 15714.73,
+        "total_duration_ms": 15714.73,
+        "prompt_tokens_estimated": 91,
+        "completion_tokens_estimated": 3130,
+        "tokens_per_second": 199.14,
+        "items_generated": 5,
+        "timestamp": "2026-06-04T15:42:31+00:00"
+    }
+}

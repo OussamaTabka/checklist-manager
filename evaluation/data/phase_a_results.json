@@ -1,0 +1,594 @@
+{
+    "timestamp": "2026-06-04T15:22:56+00:00",
+    "phase": "A",
+    "global_stats": {
+        "us_count": 11,
+        "checklist_count": 27,
+        "item_count": 179,
+        "items_classified": 179
+    },
+    "diversity_stats": {
+        "positif": 112,
+        "negatif": 53,
+        "edge_case": 14
+    },
+    "validity_stats": {
+        "checklists_evaluated": 27,
+        "checklists_with_items": 27,
+        "missing_fields": []
+    },
+    "us_results": {
+        "34": {
+            "story": {
+                "id": 34,
+                "project_id": 9,
+                "title": "Authenticate into Swag Labs",
+                "description": "As a customer, I want to log in with valid and invalid credentials so that access to the product catalog is enforced correctly.",
+                "as_a": "customer",
+                "i_want_that": "I can authenticate with supported account states",
+                "so_that": "valid users reach inventory pages and invalid users receive clear errors",
+                "business_rules": [
+                    "standard_user must access the inventory page.",
+                    "locked_out_user must remain blocked from the catalog.",
+                    "Invalid credentials must surface an error banner."
+                ],
+                "scenarios": [
+                    "Login as standard_user with secret_sauce.",
+                    "Login as locked_out_user with secret_sauce.",
+                    "Login with an invalid password.",
+                    "Log out after a successful login."
+                ],
+                "effort_points": 5,
+                "business_value": 100,
+                "start_date": "2026-05-15T00:00:00.000000Z",
+                "target_completion_date": "2026-05-30T00:00:00.000000Z",
+                "acceptance_criteria": "- The login page is reachable.\n- Valid credentials redirect to the inventory page.\n- Locked or invalid users see a clear error message.\n- Authenticated users can log out back to the login page.",
+                "status": "ready_for_test",
+                "priority": "critical",
+                "story_id": "SAUCE-US-001",
+                "created_by": 2,
+                "created_at": "2026-05-25T18:35:21.000000Z",
+                "updated_at": "2026-05-25T18:35:21.000000Z",
+                "deleted_at": null,
+                "project": {
+                    "id": 9,
+                    "name": "Sauce Demo E-commerce Automation",
+                    "description": "Public Swag Labs sandbox used to validate login, catalog, cart, sorting, and checkout behaviors with deterministic browser automation.",
+                    "test_objectives": "Exercise critical e-commerce flows on a stable public demo site and compare generated run_spec quality across authentication, catalog, cart, and checkout scenarios.",
+                    "start_date": "2026-05-11",
+                    "status": "active",
+                    "app_url": "https:\/\/www.saucedemo.com",
+                    "created_by": 2,
+                    "created_at": "2026-05-25T18:35:21.000000Z",
+                    "updated_at": "2026-05-25T18:35:21.000000Z",
+                    "deleted_at": null
+                }
+            },
+            "checklist_count": 4,
+            "item_count": 23,
+            "diversity": {
+                "positif": 16,
+                "negatif": 7,
+                "edge_case": 0
+            }
+        },
+        "36": {
+            "story": {
+                "id": 36,
+                "project_id": 9,
+                "title": "Complete checkout safely",
+                "description": "As a shopper, I want the checkout form and final confirmation to behave correctly so that I can complete my purchase without data errors.",
+                "as_a": "shopper",
+                "i_want_that": "I can enter checkout information and complete an order",
+                "so_that": "the order confirmation is displayed only after valid input",
+                "business_rules": [
+                    "Checkout first name, last name, and postal code are mandatory.",
+                    "The overview page is accessible only after valid checkout information.",
+                    "The thank-you message appears only when checkout finishes successfully."
+                ],
+                "scenarios": [
+                    "Submit checkout information without a postal code.",
+                    "Complete checkout with valid customer data."
+                ],
+                "effort_points": 8,
+                "business_value": 95,
+                "start_date": "2026-05-18T00:00:00.000000Z",
+                "target_completion_date": "2026-06-01T00:00:00.000000Z",
+                "acceptance_criteria": "- Required checkout fields show validation errors when missing.\n- Valid checkout information advances to the overview page.\n- Finishing checkout shows a thank-you confirmation.",
+                "status": "ready_for_test",
+                "priority": "critical",
+                "story_id": "SAUCE-US-003",
+                "created_by": 2,
+                "created_at": "2026-05-25T18:35:22.000000Z",
+                "updated_at": "2026-05-25T18:35:22.000000Z",
+                "deleted_at": null,
+                "project": {
+                    "id": 9,
+                    "name": "Sauce Demo E-commerce Automation",
+                    "description": "Public Swag Labs sandbox used to validate login, catalog, cart, sorting, and checkout behaviors with deterministic browser automation.",
+                    "test_objectives": "Exercise critical e-commerce flows on a stable public demo site and compare generated run_spec quality across authentication, catalog, cart, and checkout scenarios.",
+                    "start_date": "2026-05-11",
+                    "status": "active",
+                    "app_url": "https:\/\/www.saucedemo.com",
+                    "created_by": 2,
+                    "created_at": "2026-05-25T18:35:21.000000Z",
+                    "updated_at": "2026-05-25T18:35:21.000000Z",
+                    "deleted_at": null
+                }
+            },
+            "checklist_count": 3,
+            "item_count": 30,
+            "diversity": {
+                "positif": 20,
+                "negatif": 10,
+                "edge_case": 0
+            }
+        },
+        "1": {
+            "story": {
+                "id": 1,
+                "project_id": 1,
+                "title": "Authentification utilisateur",
+                "description": "En tant qu'utilisateur, je veux authentification utilisateur afin d'assurer le bon fonctionnement du systeme.",
+                "as_a": "utilisateur",
+                "i_want_that": "authentification utilisateur",
+                "so_that": "assurer le bon fonctionnement du systeme",
+                "business_rules": [
+                    "Fonctionnement correct avec donnees valides",
+                    "Gestion des erreurs",
+                    "Respect UI\/UX",
+                    "Securite respectee"
+                ],
+                "scenarios": [
+                    "Cas nominal",
+                    "Cas erreur"
+                ],
+                "effort_points": 3,
+                "business_value": 8,
+                "start_date": null,
+                "target_completion_date": null,
+                "acceptance_criteria": "- Fonctionnement correct avec donnees valides\n- Gestion des erreurs\n- Respect UI\/UX\n- Securite respectee",
+                "status": "backlog",
+                "priority": "critical",
+                "story_id": "US-001",
+                "created_by": 2,
+                "created_at": "2026-05-20T22:54:13.000000Z",
+                "updated_at": "2026-05-20T22:54:13.000000Z",
+                "deleted_at": null,
+                "project": {
+                    "id": 1,
+                    "name": "Advanced QA Checklist Manager",
+                    "description": "Demo project aligned with advanced QA examples using standardized user stories, checklists, and test cases.",
+                    "test_objectives": null,
+                    "start_date": null,
+                    "status": "planning",
+                    "app_url": "http:\/\/localhost:5173",
+                    "created_by": 2,
+                    "created_at": "2026-05-20T22:54:12.000000Z",
+                    "updated_at": "2026-05-20T22:54:12.000000Z",
+                    "deleted_at": null
+                }
+            },
+            "checklist_count": 6,
+            "item_count": 39,
+            "diversity": {
+                "positif": 23,
+                "negatif": 13,
+                "edge_case": 3
+            }
+        },
+        "35": {
+            "story": {
+                "id": 35,
+                "project_id": 9,
+                "title": "Browse products and maintain cart state",
+                "description": "As a shopper, I want to sort products and manage my cart so that I can select the correct items before checkout.",
+                "as_a": "shopper",
+                "i_want_that": "I can sort inventory items and add or remove them from the cart",
+                "so_that": "the cart reflects the products I intend to buy",
+                "business_rules": [
+                    "Sorting controls must remain available after login.",
+                    "The cart badge must reflect the number of added items.",
+                    "Removing an item must revert the UI state cleanly."
+                ],
+                "scenarios": [
+                    "Sort inventory items from Z to A.",
+                    "Add Sauce Labs Backpack to the cart.",
+                    "Remove a product from the inventory page after it was added."
+                ],
+                "effort_points": 8,
+                "business_value": 90,
+                "start_date": "2026-05-17T00:00:00.000000Z",
+                "target_completion_date": "2026-05-31T00:00:00.000000Z",
+                "acceptance_criteria": "- Sorting options are visible on the inventory page.\n- Adding a product increments the cart badge.\n- Removing a product updates the cart badge or button state.",
+                "status": "ready_for_test",
+                "priority": "high",
+                "story_id": "SAUCE-US-002",
+                "created_by": 2,
+                "created_at": "2026-05-25T18:35:21.000000Z",
+                "updated_at": "2026-05-25T18:35:21.000000Z",
+                "deleted_at": null,
+                "project": {
+                    "id": 9,
+                    "name": "Sauce Demo E-commerce Automation",
+                    "description": "Public Swag Labs sandbox used to validate login, catalog, cart, sorting, and checkout behaviors with deterministic browser automation.",
+                    "test_objectives": "Exercise critical e-commerce flows on a stable public demo site and compare generated run_spec quality across authentication, catalog, cart, and checkout scenarios.",
+                    "start_date": "2026-05-11",
+                    "status": "active",
+                    "app_url": "https:\/\/www.saucedemo.com",
+                    "created_by": 2,
+                    "created_at": "2026-05-25T18:35:21.000000Z",
+                    "updated_at": "2026-05-25T18:35:21.000000Z",
+                    "deleted_at": null
+                }
+            },
+            "checklist_count": 1,
+            "item_count": 6,
+            "diversity": {
+                "positif": 4,
+                "negatif": 0,
+                "edge_case": 2
+            }
+        },
+        "37": {
+            "story": {
+                "id": 37,
+                "project_id": 10,
+                "title": "Authenticate on the practice login page",
+                "description": "As a learner, I want to validate positive and negative login behavior on the public practice login page so that authentication rules remain obvious.",
+                "as_a": "learner",
+                "i_want_that": "I can validate success and failure states on the practice login page",
+                "so_that": "login behavior remains predictable and testable",
+                "business_rules": [
+                    "student \/ Password123 must succeed.",
+                    "An invalid username or password must show a visible error message."
+                ],
+                "scenarios": [
+                    "Valid login with student \/ Password123.",
+                    "Invalid username with valid password.",
+                    "Valid username with invalid password."
+                ],
+                "effort_points": 3,
+                "business_value": 80,
+                "start_date": "2026-05-16T00:00:00.000000Z",
+                "target_completion_date": "2026-05-29T00:00:00.000000Z",
+                "acceptance_criteria": "- The login form is reachable.\n- Valid credentials reach the logged-in page.\n- Invalid credentials display a clear error.",
+                "status": "ready_for_test",
+                "priority": "high",
+                "story_id": "PTA-US-001",
+                "created_by": 2,
+                "created_at": "2026-05-25T18:35:22.000000Z",
+                "updated_at": "2026-05-25T18:35:22.000000Z",
+                "deleted_at": null,
+                "project": {
+                    "id": 10,
+                    "name": "Practice Login Automation",
+                    "description": "Public Practice Test Automation login page used for crisp positive and negative login coverage.",
+                    "test_objectives": "Validate simple authentication behaviors on a stable public login form with clean expected outcomes for success, invalid credentials, and logout.",
+                    "start_date": "2026-05-13",
+                    "status": "active",
+                    "app_url": "https:\/\/practicetestautomation.com\/practice-test-login\/",
+                    "created_by": 2,
+                    "created_at": "2026-05-25T18:35:22.000000Z",
+                    "updated_at": "2026-05-25T18:35:22.000000Z",
+                    "deleted_at": null
+                }
+            },
+            "checklist_count": 6,
+            "item_count": 38,
+            "diversity": {
+                "positif": 24,
+                "negatif": 14,
+                "edge_case": 0
+            }
+        },
+        "39": {
+            "story": {
+                "id": 39,
+                "project_id": 11,
+                "title": "Fill and validate playground forms",
+                "description": "As a QA engineer, I want to validate the main form and file upload widgets so that basic data entry coverage remains stable on the playground page.",
+                "as_a": "QA engineer",
+                "i_want_that": "I can validate required fields, dates, and uploads on the public playground",
+                "so_that": "common form behaviors remain observable and repeatable",
+                "business_rules": [
+                    "The user must reach the form section before entering data.",
+                    "The upload widget must accept a valid local file path."
+                ],
+                "scenarios": [
+                    "Validate required fields are visible and ready for input.",
+                    "Populate the date picker with a valid date.",
+                    "Upload the prepared sample file."
+                ],
+                "effort_points": 5,
+                "business_value": 75,
+                "start_date": "2026-05-17T00:00:00.000000Z",
+                "target_completion_date": "2026-05-30T00:00:00.000000Z",
+                "acceptance_criteria": "- Required form fields are visible before interaction.\n- Date input accepts a valid date.\n- File upload accepts the prepared sample file.",
+                "status": "ready_for_test",
+                "priority": "high",
+                "story_id": "ATP-US-001",
+                "created_by": 2,
+                "created_at": "2026-05-25T18:35:22.000000Z",
+                "updated_at": "2026-05-25T18:35:22.000000Z",
+                "deleted_at": null,
+                "project": {
+                    "id": 11,
+                    "name": "Automation Testing Practice Playground",
+                    "description": "Public Blogspot automation playground used for forms, upload, tables, pagination, alerts, and dynamic button behavior.",
+                    "test_objectives": "Exercise high-signal UI widgets on a public sandbox page so that IntelliTest can be evaluated against varied selectors, validation rules, tables, and alert behaviors.",
+                    "start_date": "2026-05-14",
+                    "status": "active",
+                    "app_url": "https:\/\/testautomationpractice.blogspot.com\/",
+                    "created_by": 2,
+                    "created_at": "2026-05-25T18:35:22.000000Z",
+                    "updated_at": "2026-05-25T18:35:22.000000Z",
+                    "deleted_at": null
+                }
+            },
+            "checklist_count": 1,
+            "item_count": 6,
+            "diversity": {
+                "positif": 4,
+                "negatif": 2,
+                "edge_case": 0
+            }
+        },
+        "42": {
+            "story": {
+                "id": 42,
+                "project_id": 12,
+                "title": "Navigate key storefront entry points",
+                "description": "As a shopper, I want to land on the home page and navigate to important entry points so that I can explore the storefront safely.",
+                "as_a": "shopper",
+                "i_want_that": "I can reach the home page and key navigation links",
+                "so_that": "I can begin browsing without broken routes",
+                "business_rules": [
+                    "The home page must show the storefront shell before deeper navigation begins.",
+                    "Navigation links must remain visible without authentication."
+                ],
+                "scenarios": [
+                    "Load the home page.",
+                    "Open the Signup \/ Login page.",
+                    "Navigate through category links."
+                ],
+                "effort_points": 5,
+                "business_value": 75,
+                "start_date": "2026-05-16T00:00:00.000000Z",
+                "target_completion_date": "2026-05-30T00:00:00.000000Z",
+                "acceptance_criteria": "- The home page loads and shows the site header.\n- The Signup \/ Login entry point is reachable.\n- Category navigation is visible.",
+                "status": "ready_for_test",
+                "priority": "high",
+                "story_id": "AE-US-001",
+                "created_by": 2,
+                "created_at": "2026-05-25T18:35:22.000000Z",
+                "updated_at": "2026-05-25T18:35:22.000000Z",
+                "deleted_at": null,
+                "project": {
+                    "id": 12,
+                    "name": "Automation Exercise E-commerce QA",
+                    "description": "Public Automation Exercise storefront used for home page, search, product details, cart, contact form, and navigation testing.",
+                    "test_objectives": "Validate broad e-commerce flows on a public practice application with enough variety to analyze generator quality, locators, and preflight coverage.",
+                    "start_date": "2026-05-12",
+                    "status": "active",
+                    "app_url": "https:\/\/automationexercise.com\/",
+                    "created_by": 2,
+                    "created_at": "2026-05-25T18:35:22.000000Z",
+                    "updated_at": "2026-05-25T18:35:22.000000Z",
+                    "deleted_at": null
+                }
+            },
+            "checklist_count": 1,
+            "item_count": 6,
+            "diversity": {
+                "positif": 4,
+                "negatif": 1,
+                "edge_case": 1
+            }
+        },
+        "43": {
+            "story": {
+                "id": 43,
+                "project_id": 12,
+                "title": "Discover products and add them to the cart",
+                "description": "As a shopper, I want to search for products, view their details, and add them to the cart so that I can evaluate a buying flow.",
+                "as_a": "shopper",
+                "i_want_that": "I can discover products through search and detail pages",
+                "so_that": "I can add relevant items to the cart",
+                "business_rules": [
+                    "The search field must be visible before typing a query.",
+                    "Product cards must expose a path to a detail or cart action."
+                ],
+                "scenarios": [
+                    "Search for dress.",
+                    "Open a product detail page.",
+                    "Add a visible product to the cart."
+                ],
+                "effort_points": 8,
+                "business_value": 85,
+                "start_date": "2026-05-17T00:00:00.000000Z",
+                "target_completion_date": "2026-05-31T00:00:00.000000Z",
+                "acceptance_criteria": "- The products page exposes a search field.\n- Product detail pages are reachable.\n- Adding a product to cart shows a cart confirmation.",
+                "status": "ready_for_test",
+                "priority": "high",
+                "story_id": "AE-US-002",
+                "created_by": 2,
+                "created_at": "2026-05-25T18:35:22.000000Z",
+                "updated_at": "2026-05-25T18:35:22.000000Z",
+                "deleted_at": null,
+                "project": {
+                    "id": 12,
+                    "name": "Automation Exercise E-commerce QA",
+                    "description": "Public Automation Exercise storefront used for home page, search, product details, cart, contact form, and navigation testing.",
+                    "test_objectives": "Validate broad e-commerce flows on a public practice application with enough variety to analyze generator quality, locators, and preflight coverage.",
+                    "start_date": "2026-05-12",
+                    "status": "active",
+                    "app_url": "https:\/\/automationexercise.com\/",
+                    "created_by": 2,
+                    "created_at": "2026-05-25T18:35:22.000000Z",
+                    "updated_at": "2026-05-25T18:35:22.000000Z",
+                    "deleted_at": null
+                }
+            },
+            "checklist_count": 1,
+            "item_count": 6,
+            "diversity": {
+                "positif": 3,
+                "negatif": 0,
+                "edge_case": 3
+            }
+        },
+        "38": {
+            "story": {
+                "id": 38,
+                "project_id": 10,
+                "title": "Exit the logged-in page cleanly",
+                "description": "As a learner, I want to verify logout on the practice site so that the authentication cycle is complete.",
+                "as_a": "learner",
+                "i_want_that": "I can log out after a successful login",
+                "so_that": "the app returns to a safe anonymous state",
+                "business_rules": [
+                    "Logout is available only after authentication.",
+                    "The post-logout page exposes the login form again."
+                ],
+                "scenarios": [
+                    "Log in successfully and use the Log out action."
+                ],
+                "effort_points": 2,
+                "business_value": 60,
+                "start_date": "2026-05-19T00:00:00.000000Z",
+                "target_completion_date": "2026-05-28T00:00:00.000000Z",
+                "acceptance_criteria": "- The Log out button is visible after a successful login.\n- Clicking Log out returns the browser to the login page.",
+                "status": "ready_for_test",
+                "priority": "medium",
+                "story_id": "PTA-US-002",
+                "created_by": 2,
+                "created_at": "2026-05-25T18:35:22.000000Z",
+                "updated_at": "2026-05-25T18:35:22.000000Z",
+                "deleted_at": null,
+                "project": {
+                    "id": 10,
+                    "name": "Practice Login Automation",
+                    "description": "Public Practice Test Automation login page used for crisp positive and negative login coverage.",
+                    "test_objectives": "Validate simple authentication behaviors on a stable public login form with clean expected outcomes for success, invalid credentials, and logout.",
+                    "start_date": "2026-05-13",
+                    "status": "active",
+                    "app_url": "https:\/\/practicetestautomation.com\/practice-test-login\/",
+                    "created_by": 2,
+                    "created_at": "2026-05-25T18:35:22.000000Z",
+                    "updated_at": "2026-05-25T18:35:22.000000Z",
+                    "deleted_at": null
+                }
+            },
+            "checklist_count": 1,
+            "item_count": 5,
+            "diversity": {
+                "positif": 3,
+                "negatif": 1,
+                "edge_case": 1
+            }
+        },
+        "40": {
+            "story": {
+                "id": 40,
+                "project_id": 11,
+                "title": "Review tables and pagination",
+                "description": "As a QA engineer, I want to inspect static and paginated tables so that data-heavy widgets remain testable on the playground page.",
+                "as_a": "QA engineer",
+                "i_want_that": "I can validate table rendering and page controls",
+                "so_that": "data-oriented widgets remain stable for automation exercises",
+                "business_rules": [
+                    "Visible tables must render at least one data row.",
+                    "Pagination links must remain visible before item selection."
+                ],
+                "scenarios": [
+                    "Validate the static web table is displayed.",
+                    "Validate the pagination table exposes page links and a first page row."
+                ],
+                "effort_points": 5,
+                "business_value": 70,
+                "start_date": "2026-05-19T00:00:00.000000Z",
+                "target_completion_date": "2026-05-30T00:00:00.000000Z",
+                "acceptance_criteria": "- The static web table is visible.\n- The pagination control exposes multiple page links.",
+                "status": "ready_for_test",
+                "priority": "medium",
+                "story_id": "ATP-US-002",
+                "created_by": 2,
+                "created_at": "2026-05-25T18:35:22.000000Z",
+                "updated_at": "2026-05-25T18:35:22.000000Z",
+                "deleted_at": null,
+                "project": {
+                    "id": 11,
+                    "name": "Automation Testing Practice Playground",
+                    "description": "Public Blogspot automation playground used for forms, upload, tables, pagination, alerts, and dynamic button behavior.",
+                    "test_objectives": "Exercise high-signal UI widgets on a public sandbox page so that IntelliTest can be evaluated against varied selectors, validation rules, tables, and alert behaviors.",
+                    "start_date": "2026-05-14",
+                    "status": "active",
+                    "app_url": "https:\/\/testautomationpractice.blogspot.com\/",
+                    "created_by": 2,
+                    "created_at": "2026-05-25T18:35:22.000000Z",
+                    "updated_at": "2026-05-25T18:35:22.000000Z",
+                    "deleted_at": null
+                }
+            },
+            "checklist_count": 2,
+            "item_count": 14,
+            "diversity": {
+                "positif": 9,
+                "negatif": 4,
+                "edge_case": 1
+            }
+        },
+        "41": {
+            "story": {
+                "id": 41,
+                "project_id": 11,
+                "title": "Exercise alerts and dynamic controls",
+                "description": "As a QA engineer, I want to validate popups and delayed button behaviors so that dynamic UI timing remains observable on the playground.",
+                "as_a": "QA engineer",
+                "i_want_that": "I can trigger alerts and wait for dynamic buttons to appear",
+                "so_that": "dynamic feedback behaviors remain testable",
+                "business_rules": [
+                    "Popup actions must only be triggered when their buttons are visible.",
+                    "Dynamic buttons must not be assumed visible before their delay completes."
+                ],
+                "scenarios": [
+                    "Trigger a simple alert button.",
+                    "Wait for the delayed button to become visible."
+                ],
+                "effort_points": 5,
+                "business_value": 68,
+                "start_date": "2026-05-20T00:00:00.000000Z",
+                "target_completion_date": "2026-05-31T00:00:00.000000Z",
+                "acceptance_criteria": "- Alert buttons are visible before interaction.\n- Dynamic buttons appear or become enabled after their delay.",
+                "status": "ready_for_test",
+                "priority": "medium",
+                "story_id": "ATP-US-003",
+                "created_by": 2,
+                "created_at": "2026-05-25T18:35:22.000000Z",
+                "updated_at": "2026-05-25T18:35:22.000000Z",
+                "deleted_at": null,
+                "project": {
+                    "id": 11,
+                    "name": "Automation Testing Practice Playground",
+                    "description": "Public Blogspot automation playground used for forms, upload, tables, pagination, alerts, and dynamic button behavior.",
+                    "test_objectives": "Exercise high-signal UI widgets on a public sandbox page so that IntelliTest can be evaluated against varied selectors, validation rules, tables, and alert behaviors.",
+                    "start_date": "2026-05-14",
+                    "status": "active",
+                    "app_url": "https:\/\/testautomationpractice.blogspot.com\/",
+                    "created_by": 2,
+                    "created_at": "2026-05-25T18:35:22.000000Z",
+                    "updated_at": "2026-05-25T18:35:22.000000Z",
+                    "deleted_at": null
+                }
+            },
+            "checklist_count": 1,
+            "item_count": 6,
+            "diversity": {
+                "positif": 2,
+                "negatif": 1,
+                "edge_case": 3
+            }
+        }
+    }
+}

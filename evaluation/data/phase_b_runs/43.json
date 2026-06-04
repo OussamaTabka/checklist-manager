@@ -1,0 +1,30 @@
+{
+    "timestamp": "2026-06-04T15:41:57+00:00",
+    "us_id": 43,
+    "story_id": "AE-US-002",
+    "title": "Discover products and add them to the cart",
+    "checklist_draft": {
+        "id": 125,
+        "name": "Checklist QA générée - Discover products and add them to the cart",
+        "lifecycle_status": "draft",
+        "items_count": 6
+    },
+    "generation_result_summary": {
+        "has_decision": true,
+        "coverage_ratio": 87
+    },
+    "metrics": {
+        "us_id": 43,
+        "story_id": "AE-US-002",
+        "title": "Discover products and add them to the cart",
+        "priority": "high",
+        "status": "success",
+        "ttft_ms": 18478.22,
+        "total_duration_ms": 18478.22,
+        "prompt_tokens_estimated": 107,
+        "completion_tokens_estimated": 3383,
+        "tokens_per_second": 183.08,
+        "items_generated": 6,
+        "timestamp": "2026-06-04T15:41:57+00:00"
+    }
+}

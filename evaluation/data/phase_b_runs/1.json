@@ -1,0 +1,30 @@
+{
+    "timestamp": "2026-06-04T15:39:12+00:00",
+    "us_id": 1,
+    "story_id": "US-001",
+    "title": "Authentification utilisateur",
+    "checklist_draft": {
+        "id": 116,
+        "name": "Checklist QA générée - Authentification utilisateur",
+        "lifecycle_status": "draft",
+        "items_count": 6
+    },
+    "generation_result_summary": {
+        "has_decision": true,
+        "coverage_ratio": 93
+    },
+    "metrics": {
+        "us_id": 1,
+        "story_id": "US-001",
+        "title": "Authentification utilisateur",
+        "priority": "critical",
+        "status": "success",
+        "ttft_ms": 16334.09,
+        "total_duration_ms": 16334.09,
+        "prompt_tokens_estimated": 88,
+        "completion_tokens_estimated": 2975,
+        "tokens_per_second": 182.12,
+        "items_generated": 6,
+        "timestamp": "2026-06-04T15:39:12+00:00"
+    }
+}

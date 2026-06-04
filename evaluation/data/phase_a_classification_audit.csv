@@ -1,0 +1,180 @@
+item_id,checklist_id,us_id,item_title,final_category,matched_in,exclusion_applied,exclusion_rule,priority,criticality
+471,92,34,"Accès à la page de connexion Swag Labs",POSITIF,description,1,"NÉGATION : sans erreur",High,Critical
+472,92,34,"Connexion réussie avec standard_user et secret_sauce",POSITIF,title,,,High,Critical
+473,92,34,"Blocage de locked_out_user malgré mot de passe correct",NÉGATIF,description,,,High,Critical
+474,92,34,"Mot de passe invalide pour un utilisateur existant",NÉGATIF,title,,,High,Critical
+475,92,34,"Déconnexion’après authentification réussie",POSITIF,title,,,High,Critical
+476,92,34,"Isolation de session entre deux onglets après déconnexion",POSITIF,description,1,"NOMINALISATION : invalidée (état attendu)",Medium,Major
+477,93,34,"Accès direct à la page de connexion Swag Labs",POSITIF,description,1,"NÉGATION : sans erreur",High,Critical
+478,93,34,"Connexion réussie avec standard_user et secret_sauce",POSITIF,title,,,High,Critical
+479,93,34,"Blocage de locked_out_user malgré mot de passe correct",NÉGATIF,description,,,High,Critical
+480,93,34,"Erreur bannière pour mot de passe invalide",POSITIF,title,1,"NÉGATION : aucune invalid",High,Critical
+481,93,34,"Déconnexion’après authentification réussie",POSITIF,title,,,High,Critical
+482,93,34,"Isolation de session entre deux onglets après logout",POSITIF,description,1,"NOMINALISATION : invalidée (état attendu)",Medium,Major
+483,94,34,"Accès direct à la page de connexion Swag Labs",POSITIF,description,1,"NÉGATION : sans erreur",High,Critical
+484,94,34,"Connexion réussie avec standard_user et secret_sauce",POSITIF,title,,,High,Critical
+485,94,34,"Blocage de locked_out_user malgré mot de passe correct",NÉGATIF,description,,,High,Critical
+486,94,34,"Mot de passe invalide pour un utilisateur existant",NÉGATIF,title,,,High,Critical
+487,94,34,"Déconnexion’après authentification réussie",POSITIF,title,,,High,Critical
+551,106,34,"Accès à la page de connexion Swag Labs",POSITIF,description,,,High,Critical
+552,106,34,"Connexion réussie avec standard_user et secret_sauce",POSITIF,title,,,High,Critical
+553,106,34,"Blocage explicite de locked_out_user",POSITIF,description,1,"NOMINALISATION : refusée (état attendu)",High,Critical
+554,106,34,"Mot de passe invalide pour un utilisateur existant",NÉGATIF,title,,,High,Critical
+555,106,34,"Déconnexion’après authentification réussie",POSITIF,title,,,High,Critical
+556,106,34,"Isolation de session entre deux onglets après logout",NÉGATIF,description,,,Medium,Major
+488,95,36,"Blocage de la poursuite si le code postal est absent",NÉGATIF,title,,,High,Critical
+489,95,36,"Validation individuelle des trois champs obligatoires",POSITIF,description,1,"NOMINALISATION : refusée (état attendu)",High,Critical
+490,95,36,"Accès à la page d’aperçu avec données client valides",NÉGATIF,description,,,High,Critical
+491,95,36,"Protection contre l’accès direct à l’aperçu sans checkout valide",POSITIF,description,1,"NOMINALISATION : blocage (état attendu)",High,Critical
+492,95,36,"Affichage du message de remerciement uniquement après finalisation",POSITIF,description,,,High,Critical
+493,95,36,"Absence de confirmation tant que la commande n’est pas finalisée",POSITIF,default,,,High,Critical
+557,107,36,"- Required checkout fields show validation errors when missing.",NÉGATIF,title,,,High,Critical
+558,107,36,"- Valid checkout information’advances to the overview page.",POSITIF,title,,,High,Critical
+559,107,36,"- Finishing checkout shows a thank-you confirmation.",POSITIF,default,,,High,Critical
+560,107,36,"Carte expiree refuse le paiement",POSITIF,title,1,"NOMINALISATION : refus (état attendu)",High,Critical
+561,107,36,"CVV invalide bloque la transaction",NÉGATIF,title,,,High,Critical
+562,107,36,"Double soumission ne créé pas de paiement en doublon",POSITIF,default,,,High,Critical
+563,107,36,"Refus du prestataire conserve un etat recuperable",NÉGATIF,title,,,High,Critical
+564,107,36,"Regle métier respectee - Complété checkout safely",POSITIF,default,,,High,Critical
+565,107,36,"Scenario specifique couvre - Complété checkout safely",POSITIF,default,,,Medium,Major
+566,107,36,"Notification cohérente après succès pour Complété checkout safely",POSITIF,default,,,Medium,Major
+567,107,36,"Gestion des erreurs pour Complété checkout safely",NÉGATIF,title,,,High,Critical
+568,107,36,"Notifications correctes pour Complété checkout safely",POSITIF,description,,,Medium,Major
+569,108,36,"- Required checkout fields show validation errors when missing.",NÉGATIF,title,,,High,Critical
+570,108,36,"- Valid checkout information’advances to the overview page.",POSITIF,title,,,High,Critical
+571,108,36,"- Finishing checkout shows a thank-you confirmation.",POSITIF,default,,,High,Critical
+572,108,36,"Carte expiree refuse le paiement",POSITIF,title,1,"NOMINALISATION : refus (état attendu)",High,Critical
+573,108,36,"CVV invalide bloque la transaction",NÉGATIF,title,,,High,Critical
+574,108,36,"Double soumission ne créé pas de paiement en doublon",POSITIF,default,,,High,Critical
+575,108,36,"Refus du prestataire conserve un etat recuperable",NÉGATIF,title,,,High,Critical
+576,108,36,"Regle métier respectee - Complété checkout safely",POSITIF,default,,,High,Critical
+577,108,36,"Scenario specifique couvre - Complété checkout safely",POSITIF,default,,,Medium,Major
+578,108,36,"Notification cohérente après succès pour Complété checkout safely",POSITIF,default,,,Medium,Major
+579,108,36,"Gestion des erreurs pour Complété checkout safely",NÉGATIF,title,,,High,Critical
+580,108,36,"Notifications correctes pour Complété checkout safely",POSITIF,description,,,Medium,Major
+317,68,1,"- Fonctionnement correct avec données valides",POSITIF,title,,,High,Critical
+318,68,1,"- Gestion des erreurs",NÉGATIF,title,,,High,Critical
+319,68,1,"- Respect UI/UX",POSITIF,default,,,High,Critical
+320,68,1,"- Sécurité respectee",POSITIF,default,,,Medium,Major
+321,68,1,"Gestion des erreurs pour Authentification utilisateur",NÉGATIF,title,,,High,Critical
+322,68,1,"Cas nominal réussi pour Authentification utilisateur",POSITIF,title,,,High,Critical
+323,68,1,"Validation des champs pour Authentification utilisateur",NÉGATIF,description,,,High,Critical
+324,69,1,"- Fonctionnement correct avec données valides",POSITIF,title,,,High,Critical
+325,69,1,"- Gestion des erreurs",NÉGATIF,title,,,High,Critical
+326,69,1,"- Respect UI/UX",POSITIF,default,,,High,Critical
+327,69,1,"- Sécurité respectee",POSITIF,default,,,Medium,Major
+328,69,1,"Gestion des erreurs pour Authentification utilisateur",NÉGATIF,title,,,High,Critical
+329,69,1,"Cas nominal réussi pour Authentification utilisateur",POSITIF,title,,,High,Critical
+330,69,1,"Validation des champs pour Authentification utilisateur",NÉGATIF,description,,,High,Critical
+331,70,1,"- Fonctionnement correct avec données valides",POSITIF,title,,,High,Critical
+332,70,1,"- Gestion des erreurs",NÉGATIF,title,,,High,Critical
+333,70,1,"- Respect UI/UX",POSITIF,default,,,High,Critical
+334,70,1,"- Sécurité respectee",POSITIF,default,,,Medium,Major
+335,70,1,"Gestion des erreurs pour Authentification utilisateur",NÉGATIF,title,,,High,Critical
+336,70,1,"Cas nominal réussi pour Authentification utilisateur",POSITIF,title,,,High,Critical
+337,70,1,"Validation des champs pour Authentification utilisateur",NÉGATIF,description,,,High,Critical
+338,71,1,"Connexion réussie avec identifiants valides et redirection post-authentificatio",POSITIF,title,,,High,Critical
+339,71,1,"Refus de connexion’avec mot de passe incorrect sans divulgation d’informatio",POSITIF,title,1,"NOMINALISATION : refusée (état attendu)",High,Critical
+340,71,1,"Validation UI/UX des champs obligatoires et états d’erreur du formulaire",NÉGATIF,title,,,Medium,Major
+341,71,1,"Protection contre brute force après tentatives d’échec répétées",POSITIF,default,,,High,Critical
+342,71,1,"Gestion de sessions concurrentes sur plusieurs appareils",EDGE-CASE,title,,,High,Critical
+343,71,1,"Intégrité de session’après déconnexion et impossibilité de réutiliser un",EDGE-CASE,title,,,High,Critical
+344,72,1,"Connexion réussie avec identifiants valides et redirection post-authentificatio",POSITIF,title,,,High,Critical
+345,72,1,"Refus de connexion’avec mot de passe invalide sans divulgation d'information s",POSITIF,title,1,"NOMINALISATION : refus (état attendu)",High,Critical
+346,72,1,"Validation UI/UX des champs obligatoires et blocage de soumission",POSITIF,default,,,Medium,Major
+347,72,1,"Protection contre injections dans les champs de connexion",POSITIF,default,,,High,Critical
+348,72,1,"Gestion de connexions simultanees sur plusieurs sessions utilisateur",NÉGATIF,description,,,High,Critical
+349,72,1,"Comportement en indisponibilite du service d'authentification",POSITIF,description,1,"NÉGATION : sans blocage",High,Critical
+545,105,1,"Connexion réussie avec identifiants valides",POSITIF,title,,,High,Critical
+546,105,1,"Refus d’accès avec mot de passe incorrect",POSITIF,title,1,"NOMINALISATION : refusée (état attendu)",High,Critical
+547,105,1,"Validation des champs obligatoires du formulaire",NÉGATIF,description,,,High,Critical
+548,105,1,"Résistance aux tentatives d’injection dans les champs d’authentification",NÉGATIF,description,,,High,Critical
+549,105,1,"Comportement UI/UX en cas d’erreur puis correction",POSITIF,title,1,"NÉGATION : sans erreur",Medium,Major
+550,105,1,"Tentatives simultanées sur le même compte",EDGE-CASE,title,,,High,Critical
+494,96,35,"Affichage persistant du tri sur la page inventaire après connexion",POSITIF,default,,,High,Critical
+495,96,35,"Tri des articles de Z à A sur inventaire",POSITIF,default,,,High,Critical
+496,96,35,"Ajout de Sauce Labs Backpack met à jour le badge panier",POSITIF,description,,,High,Critical
+497,96,35,"Retrait d’un produit depuis inventaire rétablit l’état UI proprement",POSITIF,default,,,High,Critical
+498,96,35,"Robustesse du badge lors d’actions rapides ajouter/retirer",EDGE-CASE,title,,,High,Critical
+499,96,35,"Traçabilité fonctionnelle des changements panier visibles pour l’utilisateur",EDGE-CASE,description,,,Medium,Major
+307,67,37,"- The login form is reachable.",POSITIF,default,,,High,Critical
+308,67,37,"- Valid credentials reach the logged-in page.",POSITIF,default,,,High,Critical
+309,67,37,"- Invalid credentials display a clear error.",NÉGATIF,title,,,High,Critical
+310,67,37,"Regle métier respectee - Authenticate on the practice login page",POSITIF,default,,,High,Critical
+311,67,37,"Scenario specifique couvre - Authenticate on the practice login page",POSITIF,default,,,Medium,Major
+312,67,37,"Gestion des erreurs pour Authenticate on the practice login page",NÉGATIF,title,,,High,Critical
+313,67,37,"Sécurité des données sensibles pour Authenticate on the practice login page",POSITIF,default,,,High,Critical
+314,67,37,"Retours utilisateur clairs pour Authenticate on the practice login page",NÉGATIF,description,,,Medium,Major
+315,67,37,"Cas nominal réussi pour Authenticate on the practice login page",POSITIF,title,,,High,Critical
+316,67,37,"Validation des champs pour Authenticate on the practice login page",NÉGATIF,description,,,High,Critical
+500,97,37,"Accès public au formulaire de connexion de pratique",POSITIF,description,1,"NÉGATION : sans erreur",High,Critical
+501,97,37,"Connexion réussie avec les identifiants métier student / Password123",POSITIF,title,,,High,Critical
+502,97,37,"Rejet d’un identifiant invalide avec mot de passe valide",NÉGATIF,title,,,High,Critical
+503,97,37,"Rejet d’un mot de passe invalide avec identifiant valide",NÉGATIF,title,,,High,Critical
+504,97,37,"Message d’erreur cohérent et sans fuite d’information",POSITIF,title,1,"NÉGATION : sans invalid",Medium,Major
+590,110,37,"Accès direct au formulaire de connexion public",POSITIF,description,,,High,Critical
+591,110,37,"Connexion réussie avec student / Password123",POSITIF,title,,,High,Critical
+592,110,37,"Échec avec nom d’utilisateur invalide et mot de passe valide",POSITIF,title,1,"NOMINALISATION : refusée (état attendu)",High,Critical
+593,110,37,"Échec avec nom d’utilisateur valide et mot de passe invalide",POSITIF,title,1,"NOMINALISATION : refusée (état attendu)",High,Critical
+594,110,37,"Message d’erreur non’ambigu et visible après échec",NÉGATIF,title,,,Medium,Major
+595,110,37,"Aucun’accès à la page connectée après tentative invalide",POSITIF,title,1,"NÉGATION : aucune erreur",High,Critical
+596,111,37,"Accès à la page publique de connexion",POSITIF,description,,,High,Critical
+597,111,37,"Connexion réussie avec student / Password123",POSITIF,title,,,High,Critical
+598,111,37,"Rejet d’un nom d’utilisateur invalide avec mot de passe valide",NÉGATIF,title,,,High,Critical
+599,111,37,"Rejet d’un mot de passe invalide avec nom d’utilisateur valide",NÉGATIF,title,,,High,Critical
+600,111,37,"Erreur visible et absence de fuite d’information sur échec de connexion",NÉGATIF,title,,,Medium,Major
+601,111,37,"Nouvelle tentative réussie après un échec précédent",POSITIF,title,,,High,Critical
+602,112,37,"Accès à la page publique de connexion",POSITIF,description,,,High,Critical
+603,112,37,"Connexion réussie avec student / Password123",POSITIF,title,,,High,Critical
+604,112,37,"Échec avec nom d’utilisateur invalide et mot de passe valide",NÉGATIF,title,,,High,Critical
+605,112,37,"Échec avec nom d’utilisateur valide et mot de passe invalide",NÉGATIF,title,,,High,Critical
+606,112,37,"Absence d’accès partiel après un échec de connexion",POSITIF,description,1,"NOMINALISATION : échec (état attendu)",High,Critical
+607,112,37,"Lisibilité et visibilité du message d’erreur de connexion",NÉGATIF,title,,,Medium,Major
+608,113,37,"Accès à la page publique de connexion",POSITIF,description,,,High,Critical
+609,113,37,"Connexion réussie avec student / Password123",POSITIF,title,,,High,Critical
+610,113,37,"Échec avec identifiant invalide et mot de passe valide",POSITIF,title,1,"NOMINALISATION : refusée (état attendu)",High,Critical
+611,113,37,"Échec avec identifiant valide et mot de passe invalide",POSITIF,title,1,"NOMINALISATION : refusée (état attendu)",High,Critical
+612,113,37,"Absence d’accès à la page connectée après échec d’authentification",NÉGATIF,description,,,High,Critical
+527,102,39,"Visibilité initiale des champs obligatoires du formulaire playground",POSITIF,description,,,High,Critical
+528,102,39,"Respect du flux: accès à la section formulaire avant saisie",POSITIF,description,,,Medium,Major
+529,102,39,"Acceptation d’une date valide dans le champ date",POSITIF,description,1,"NÉGATION : sans erreur",High,Critical
+530,102,39,"Rejet d’une date invalide avec message explicite",NÉGATIF,title,,,Medium,Major
+531,102,39,"Upload réussi du fichier échantillon préparé via chemin local valide",POSITIF,title,,,High,Critical
+532,102,39,"Comportement de l’upload avec chemin local invalide ou fichier inaccèssible",NÉGATIF,title,,,Medium,Major
+533,103,42,"Chargement initial de l’accueil avec shell storefront et en-tête visible",POSITIF,description,1,"NÉGATION : sans erreur",High,Critical
+534,103,42,"Accès à l’entrée Signup / Login depuis l’accueil en mode non’authentifi",POSITIF,description,1,"NÉGATION : aucune erreur",High,Critical
+535,103,42,"Visibilité persistante des liens de navigation sans authentification",POSITIF,default,,,High,Critical
+536,103,42,"Navigation par catégories depuis l’accueil vers une catégorie valide",POSITIF,description,1,"NÉGATION : sans erreur",High,Critical
+537,103,42,"Robustesse des points d’entrée lors d’actions rapides en onglets multiples",EDGE-CASE,title,,,Medium,Major
+538,103,42,"Traçabilité des échecs de navigation sur points d’entrée clés",NÉGATIF,description,,,Medium,Major
+539,104,43,"Visibilité immédiate du champ de recherche sur la page produits",POSITIF,default,,,High,Critical
+540,104,43,"Recherche du terme « dress » retourne des produits pertinents",POSITIF,description,,,High,Critical
+541,104,43,"Chaque carte produit propose un chemin vers détail ou ajout panier",EDGE-CASE,title,,,High,Critical
+542,104,43,"Ouverture de la page détail depuis une carte produit",POSITIF,description,,,High,Critical
+543,104,43,"Ajout au panier d’un produit visible avec confirmation utilisateur",EDGE-CASE,description,,,High,Critical
+544,104,43,"Résilience en double clic rapide sur Ajouter au panier",EDGE-CASE,title,,,Medium,Major
+505,98,38,"Affichage du bouton Log out après authentification réussie",POSITIF,title,,,High,Critical
+506,98,38,"Retour à la page de connexion’après clic sur Log out",POSITIF,description,,,High,Critical
+507,98,38,"Indisponibilité de la déconnexion en état anonyme",POSITIF,default,,,High,Critical
+508,98,38,"Invalidation de session et blocage du retour arrière après déconnexion",NÉGATIF,title,,,High,Critical
+509,98,38,"Traçabilité de l’événement de déconnexion",EDGE-CASE,description,,,Medium,Major
+510,99,40,"Affichage initial du tableau web statique sur la page playground",EDGE-CASE,description,,,High,Critical
+511,99,40,"Présence des liens de pagination’avant toute sélection d’élément",POSITIF,default,,,High,Critical
+512,99,40,"Validation de la première page du tableau paginé",POSITIF,default,,,High,Critical
+513,99,40,"Stabilité visuelle de la pagination lors des changements de page succèssifs",POSITIF,default,,,Medium,Major
+514,99,40,"Comportement en cas de jeu de données insuffisant pour pages multiples",NÉGATIF,description,,,Medium,Major
+581,109,40,"- The static web table is visible.",POSITIF,default,,,High,Critical
+582,109,40,"- The pagination control exposes multiple page links.",POSITIF,default,,,High,Critical
+583,109,40,"Regle métier respectee - Review tables and pagination",POSITIF,default,,,High,Critical
+584,109,40,"Scenario specifique couvre - Review tables and pagination",POSITIF,default,,,Medium,Major
+585,109,40,"Validation des champs pour Review tables and pagination",NÉGATIF,description,,,High,Critical
+586,109,40,"Règles métier appliquees pour Review tables and pagination",POSITIF,default,,,High,Critical
+587,109,40,"Retours utilisateur clairs pour Review tables and pagination",NÉGATIF,description,,,Medium,Major
+588,109,40,"Cas nominal réussi pour Review tables and pagination",POSITIF,title,,,High,Critical
+589,109,40,"Gestion des erreurs pour Review tables and pagination",NÉGATIF,title,,,High,Critical
+515,100,41,"Visibilité initiale des boutons d’alerte avant toute interaction",POSITIF,description,,,High,Critical
+516,100,41,"Déclenchement d’une alerte simple et retour utilisateur",POSITIF,description,,,High,Critical
+517,100,41,"Absence du bouton dynamique avant la fin du délai",EDGE-CASE,title,,,High,Critical
+518,100,41,"Apparition/activation du bouton dynamique après délai",EDGE-CASE,title,,,High,Critical
+519,100,41,"Robustesse lors d’actions rapides concurrentes autour du délai",EDGE-CASE,title,,,Medium,Major
+520,100,41,"Comportement après rechargement pendant une attente dynamique",NÉGATIF,description,,,Medium,Major

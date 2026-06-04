@@ -1,0 +1,30 @@
+{
+    "timestamp": "2026-06-04T15:39:30+00:00",
+    "us_id": 21,
+    "story_id": "INS-US-001",
+    "title": "Declaration de sinistre en ligne",
+    "checklist_draft": {
+        "id": 117,
+        "name": "Checklist QA générée - Declaration de sinistre en ligne",
+        "lifecycle_status": "draft",
+        "items_count": 7
+    },
+    "generation_result_summary": {
+        "has_decision": true,
+        "coverage_ratio": 100
+    },
+    "metrics": {
+        "us_id": 21,
+        "story_id": "INS-US-001",
+        "title": "Declaration de sinistre en ligne",
+        "priority": "critical",
+        "status": "success",
+        "ttft_ms": 18013.57,
+        "total_duration_ms": 18013.57,
+        "prompt_tokens_estimated": 68,
+        "completion_tokens_estimated": 3174,
+        "tokens_per_second": 176.19,
+        "items_generated": 7,
+        "timestamp": "2026-06-04T15:39:30+00:00"
+    }
+}

@@ -1,0 +1,7 @@
+order,item_id,item_title,final_category,matched_in,exclusion_applied,exclusion_rule,reason
+0,471,"Accès à la page de connexion Swag Labs",POSITIF,description,YES,"NÉGATION : sans erreur","Description contient négatif, mais exclusion appliquée : NÉGATION : sans erreur"
+1,472,"Connexion réussie avec standard_user et secret_sauce",POSITIF,title,NO,,"Titre contient : réussi"
+2,473,"Blocage de locked_out_user malgré mot de passe correct",NÉGATIF,description,NO,,"Description contient : erreur, refus"
+3,474,"Mot de passe invalide pour un utilisateur existant",NÉGATIF,title,NO,,"Titre contient : invalid, invalide"
+4,475,"Déconnexion’après authentification réussie",POSITIF,title,NO,,"Titre contient : réussi"
+5,476,"Isolation de session entre deux onglets après déconnexion",POSITIF,description,YES,"NOMINALISATION : invalidée (état attendu)","Description contient négatif, mais exclusion appliquée : NOMINALISATION : invalidée (état attendu)"

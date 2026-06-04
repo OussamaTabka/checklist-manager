@@ -1,0 +1,30 @@
+{
+    "timestamp": "2026-06-04T15:41:38+00:00",
+    "us_id": 42,
+    "story_id": "AE-US-001",
+    "title": "Navigate key storefront entry points",
+    "checklist_draft": {
+        "id": 124,
+        "name": "Checklist QA générée - Navigate key storefront entry points",
+        "lifecycle_status": "draft",
+        "items_count": 6
+    },
+    "generation_result_summary": {
+        "has_decision": true,
+        "coverage_ratio": 93
+    },
+    "metrics": {
+        "us_id": 42,
+        "story_id": "AE-US-001",
+        "title": "Navigate key storefront entry points",
+        "priority": "high",
+        "status": "success",
+        "ttft_ms": 19200.63,
+        "total_duration_ms": 19200.63,
+        "prompt_tokens_estimated": 110,
+        "completion_tokens_estimated": 3507,
+        "tokens_per_second": 182.66,
+        "items_generated": 6,
+        "timestamp": "2026-06-04T15:41:38+00:00"
+    }
+}

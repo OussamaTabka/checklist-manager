@@ -1,0 +1,30 @@
+{
+    "timestamp": "2026-06-04T15:40:59+00:00",
+    "us_id": 37,
+    "story_id": "PTA-US-001",
+    "title": "Authenticate on the practice login page",
+    "checklist_draft": {
+        "id": 122,
+        "name": "Practice Login Automation - Checklist QA générée - Authenticate on the practice login page",
+        "lifecycle_status": "draft",
+        "items_count": 6
+    },
+    "generation_result_summary": {
+        "has_decision": true,
+        "coverage_ratio": 67
+    },
+    "metrics": {
+        "us_id": 37,
+        "story_id": "PTA-US-001",
+        "title": "Authenticate on the practice login page",
+        "priority": "high",
+        "status": "success",
+        "ttft_ms": 19279.88,
+        "total_duration_ms": 19279.88,
+        "prompt_tokens_estimated": 105,
+        "completion_tokens_estimated": 3466,
+        "tokens_per_second": 179.76,
+        "items_generated": 6,
+        "timestamp": "2026-06-04T15:40:59+00:00"
+    }
+}

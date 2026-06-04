@@ -1,0 +1,30 @@
+{
+    "timestamp": "2026-06-04T15:40:16+00:00",
+    "us_id": 31,
+    "story_id": "BI-US-001",
+    "title": "Filtrage par periode",
+    "checklist_draft": {
+        "id": 120,
+        "name": "Checklist QA générée - Filtrage par periode",
+        "lifecycle_status": "draft",
+        "items_count": 6
+    },
+    "generation_result_summary": {
+        "has_decision": true,
+        "coverage_ratio": 100
+    },
+    "metrics": {
+        "us_id": 31,
+        "story_id": "BI-US-001",
+        "title": "Filtrage par periode",
+        "priority": "critical",
+        "status": "success",
+        "ttft_ms": 15437.72,
+        "total_duration_ms": 15437.72,
+        "prompt_tokens_estimated": 60,
+        "completion_tokens_estimated": 2644,
+        "tokens_per_second": 171.27,
+        "items_generated": 6,
+        "timestamp": "2026-06-04T15:40:16+00:00"
+    }
+}

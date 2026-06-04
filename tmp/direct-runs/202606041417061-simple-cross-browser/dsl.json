@@ -1,0 +1,163 @@
+{
+  "schema_version": "1.0",
+  "run_id": "direct-run-202606041417061",
+  "target": {
+    "base_url": "https://www.saucedemo.com"
+  },
+  "runtime": {
+    "headless": false,
+    "timeout_ms": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "trace": "retain-on-failure",
+    "video": "retain-on-failure",
+    "screenshot": "only-on-failure"
+  },
+  "cases": [
+    {
+      "external_id": 1003,
+      "title": "Cross-browser compatibility (chromium)",
+      "severity": "critical",
+      "use_auth": false,
+      "execution_profile": {
+        "intent_summary": "Verify page loads correctly in chromium",
+        "coverage_type": "generic_ui",
+        "expected_observations": [
+          "Page loads and displays correctly in chromium browser"
+        ]
+      },
+      "steps": [
+        {
+          "action": "goto",
+          "url": "https://www.saucedemo.com"
+        },
+        {
+          "action": "wait_for_selector",
+          "selector": {
+            "by": "css",
+            "value": "body"
+          },
+          "state": "visible",
+          "timeout_ms": 15000
+        },
+        {
+          "action": "screenshot",
+          "name": "cross-browser-chromium"
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_url_contains",
+          "value": "www.saucedemo.com"
+        },
+        {
+          "type": "expect_visible",
+          "selector": {
+            "by": "css",
+            "value": "body"
+          }
+        }
+      ],
+      "browser": "chromium"
+    },
+    {
+      "external_id": 1004,
+      "title": "Cross-browser compatibility (firefox)",
+      "severity": "critical",
+      "use_auth": false,
+      "execution_profile": {
+        "intent_summary": "Verify page loads correctly in firefox",
+        "coverage_type": "generic_ui",
+        "expected_observations": [
+          "Page loads and displays correctly in firefox browser"
+        ]
+      },
+      "steps": [
+        {
+          "action": "goto",
+          "url": "https://www.saucedemo.com"
+        },
+        {
+          "action": "wait_for_selector",
+          "selector": {
+            "by": "css",
+            "value": "body"
+          },
+          "state": "visible",
+          "timeout_ms": 15000
+        },
+        {
+          "action": "screenshot",
+          "name": "cross-browser-firefox"
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_url_contains",
+          "value": "www.saucedemo.com"
+        },
+        {
+          "type": "expect_visible",
+          "selector": {
+            "by": "css",
+            "value": "body"
+          }
+        }
+      ],
+      "browser": "firefox"
+    },
+    {
+      "external_id": 1005,
+      "title": "Cross-browser compatibility (webkit)",
+      "severity": "critical",
+      "use_auth": false,
+      "execution_profile": {
+        "intent_summary": "Verify page loads correctly in webkit",
+        "coverage_type": "generic_ui",
+        "expected_observations": [
+          "Page loads and displays correctly in webkit browser"
+        ]
+      },
+      "steps": [
+        {
+          "action": "goto",
+          "url": "https://www.saucedemo.com"
+        },
+        {
+          "action": "wait_for_selector",
+          "selector": {
+            "by": "css",
+            "value": "body"
+          },
+          "state": "visible",
+          "timeout_ms": 15000
+        },
+        {
+          "action": "screenshot",
+          "name": "cross-browser-webkit"
+        }
+      ],
+      "asserts": [
+        {
+          "type": "expect_url_contains",
+          "value": "www.saucedemo.com"
+        },
+        {
+          "type": "expect_visible",
+          "selector": {
+            "by": "css",
+            "value": "body"
+          }
+        }
+      ],
+      "browser": "webkit"
+    }
+  ],
+  "generation_metadata": {
+    "engine": "manual",
+    "model": "template",
+    "fallback_used": false
+  }
+}

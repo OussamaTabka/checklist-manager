@@ -1,0 +1,30 @@
+{
+    "timestamp": "2026-06-04T15:42:15+00:00",
+    "us_id": 38,
+    "story_id": "PTA-US-002",
+    "title": "Exit the logged-in page cleanly",
+    "checklist_draft": {
+        "id": 126,
+        "name": "Practice Login Automation - Checklist QA générée - Exit the logged-in page cleanly",
+        "lifecycle_status": "draft",
+        "items_count": 6
+    },
+    "generation_result_summary": {
+        "has_decision": true,
+        "coverage_ratio": 55
+    },
+    "metrics": {
+        "us_id": 38,
+        "story_id": "PTA-US-002",
+        "title": "Exit the logged-in page cleanly",
+        "priority": "medium",
+        "status": "success",
+        "ttft_ms": 18122.02,
+        "total_duration_ms": 18122.02,
+        "prompt_tokens_estimated": 89,
+        "completion_tokens_estimated": 3409,
+        "tokens_per_second": 188.13,
+        "items_generated": 6,
+        "timestamp": "2026-06-04T15:42:15+00:00"
+    }
+}

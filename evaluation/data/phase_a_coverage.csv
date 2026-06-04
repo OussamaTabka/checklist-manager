@@ -1,0 +1,12 @@
+us_id,story_id,title,priority,nb_rules,rules_covered,rules_coverage_pct,nb_criteria,criteria_covered,criteria_coverage_pct,coverage_global
+34,SAUCE-US-001,"Authenticate into Swag Labs",critical,3,3,100,4,4,100,100
+36,SAUCE-US-003,"Complete checkout safely",critical,3,3,100,4,3,75,87.5
+1,US-001,"Authentification utilisateur",critical,4,2,50,4,2,50,50
+35,SAUCE-US-002,"Browse products and maintain cart state",high,3,3,100,3,3,100,100
+37,PTA-US-001,"Authenticate on the practice login page",high,2,2,100,3,3,100,100
+39,ATP-US-001,"Fill and validate playground forms",high,2,2,100,3,3,100,100
+42,AE-US-001,"Navigate key storefront entry points",high,2,2,100,3,3,100,100
+43,AE-US-002,"Discover products and add them to the cart",high,2,2,100,3,3,100,100
+38,PTA-US-002,"Exit the logged-in page cleanly",medium,2,1,50,2,1,50,50
+40,ATP-US-002,"Review tables and pagination",medium,2,2,100,2,2,100,100
+41,ATP-US-003,"Exercise alerts and dynamic controls",medium,2,2,100,2,2,100,100
