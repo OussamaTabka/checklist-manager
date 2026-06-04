@@ -1,0 +1,17 @@
+{
+  "id": "simple-page-loads",
+  "external_id": 1001,
+  "title": "Page loads successfully",
+  "description": "Verify the target URL responds with HTTP 200 and renders a valid DOM",
+  "test_case_text": "Test that a simple page load is successful: verify that the base URL is reachable, the page returns HTTP 200, and the DOM body is visible. Take a baseline screenshot.",
+  "base_url": "https://www.saucedemo.com",
+  "use_auth": false,
+  "environment_name": "simple",
+  "priority": "High",
+  "criticality": "Critical",
+  "provided_inputs": {},
+  "expected_result": {
+    "visible_text": "Swag Labs",
+    "assertion_keywords": ["page loads", "DOM available", "body visible"]
+  }
+}

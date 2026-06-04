@@ -1,0 +1,17 @@
+{
+  "id": "simple-cross-browser",
+  "external_id": 1003,
+  "title": "Cross-browser compatibility",
+  "description": "Verify the page loads successfully and remains functional across the three major Playwright browsers: Chromium, Firefox, and WebKit. Each browser should be able to load the page without critical errors.",
+  "test_case_text": "Test cross-browser compatibility: Load the page in three different browsers (Chromium, Firefox, WebKit). For each browser, verify that the page loads correctly, the URL is reachable, and a baseline screenshot can be captured. The page should render consistently across all browsers without blocking errors.",
+  "base_url": "https://www.saucedemo.com",
+  "use_auth": false,
+  "environment_name": "simple",
+  "priority": "High",
+  "criticality": "Major",
+  "provided_inputs": {},
+  "expected_result": {
+    "visible_text": "Swag Labs",
+    "assertion_keywords": ["cross-browser", "chromium", "firefox", "webkit", "compatibility"]
+  }
+}

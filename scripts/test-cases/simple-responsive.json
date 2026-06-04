@@ -1,0 +1,17 @@
+{
+  "id": "simple-responsive",
+  "external_id": 1002,
+  "title": "Responsive rendering across viewports",
+  "description": "Verify the page renders correctly and remains accessible across 3 device viewports: mobile (390x844), tablet (768x1024), and desktop (1280x800). The page should load and display primary content on all screen sizes.",
+  "test_case_text": "Test responsive design: Load the page and capture screenshots on three viewports: mobile (390x844), tablet (768x1024), and desktop (1280x800). Verify the page loads and the URL is correct on each viewport. The page should render without critical errors on all screen sizes.",
+  "base_url": "https://www.saucedemo.com",
+  "use_auth": false,
+  "environment_name": "simple",
+  "priority": "High",
+  "criticality": "Major",
+  "provided_inputs": {},
+  "expected_result": {
+    "visible_text": "Swag Labs",
+    "assertion_keywords": ["responsive", "viewport", "mobile", "tablet", "desktop"]
+  }
+}
