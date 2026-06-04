@@ -32,7 +32,7 @@ echo "  Base URL: {$testRun->base_url}\n";
 echo "  Status: {$testRun->status}\n\n";
 
 // Dispatch the job
-ExecuteSingleTestCaseRun::dispatch($testRun->id);
+ExecuteSingleTestCaseRun::dispatch($testRun->run_id);
 echo "✓ Job dispatched successfully!\n\n";
 
 // Show queue status
