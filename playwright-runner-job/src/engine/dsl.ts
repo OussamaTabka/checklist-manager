@@ -169,20 +169,20 @@ export interface GeneratedPlanDsl {
   title?: string
   intent_summary: string
   coverage_type: string
-  preflight_checks: PreflightCheckDsl[]
+  preflight_checks?: PreflightCheckDsl[]
   steps: StepDsl[]
   asserts: AssertDsl[]
   expected_observations: string[]
-  diagnostics: ExecutionDiagnosticDsl[]
+  diagnostics?: ExecutionDiagnosticDsl[]
 }
 
 export interface ExecutionProfileDsl {
   intent_summary: string
   coverage_type: string
-  preconditions: string[]
-  required_inputs: RequiredInputDsl[]
+  preconditions?: string[]
+  required_inputs?: RequiredInputDsl[]
   expected_observations: string[]
-  diagnostics: ExecutionDiagnosticDsl[]
+  diagnostics?: ExecutionDiagnosticDsl[]
   generation_confidence?: number
   last_generated_plan?: GeneratedPlanDsl
 }
@@ -580,11 +580,13 @@ function validateGeneratedPlan(input: unknown, path: string, errors: string[]): 
     errors.push(`${path}.coverage_type must be a non-empty string`)
   }
 
-  if (!Array.isArray(input.preflight_checks)) {
-    errors.push(`${path}.preflight_checks must be an array`)
-  } else {
-    for (let i = 0; i < input.preflight_checks.length; i += 1) {
-      validatePreflightCheck(input.preflight_checks[i], `${path}.preflight_checks[${i}]`, errors)
+  if (input.preflight_checks !== undefined) {
+    if (!Array.isArray(input.preflight_checks)) {
+      errors.push(`${path}.preflight_checks must be an array when provided`)
+    } else {
+      for (let i = 0; i < input.preflight_checks.length; i += 1) {
+        validatePreflightCheck(input.preflight_checks[i], `${path}.preflight_checks[${i}]`, errors)
+      }
     }
   }
 
@@ -608,11 +610,13 @@ function validateGeneratedPlan(input: unknown, path: string, errors: string[]): 
     errors.push(`${path}.expected_observations must be an array`)
   }
 
-  if (!Array.isArray(input.diagnostics)) {
-    errors.push(`${path}.diagnostics must be an array`)
-  } else {
-    for (let i = 0; i < input.diagnostics.length; i += 1) {
-      validateDiagnostic(input.diagnostics[i], `${path}.diagnostics[${i}]`, errors)
+  if (input.diagnostics !== undefined) {
+    if (!Array.isArray(input.diagnostics)) {
+      errors.push(`${path}.diagnostics must be an array when provided`)
+    } else {
+      for (let i = 0; i < input.diagnostics.length; i += 1) {
+        validateDiagnostic(input.diagnostics[i], `${path}.diagnostics[${i}]`, errors)
+      }
     }
   }
 
@@ -633,15 +637,19 @@ function validateExecutionProfile(input: unknown, path: string, errors: string[]
     errors.push(`${path}.coverage_type must be a non-empty string`)
   }
 
-  if (!Array.isArray(input.preconditions)) {
-    errors.push(`${path}.preconditions must be an array`)
+  if (input.preconditions !== undefined) {
+    if (!Array.isArray(input.preconditions)) {
+      errors.push(`${path}.preconditions must be an array when provided`)
+    }
   }
 
-  if (!Array.isArray(input.required_inputs)) {
-    errors.push(`${path}.required_inputs must be an array`)
-  } else {
-    for (let i = 0; i < input.required_inputs.length; i += 1) {
-      validateRequiredInput(input.required_inputs[i], `${path}.required_inputs[${i}]`, errors)
+  if (input.required_inputs !== undefined) {
+    if (!Array.isArray(input.required_inputs)) {
+      errors.push(`${path}.required_inputs must be an array when provided`)
+    } else {
+      for (let i = 0; i < input.required_inputs.length; i += 1) {
+        validateRequiredInput(input.required_inputs[i], `${path}.required_inputs[${i}]`, errors)
+      }
     }
   }
 
@@ -649,11 +657,13 @@ function validateExecutionProfile(input: unknown, path: string, errors: string[]
     errors.push(`${path}.expected_observations must be an array`)
   }
 
-  if (!Array.isArray(input.diagnostics)) {
-    errors.push(`${path}.diagnostics must be an array`)
-  } else {
-    for (let i = 0; i < input.diagnostics.length; i += 1) {
-      validateDiagnostic(input.diagnostics[i], `${path}.diagnostics[${i}]`, errors)
+  if (input.diagnostics !== undefined) {
+    if (!Array.isArray(input.diagnostics)) {
+      errors.push(`${path}.diagnostics must be an array when provided`)
+    } else {
+      for (let i = 0; i < input.diagnostics.length; i += 1) {
+        validateDiagnostic(input.diagnostics[i], `${path}.diagnostics[${i}]`, errors)
+      }
     }
   }
 
