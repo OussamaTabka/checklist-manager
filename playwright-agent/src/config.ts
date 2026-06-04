@@ -159,7 +159,7 @@ export function getOpenAIConfig(): OpenAIConfig {
     apiKey,
     model: readOptionalEnv('AGENT_OPENAI_MODEL')
       ?? readOptionalEnv('CODEX_MODEL')
-      ?? readEnv('OPENAI_MODEL', 'gpt-5.3-codex'),
+      ?? readEnv('OPENAI_MODEL', 'gpt-5.4'),
     apiUrl: readOptionalEnv('AGENT_OPENAI_API_URL')
       ?? readOptionalEnv('OPENAI_BASE_URL')
       ?? readEnv('OPENAI_API_URL', 'https://codex.sale/v1'),

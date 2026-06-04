@@ -6,6 +6,6 @@ export function createLLMProvider(options: {
   provider: 'openai'
   config: OpenAIConfig
 }): LLMProvider {
-  process.stderr.write('[llm] Provider locked to openai (gpt-5.3-codex via codex.sale)\n')
+  process.stderr.write('[llm] Provider locked to openai (gpt-5.4 via codex.sale)\n')
   return createOpenAIProvider(options.config)
 }

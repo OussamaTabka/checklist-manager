@@ -143,7 +143,7 @@ const primaryAction = computed(() => {
 const generatorStatus = computed(() => {
   if (storiesStore.isGenerating) {
     return {
-      label: 'Generation...',
+      label: 'Génération...',
       description: 'Le système génére une proposition de checklist. Veuillez patienter.',
       tone: 'info',
     }
@@ -176,8 +176,8 @@ const interactionLockState = computed(() => {
   if (storiesStore.isGenerating) {
     return {
       active: true,
-      title: 'Generation de checklist en cours',
-      description: 'Veuillez patienter pendant que le systeme prepare la checklist.',
+      title: 'Génération de checklist en cours',
+      description: 'Veuillez patienter pendant que le système prépare la checklist.',
     }
   }
 

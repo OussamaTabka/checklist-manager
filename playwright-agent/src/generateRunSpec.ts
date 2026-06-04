@@ -4,8 +4,7 @@ import { z } from 'zod'
 import { config, getGenerationEngine, getOpenAIConfig } from './config.js'
 import { RunSpecDslV1Schema, type GenerationMetadataDsl } from './dslSchema.js'
 import { createLLMProvider } from './llm/provider.js'
-import { generateRunCase, RunCaseGenerationFailedError } from './llm/runCaseGenerator.js'
-import { LLMProviderError } from './llm/types.js'
+import { generateRunCase } from './llm/runCaseGenerator.js'
 import type { GeneratorChecklistItem } from './prompts/generatorPrompt.js'
 
 const InputSchema = z.object({
@@ -1486,10 +1485,6 @@ function buildRunSpecFromGeneratedCase(
   }
 }
 
-function isStrictGenerationEnabled(): boolean {
-  return process.env.AGENT_STRICT_GENERATION === 'true'
-}
-
 function withGenerationMetadata(
   runSpec: z.infer<typeof RunSpecDslV1Schema>,
   metadata: GenerationMetadataDsl,
@@ -1497,67 +1492,6 @@ function withGenerationMetadata(
   return {
     ...runSpec,
     generation_metadata: metadata,
-  }
-}
-
-function describeProviderFailure(error: unknown): {
-  reason: string
-  debugFilePath: string | undefined
-  detail: string | undefined
-  model: string | undefined
-  apiKeyPresent: boolean | undefined
-  httpStatus: number | undefined
-  errorName: string | undefined
-  errorCode: string | undefined
-} {
-  if (error instanceof RunCaseGenerationFailedError) {
-    return {
-      reason: error.message,
-      debugFilePath: error.debugFilePath,
-      detail: undefined,
-      model: undefined,
-      apiKeyPresent: undefined,
-      httpStatus: undefined,
-      errorName: error.name,
-      errorCode: error.reason,
-    }
-  }
-
-  if (error instanceof LLMProviderError) {
-    return {
-      reason: error.message,
-      debugFilePath: error.debugFilePath,
-      detail: undefined,
-      model: error.model,
-      apiKeyPresent: error.apiKeyPresent,
-      httpStatus: error.httpStatus,
-      errorName: error.name,
-      errorCode: error.errorCode ?? error.reason,
-    }
-  }
-
-  if (error instanceof Error) {
-    return {
-      reason: error.message,
-      debugFilePath: undefined,
-      detail: undefined,
-      model: undefined,
-      apiKeyPresent: undefined,
-      httpStatus: undefined,
-      errorName: error.name,
-      errorCode: undefined,
-    }
-  }
-
-  return {
-    reason: String(error),
-    debugFilePath: undefined,
-    detail: undefined,
-    model: undefined,
-    apiKeyPresent: undefined,
-    httpStatus: undefined,
-    errorName: undefined,
-    errorCode: undefined,
   }
 }
 
@@ -1608,46 +1542,7 @@ async function main(): Promise<void> {
         },
       )
     } catch (error) {
-      const failure = describeProviderFailure(error)
-
-      if (isStrictGenerationEnabled()) {
-        throw error
-      }
-
-      process.stderr.write(`[agent] openai generation failed, falling back to heuristic generator\n`)
-      process.stderr.write(`[agent] openai failure reason: ${failure.reason}\n`)
-      if (failure.detail) {
-        process.stderr.write(`[agent] openai failure detail: ${failure.detail}\n`)
-      }
-      if (failure.errorName) {
-        process.stderr.write(`[agent] openai error name: ${failure.errorName}\n`)
-      }
-      if (failure.errorCode) {
-        process.stderr.write(`[agent] openai error code: ${failure.errorCode}\n`)
-      }
-      if (failure.httpStatus !== undefined) {
-        process.stderr.write(`[agent] openai HTTP status: ${failure.httpStatus}\n`)
-      }
-      if (failure.model) {
-        process.stderr.write(`[agent] openai model used: ${failure.model}\n`)
-      }
-      if (failure.apiKeyPresent !== undefined) {
-        process.stderr.write(`[agent] openai API key loaded: ${failure.apiKeyPresent ? 'yes' : 'no'}\n`)
-      }
-      if (failure.debugFilePath) {
-        process.stderr.write(`[agent] openai debug raw response: ${failure.debugFilePath}\n`)
-      }
-
-      runSpec = withGenerationMetadata(
-        buildRunSpecFromPlan(parsedInput),
-        {
-          engine: 'heuristic',
-          requested_engine: 'openai',
-          fallback_used: true,
-          fallback_reason: failure.reason,
-          model: failure.model,
-        },
-      )
+      throw error
     }
   } else {
     runSpec = buildRunSpecFromPlan(parsedInput)
