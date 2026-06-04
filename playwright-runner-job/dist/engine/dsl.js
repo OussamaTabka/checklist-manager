@@ -362,7 +362,7 @@ function validateExecutionProfile(input, path, errors) {
     if (input.generation_confidence !== undefined && typeof input.generation_confidence !== 'number') {
         errors.push(`${path}.generation_confidence must be a number when provided`);
     }
-    if (input.last_generated_plan !== undefined) {
+    if (input.last_generated_plan !== undefined && input.last_generated_plan !== null) {
         validateGeneratedPlan(input.last_generated_plan, `${path}.last_generated_plan`, errors);
     }
     return true;
@@ -606,10 +606,10 @@ function validateRunRequest(input) {
             if (c.use_auth !== undefined && typeof c.use_auth !== 'boolean') {
                 errors.push(`${basePath}.use_auth must be a boolean when provided`);
             }
-            if (c.execution_profile !== undefined) {
+            if (c.execution_profile !== undefined && c.execution_profile !== null) {
                 validateExecutionProfile(c.execution_profile, `${basePath}.execution_profile`, errors);
             }
-            if (c.generated_plan !== undefined) {
+            if (c.generated_plan !== undefined && c.generated_plan !== null) {
                 validateGeneratedPlan(c.generated_plan, `${basePath}.generated_plan`, errors);
             }
             if (c.preflight_checks !== undefined) {

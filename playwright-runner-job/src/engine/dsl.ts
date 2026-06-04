@@ -184,7 +184,7 @@ export interface ExecutionProfileDsl {
   expected_observations: string[]
   diagnostics?: ExecutionDiagnosticDsl[]
   generation_confidence?: number
-  last_generated_plan?: GeneratedPlanDsl
+  last_generated_plan?: GeneratedPlanDsl | null
 }
 
 export interface RunCaseDsl {
@@ -192,8 +192,8 @@ export interface RunCaseDsl {
   title: string
   severity?: 'minor' | 'major' | 'critical'
   use_auth?: boolean
-  execution_profile?: ExecutionProfileDsl
-  generated_plan?: GeneratedPlanDsl
+  execution_profile?: ExecutionProfileDsl | null
+  generated_plan?: GeneratedPlanDsl | null
   preflight_checks?: PreflightCheckDsl[]
   steps: StepDsl[]
   asserts: AssertDsl[]
@@ -671,7 +671,7 @@ function validateExecutionProfile(input: unknown, path: string, errors: string[]
     errors.push(`${path}.generation_confidence must be a number when provided`)
   }
 
-  if (input.last_generated_plan !== undefined) {
+  if (input.last_generated_plan !== undefined && input.last_generated_plan !== null) {
     validateGeneratedPlan(input.last_generated_plan, `${path}.last_generated_plan`, errors)
   }
 
@@ -969,11 +969,11 @@ export function validateRunRequest(input: unknown): ValidationResult<RunRequestD
         errors.push(`${basePath}.use_auth must be a boolean when provided`)
       }
 
-      if (c.execution_profile !== undefined) {
+      if (c.execution_profile !== undefined && c.execution_profile !== null) {
         validateExecutionProfile(c.execution_profile, `${basePath}.execution_profile`, errors)
       }
 
-      if (c.generated_plan !== undefined) {
+      if (c.generated_plan !== undefined && c.generated_plan !== null) {
         validateGeneratedPlan(c.generated_plan, `${basePath}.generated_plan`, errors)
       }
 
