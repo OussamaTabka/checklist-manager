@@ -1,0 +1,21 @@
+{
+  "id": 279,
+  "external_id": 279,
+  "title": "Verify successful login with standard_user",
+  "description": "Test that a user can successfully log in with valid credentials and access the inventory page",
+  "test_case_text": "Verify that the standard_user can log in to the Sauce Demo application with the password 'secret_sauce' and is redirected to the inventory page. The Products page header should be visible.",
+  "base_url": "https://www.saucedemo.com",
+  "use_auth": false,
+  "environment_name": "direct",
+  "priority": "High",
+  "criticality": "Critical",
+  "provided_inputs": {
+    "email": "standard_user",
+    "password": "secret_sauce"
+  },
+  "expected_result": {
+    "visible_text": "Products",
+    "visible_text_contains": "Products",
+    "assertion_keywords": ["inventory page", "login successful", "authenticated"]
+  }
+}
