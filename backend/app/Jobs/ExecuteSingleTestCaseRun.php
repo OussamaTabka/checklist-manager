@@ -41,6 +41,11 @@ class ExecuteSingleTestCaseRun implements ShouldQueue
             return;
         }
 
+        // Ensure requested_by is set (default to system admin if null)
+        if (!$run->requested_by) {
+            $run->update(['requested_by' => 1]);
+        }
+
         $payload = is_array($run->request_payload) ? $run->request_payload : [];
         $testCaseId = (int) ($payload['test_case_id'] ?? 0);
         $targetType = (string) ($payload['target_type'] ?? 'version_item');
