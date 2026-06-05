@@ -167,7 +167,7 @@ const checklistSourceLabel = computed(() => {
     return `Source : ${String(checklist.value.generated_from)}`
   }
 
-  return 'Créée dans l'espace d'exécution QA'
+  return "Créée dans l'espace d'exécution QA"
 })
 
 const checklistStoryDescription = computed(() => {
