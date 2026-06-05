@@ -34,21 +34,21 @@ const roleStoryCopy = computed(() => {
         kicker: 'Espace administrateur',
         title: 'Pilotage des User Stories',
         description:
-          'Supervisez la qualitÃ© du backlog, la structuration des besoins et la rÃ©utilisation des checklists Ã  lâ€™Ã©chelle de la plateforme.',
+          'Supervisez la qualité du backlog, la structuration des besoins et la réutilisation des checklists Ã  l'échelle de la plateforme.',
       }
     case 'testeur':
       return {
-        kicker: 'Espace dâ€™exÃ©cution',
-        title: 'User Stories assignÃ©es',
+        kicker: 'Espace d'exécution',
+        title: 'User Stories assignées',
         description:
-          'Consultez les User Stories liÃ©es Ã  vos projets, Ã©valuez leur niveau de prÃ©paration et accÃ©dez au contexte nÃ©cessaire avant lâ€™exÃ©cution des tests.',
+          'Consultez les User Stories liées Ã  vos projets, évaluez leur niveau de préparation et accédez au contexte nécessaire avant l'exécution des tests.',
       }
     default:
       return {
         kicker: 'Espace chef de projet',
         title: 'Backlog des User Stories',
         description:
-          'Centralisez les besoins du projet, suivez leur maturitÃ© et transformez-les en checklists rÃ©utilisables sans perdre le contexte mÃ©tier.',
+          'Centralisez les besoins du projet, suivez leur maturité et transformez-les en checklists réutilisables sans perdre le contexte métier.',
       }
   }
 })
@@ -126,8 +126,8 @@ const statusCounts = computed(() => ({
 const statusLabels = {
   backlog: 'Backlog',
   in_progress: 'En cours',
-  ready_for_test: 'PrÃªt pour test',
-  completed: 'TerminÃ©e',
+  ready_for_test: 'Prêt pour test',
+  completed: 'Terminée',
 }
 
 const priorityLabels = {
@@ -212,7 +212,7 @@ watch(
           <label>Projet actif</label>
           <select :value="projectId || ''" @change="selectProject($event.target.value)">
             <option value="" :disabled="loadingProjects">
-              {{ loadingProjects ? 'Chargement des projets...' : 'SÃ©lectionner un projet' }}
+              {{ loadingProjects ? 'Chargement des projets...' : 'Sélectionner un projet' }}
             </option>
             <option v-for="project in projects" :key="project.id" :value="project.id">
               {{ project.name }}
@@ -246,13 +246,13 @@ watch(
       <article class="story-insight-card story-insight-highlight">
         <div class="story-insight-top">
           <div>
-            <p class="story-insight-label">Projet sÃ©lectionnÃ©</p>
-            <h2>{{ currentProject?.name || 'Aucun projet sÃ©lectionnÃ©' }}</h2>
+            <p class="story-insight-label">Projet sélectionné</p>
+            <h2>{{ currentProject?.name || 'Aucun projet sélectionné' }}</h2>
           </div>
           <span class="story-insight-chip">{{ filteredStories.length }} User Stories visibles</span>
         </div>
         <p class="story-insight-text">
-          {{ currentProject?.description || 'Choisissez un projet pour centraliser la navigation, la crÃ©ation des User Stories et la gÃ©nÃ©ration de checklists.' }}
+          {{ currentProject?.description || 'Choisissez un projet pour centraliser la navigation, la création des User Stories et la génération de checklists.' }}
         </p>
       </article>
 
@@ -260,14 +260,14 @@ watch(
         <div class="story-generator-line">
           <Zap :size="18" class="text-brand-600" />
           <div>
-            <p class="story-insight-label">Moteur de gÃ©nÃ©ration</p>
-            <strong>{{ storiesStore.generatorStatus.current || 'DÃ©tection en cours...' }}</strong>
+            <p class="story-insight-label">Moteur de génération</p>
+            <strong>{{ storiesStore.generatorStatus.current || 'Détection en cours...' }}</strong>
           </div>
         </div>
         <p class="story-insight-text">
-          {{ storiesStore.generatorStatus.available?.join(', ') || 'VÃ©rification de disponibilitÃ©...' }}
+          {{ storiesStore.generatorStatus.available?.join(', ') || 'Vérification de disponibilité...' }}
         </p>
-        <div class="story-status-ready">SystÃ¨me prÃªt</div>
+        <div class="story-status-ready">Système prêt</div>
       </article>
     </div>
 
@@ -278,7 +278,7 @@ watch(
           <input
             v-model="search"
             type="text"
-            placeholder="Rechercher par titre, description ou logique mÃ©tier..."
+            placeholder="Rechercher par titre, description ou logique métier..."
           />
         </div>
 
@@ -288,13 +288,13 @@ watch(
             <option value="all">Tous</option>
             <option value="backlog">Backlog</option>
             <option value="in_progress">En cours</option>
-            <option value="ready_for_test">PrÃªt pour test</option>
-            <option value="completed">TerminÃ©e</option>
+            <option value="ready_for_test">Prêt pour test</option>
+            <option value="completed">Terminée</option>
           </select>
         </div>
 
         <div class="field">
-          <label>PrioritÃ©</label>
+          <label>Priorité</label>
           <select v-model="priorityFilter">
             <option value="all">Toutes</option>
             <option value="critical">Critique</option>
@@ -316,7 +316,7 @@ watch(
       >
         <span class="story-metric-label">{{ label }}</span>
         <strong>{{ statusCounts[statusKey] }}</strong>
-        <span class="story-metric-link">{{ statusFilter === statusKey ? 'RÃ©initialiser' : 'Filtrer' }}</span>
+        <span class="story-metric-link">{{ statusFilter === statusKey ? 'Réinitialiser' : 'Filtrer' }}</span>
       </button>
     </div>
 
@@ -357,7 +357,7 @@ watch(
 
         <div class="story-card-footer">
           <span class="story-open-link">
-            Voir les dÃ©tails
+            Voir les détails
             <ArrowRight :size="15" />
           </span>
         </div>
@@ -366,9 +366,9 @@ watch(
 
     <div v-else class="story-empty-state">
       <Sparkles :size="28" />
-      <h3>Aucune User Story trouvÃ©e</h3>
+      <h3>Aucune User Story trouvée</h3>
       <p>
-        Commencez par sÃ©lectionner un projet, puis ajoutez des User Stories qui serviront de base Ã  la gÃ©nÃ©ration intelligente de checklists.
+        Commencez par sélectionner un projet, puis ajoutez des User Stories qui serviront de base Ã  la génération intelligente de checklists.
       </p>
       <RouterLink
         v-if="canAddStories && projectId"
@@ -376,7 +376,7 @@ watch(
         class="btn btn-primary btn-sm"
       >
         <Plus :size="16" />
-        <span>CrÃ©er la premiÃ¨re User Story</span>
+        <span>Créer la première User Story</span>
       </RouterLink>
     </div>
   </section>

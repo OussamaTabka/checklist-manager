@@ -28,7 +28,7 @@ function tr(text) {
 
 const currentLanguageLabel = computed(() => {
   const lang = settingsStore.languages.find((item) => item.code === settingsStore.language)
-  return lang ? `${lang.flag} ${lang.name}` : 'FranÃ§ais'
+  return lang ? `${lang.flag} ${lang.name}` : 'Français'
 })
 
 const settingsCopy = computed(() => {

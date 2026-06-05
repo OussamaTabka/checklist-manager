@@ -27,8 +27,8 @@ const currentLanguage = computed(() => settingsStore.language || 'fr')
 const statusLabels = {
   backlog: 'Backlog',
   in_progress: 'En cours',
-  ready_for_test: 'PrÃªt pour test',
-  completed: 'TerminÃ©e',
+  ready_for_test: 'Prêt pour test',
+  completed: 'Terminée',
 }
 
 const priorityColors = {
@@ -133,18 +133,18 @@ const storyTabs = computed(() => [
 ])
 const primaryAction = computed(() => {
   if (hasAttachedChecklists.value) {
-    return { key: 'exÃ©cution', label: "Ouvrir l'espace d'exÃ©cution" }
+    return { key: 'exécution', label: "Ouvrir l'espace d'exécution" }
   }
   if (hasDrafts.value) {
     return { key: 'drafts', label: 'Continuer la validation' }
   }
-  return { key: 'prÃ©pare', label: 'PrÃ©parer une checklist' }
+  return { key: 'prépare', label: 'Préparer une checklist' }
 })
 const generatorStatus = computed(() => {
   if (storiesStore.isGenerating) {
     return {
-      label: 'GÃ©nÃ©ration...',
-      description: 'Le systÃ¨me gÃ©nÃ©re une proposition de checklist. Veuillez patienter.',
+      label: 'Génération...',
+      description: 'Le système génére une proposition de checklist. Veuillez patienter.',
       tone: 'info',
     }
   }
@@ -167,7 +167,7 @@ const generatorStatus = computed(() => {
 
   return {
     label: 'Pret',
-    description: 'Choisissez une mÃ©thode pour prÃ©parer la checklist.',
+    description: 'Choisissez une méthode pour préparer la checklist.',
     tone: 'neutral',
   }
 })
@@ -176,8 +176,8 @@ const interactionLockState = computed(() => {
   if (storiesStore.isGenerating) {
     return {
       active: true,
-      title: 'GÃ©nÃ©ration de checklist en cours',
-      description: 'Veuillez patienter pendant que le systÃ¨me prÃ©pare la checklist.',
+      title: 'Génération de checklist en cours',
+      description: 'Veuillez patienter pendant que le système prépare la checklist.',
     }
   }
 
@@ -576,30 +576,30 @@ function handlePrimaryAction() {
 
 function localizeGeneratedText(text) {
   return String(text || '')
-    .replace(/ÃƒÂ©/g, 'Ã©')
-    .replace(/ÃƒÂ¨/g, 'Ã¨')
-    .replace(/ÃƒÂª/g, 'Ãª')
+    .replace(/Ãƒ©/g, 'é')
+    .replace(/Ãƒ¨/g, 'è')
+    .replace(/Ãƒª/g, 'ê')
     .replace(/Ãƒ /g, 'Ã ')
-    .replace(/ÃƒÂ¢/g, 'Ã¢')
-    .replace(/ÃƒÂ®/g, 'Ã®')
-    .replace(/ÃƒÂ´/g, 'Ã´')
-    .replace(/ÃƒÂ¹/g, 'Ã¹')
-    .replace(/ÃƒÂ»/g, 'Ã»')
-    .replace(/ÃƒÂ§/g, 'Ã§')
-    .replace(/Ã¢â‚¬â„¢/g, 'â€™')
+    .replace(/Ãƒ¢/g, 'â')
+    .replace(/Ãƒ®/g, 'î')
+    .replace(/Ãƒ´/g, 'ô')
+    .replace(/Ãƒ¹/g, 'ù')
+    .replace(/Ãƒ»/g, 'û')
+    .replace(/Ãƒ§/g, 'ç')
+    .replace(/ââ‚¬â„¢/g, ''')
     .replace(/Ã‚/g, '')
 }
 
 function provenanceLabel(item) {
   if (item?.source_type === 'reused') {
-    return currentLanguage.value === 'en' ? 'Reused' : 'RÃ©utilisÃ©'
+    return currentLanguage.value === 'en' ? 'Reused' : 'Réutilisé'
   }
 
   if (item?.source_type === 'generated') {
-    return currentLanguage.value === 'en' ? 'Generated' : 'GÃ©nÃ©rÃ©'
+    return currentLanguage.value === 'en' ? 'Generated' : 'Généré'
   }
 
-  return currentLanguage.value === 'en' ? 'Custom' : 'PersonnalisÃ©'
+  return currentLanguage.value === 'en' ? 'Custom' : 'Personnalisé'
 }
 
 function provenanceClass(item) {
@@ -621,23 +621,23 @@ function provenanceSourceText(item) {
 
   return currentLanguage.value === 'en'
     ? `Reused from ${item.source_checklist_name}`
-    : `RÃ©utilisÃ© depuis ${item.source_checklist_name}`
+    : `Réutilisé depuis ${item.source_checklist_name}`
 }
 
 function generatedSourceLabel(value) {
   const labels = {
-    ai: 'GÃ©nÃ©ration automatique',
-    reuse: 'RÃ©utilisation d une checklist existante',
-    manual: 'CrÃ©ation manuelle',
+    ai: 'Génération automatique',
+    reuse: 'Réutilisation d une checklist existante',
+    manual: 'Création manuelle',
   }
 
-  return labels[value] || 'PrÃ©paration manuelle'
+  return labels[value] || 'Préparation manuelle'
 }
 
 function generatedFromLabel(value) {
   const labels = currentLanguage.value === 'en'
     ? { ai: 'AI draft', reuse: 'Reuse draft', manual: 'Manual draft' }
-    : { ai: 'Brouillon IA', reuse: 'Brouillon rÃ©utilisÃ©', manual: 'Brouillon manuel' }
+    : { ai: 'Brouillon IA', reuse: 'Brouillon réutilisé', manual: 'Brouillon manuel' }
 
   return labels[value] || value || '-'
 }
@@ -645,8 +645,8 @@ function generatedFromLabel(value) {
 function lifecycleLabel(value) {
   const labels = {
     draft: 'Brouillon',
-    approved: 'ApprouvÃ©e',
-    archived: 'ArchivÃ©e',
+    approved: 'Approuvée',
+    archived: 'Archivée',
   }
 
   return labels[value] || value || '-'
@@ -964,7 +964,7 @@ onBeforeUnmount(() => {
         <div class="mb-4 flex items-center justify-between gap-3">
           <div>
             <h2 class="text-xl font-semibold text-slate-950">Contexte de la user story</h2>
-            <p class="text-sm text-slate-500">Consultez le besoin par onglets pour Ã©viter de surcharger la page.</p>
+            <p class="text-sm text-slate-500">Consultez le besoin par onglets pour éviter de surcharger la page.</p>
           </div>
           <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
             {{ storyTabs.length }} vues
@@ -1024,7 +1024,7 @@ onBeforeUnmount(() => {
               </span>
               <div>
                 <p class="font-semibold text-slate-900">
-                  {{ storiesStore.isGenerating ? "GÃ©nÃ©ration..." : "GÃ©nÃ©rer la checklist" }}
+                  {{ storiesStore.isGenerating ? "Génération..." : "Générer la checklist" }}
                 </p>
                 <p class="text-sm text-slate-500">
                   {{ storiesStore.isGenerating
@@ -1044,8 +1044,8 @@ onBeforeUnmount(() => {
                 <Plus :size="18" />
               </span>
               <div>
-                <p class="font-semibold text-slate-900">CrÃ©er manuellement</p>
-                <p class="text-sm text-slate-500">PrÃ©parez un brouillon sur mesure avant validation.</p>
+                <p class="font-semibold text-slate-900">Créer manuellement</p>
+                <p class="text-sm text-slate-500">Préparez un brouillon sur mesure avant validation.</p>
               </div>
             </div>
             <p class="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
@@ -1070,7 +1070,7 @@ onBeforeUnmount(() => {
           <div v-else-if="attachableChecklists.length === 0" class="mt-4 rounded-3xl border border-dashed border-slate-200 bg-white px-5 py-8 text-center">
             <AlertCircle :size="30" class="mx-auto mb-3 text-slate-400" />
             <p class="font-medium text-slate-900">Aucune checklist existante disponible</p>
-            <p class="mt-2 text-sm text-slate-500">Toutes les checklists actives du projet sont deja associees ou archivÃ©es.</p>
+            <p class="mt-2 text-sm text-slate-500">Toutes les checklists actives du projet sont deja associees ou archivées.</p>
           </div>
 
           <form v-else class="mt-4 space-y-4" @submit.prevent="attachExistingChecklist">
@@ -1090,7 +1090,7 @@ onBeforeUnmount(() => {
                 <span class="min-w-0">
                   <strong class="block text-sm font-semibold text-slate-900">{{ checklist.name }}</strong>
                   <small class="mt-1 block text-sm text-slate-500">
-                    {{ checklist.category || 'Sans categorie' }} Â· {{ checklist.items?.length || 0 }} cas de test Â· {{ checklist.lifecycle_status || checklist.status || 'validee' }}
+                    {{ checklist.category || 'Sans categorie' }} · {{ checklist.items?.length || 0 }} cas de test · {{ checklist.lifecycle_status || checklist.status || 'validee' }}
                   </small>
                   <span v-if="checklist.description" class="mt-1 block text-sm leading-6 text-slate-600">{{ checklist.description }}</span>
                 </span>
@@ -1220,8 +1220,8 @@ onBeforeUnmount(() => {
       >
         <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h2 class="text-xl font-semibold text-slate-950">Checklists associÃ©es</h2>
-            <p class="text-sm text-slate-500">Ces checklists sont rattachees a cette User Story pour conserver la traÃ§abilitÃ© et le contexte de test.</p>
+            <h2 class="text-xl font-semibold text-slate-950">Checklists associées</h2>
+            <p class="text-sm text-slate-500">Ces checklists sont rattachees a cette User Story pour conserver la traçabilité et le contexte de test.</p>
           </div>
         </div>
 
@@ -1380,7 +1380,7 @@ onBeforeUnmount(() => {
                           ? 'Chargement des items disponibles...'
                           : addableExistingItems.length > 0
                             ? 'Selectionner un item existant'
-                            : 'Aucun item rÃ©utilisable disponible'
+                            : 'Aucun item réutilisable disponible'
                       }}
                     </option>
                     <option
@@ -1402,7 +1402,7 @@ onBeforeUnmount(() => {
                 </button>
               </div>
               <p class="mt-3 text-sm text-slate-500">
-                Ã©utilisez rapidement des items dÃ©jÃ  prÃ©sents dans la bibliothÃ¨que de checklists.
+                éutilisez rapidement des items déjÃ  présents dans la bibliothèque de checklists.
               </p>
             </div>
 

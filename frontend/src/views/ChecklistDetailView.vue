@@ -248,7 +248,7 @@ function executionStateLabel(state) {
     case 'passed':
       return 'Exécution Réussie'
     case 'failed':
-      return 'Exécution en Ã©chec'
+      return 'Exécution en échec'
     case 'blocked':
       return 'Exécution Bloquée'
     default:
@@ -1026,7 +1026,7 @@ onBeforeUnmount(() => {
             <p v-if="projectContextName" class="project-context-label">{{ projectContextName }}</p>
             <h1 class="project-execution-title">{{ checklist?.name || 'Chargement...' }}</h1>
             <p class="project-execution-subtitle compact">
-              ExÃ©cutez les scénarios, lancez lâ€™agent automatique et suivez les résultats de validation.
+              Exécutez les scénarios, lancez l'agent automatique et suivez les résultats de validation.
             </p>
           </div>
         </div>
@@ -1035,7 +1035,7 @@ onBeforeUnmount(() => {
       <div class="project-execution-side compact">
         <div class="project-execution-app-card compact">
           <span class="project-execution-side-label">Exécution active</span>
-          <p class="muted">Le runner, lâ€™orchestrateur et le polling restent actifs pour cette checklist.</p>
+          <p class="muted">Le runner, l'orchestrateur et le polling restent actifs pour cette checklist.</p>
         </div>
 
         <label v-if="projectContextId" class="execution-checklist-selector compact">
@@ -1066,12 +1066,12 @@ onBeforeUnmount(() => {
       <div class="card stack compact-info-card">
         <div class="flex items-center gap-3 pb-3 border-b border-gray-200 mb-4">
           <FileText :size="20" class="text-brand-600" />
-          <h2>Informations gÃ©nÃ©rales</h2>
+          <h2>Informations générales</h2>
         </div>
 
         <div class="info-stat-grid">
           <div class="info-stat-chip">
-            <p class="info-stat-label">PrioritÃ©</p>
+            <p class="info-stat-label">Priorité</p>
             <span :class="['tag', getChecklistPriorityTagClass(checklist.priority)]">
               {{ formatChecklistPriority(checklist.priority) }}
             </span>
@@ -1092,14 +1092,14 @@ onBeforeUnmount(() => {
           </div>
 
           <div v-if="checklistReuseScore" class="info-stat-chip">
-            <p class="info-stat-label">Score de rÃ©utilisation</p>
+            <p class="info-stat-label">Score de réutilisation</p>
             <span class="tag text-emerald-900 border-emerald-300 bg-emerald-100">
               {{ checklistReuseScore }}
             </span>
           </div>
 
           <div v-if="checklistGeneratedAt" class="info-stat-chip">
-            <p class="info-stat-label">Date de gÃ©nÃ©ration</p>
+            <p class="info-stat-label">Date de génération</p>
             <span class="tag text-slate-900 border-slate-300 bg-slate-100">
               {{ formatTimestamp(checklistGeneratedAt) }}
             </span>
@@ -1118,7 +1118,7 @@ onBeforeUnmount(() => {
           </section>
 
           <section v-if="acceptanceCriteriaItems.length" class="info-section">
-            <p class="info-section-title">CritÃ¨res dâ€™acceptation</p>
+            <p class="info-section-title">Critères d'acceptation</p>
             <ol class="info-list">
               <li v-for="(criterion, index) in acceptanceCriteriaItems" :key="`${index}-${criterion}`">
                 {{ criterion }}
@@ -1131,7 +1131,7 @@ onBeforeUnmount(() => {
       <div v-if="checklist.business_rules && checklist.business_rules.length > 0" class="card stack">
         <div class="flex items-center gap-3 pb-3 border-b border-gray-200 mb-4">
           <Grid3x3 :size="20" class="text-violet-600" />
-          <h2>RÃ¨gles mÃ©tier</h2>
+          <h2>Règles métier</h2>
         </div>
 
         <ul class="space-y-2">
@@ -1147,10 +1147,10 @@ onBeforeUnmount(() => {
           <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div class="flex items-center gap-3">
               <CheckSquare :size="20" class="text-orange-600" />
-              <h2>Test cases exÃ©cutables</h2>
+              <h2>Test cases exécutables</h2>
               <span class="tag text-brand-900 border-brand-300 bg-brand-100">{{ scenariosStats.total }}</span>
             </div>
-            <p class="muted test-case-section-note">Lancez les tests, ajustez le statut final et consultez rapidement lâ€™historique et les observations QA.</p>
+            <p class="muted test-case-section-note">Lancez les tests, ajustez le statut final et consultez rapidement l'historique et les observations QA.</p>
           </div>
 
         </div>
@@ -1179,7 +1179,7 @@ onBeforeUnmount(() => {
 
                   <div class="flex flex-col gap-2.5 xl:min-w-[500px] xl:flex-row xl:items-center xl:justify-end">
                     <span :class="['inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold', getItemCriticalityClass(item.criticality)]">
-                      CriticitÃ© : {{ item.criticality || 'N/A' }}
+                      Criticité : {{ item.criticality || 'N/A' }}
                     </span>
                     <label class="qa-card-status-field">
                       <select
@@ -1217,7 +1217,7 @@ onBeforeUnmount(() => {
                   </div>
 
                   <div v-if="historyLoadingByItemId[item.id]" class="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-500">
-                    Chargement de lâ€™historique...
+                    Chargement de l'historique...
                   </div>
 
                   <div v-else-if="visibleHistory(item).length" class="mt-4 space-y-3">
@@ -1255,11 +1255,11 @@ onBeforeUnmount(() => {
 
                   <div v-else class="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-6 text-center">
                     <p class="text-sm font-medium text-slate-700">Aucun historique disponible pour ce test case.</p>
-                    <p class="mt-2 text-sm text-slate-500">Les changements de statut et d'exécution apparaÃ®tront ici.</p>
+                    <p class="mt-2 text-sm text-slate-500">Les changements de statut et d'exécution apparaîtront ici.</p>
                   </div>
 
                   <button class="btn btn-secondary btn-sm mt-4" @click="toggleItemHistory(item.id)">
-                    {{ showItemHistory[item.id] ? 'RÃ©duire lâ€™historique' : 'Afficher tout lâ€™historique' }}
+                    {{ showItemHistory[item.id] ? 'Réduire l'historique' : 'Afficher tout l'historique' }}
                   </button>
                 </section>
 
@@ -1398,14 +1398,14 @@ onBeforeUnmount(() => {
                     <div class="flex flex-wrap items-center justify-between gap-3">
                       <p class="text-sm font-semibold text-slate-900">{{ item.tester?.name || item.tested_by?.name || 'Observation QA' }}</p>
                       <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                        {{ item.tested_at ? formatTimestamp(item.tested_at) : 'Commentaire enregistrÃ©' }}
+                        {{ item.tested_at ? formatTimestamp(item.tested_at) : 'Commentaire enregistré' }}
                       </span>
                     </div>
                     <p class="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{{ item.qa_comment }}</p>
                   </div>
 
                   <div v-else class="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-6 text-center">
-                    <p class="text-sm font-semibold text-slate-700">Aucun commentaire enregistrÃ© pour ce test case.</p>
+                    <p class="text-sm font-semibold text-slate-700">Aucun commentaire enregistré pour ce test case.</p>
                     <p class="mt-2 text-sm text-slate-500">Soyez le premier Ã  ajouter une observation.</p>
                   </div>
 

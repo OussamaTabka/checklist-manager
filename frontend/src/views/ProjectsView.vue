@@ -91,21 +91,21 @@ const projectPageCopy = computed(() => {
         kicker: 'Espace administrateur',
         title: 'Projets',
         description:
-          'Supervisez la configuration des projets, leur pÃ©rimÃ¨tre fonctionnel et lâ€™organisation globale de la plateforme.',
+          'Supervisez la configuration des projets, leur périmètre fonctionnel et l'organisation globale de la plateforme.',
       }
     case 'testeur':
       return {
-        kicker: 'Espace dâ€™exÃ©cution',
-        title: 'Projets assignÃ©s',
+        kicker: 'Espace d'exécution',
+        title: 'Projets assignés',
         description:
-          'Consultez les projets qui vous sont assignÃ©s, comprenez leur pÃ©rimÃ¨tre et accÃ©dez rapidement Ã  lâ€™exÃ©cution des tests.',
+          'Consultez les projets qui vous sont assignés, comprenez leur périmètre et accédez rapidement Ã  l'exécution des tests.',
       }
     default:
       return {
         kicker: 'Espace chef de projet',
         title: 'Projets',
         description:
-          'CrÃ©ez les projets, dÃ©finissez leur contexte, prÃ©parez le backlog initial et assignez les testeurs.',
+          'Créez les projets, définissez leur contexte, préparez le backlog initial et assignez les testeurs.',
       }
   }
 })
@@ -138,7 +138,7 @@ const activeFilterBadges = computed(() => {
   }
 
   if (filters.category.trim() !== '') {
-    badges.push({ key: 'category', label: `CatÃ©gorie : ${filters.category.trim()}` })
+    badges.push({ key: 'category', label: `Catégorie : ${filters.category.trim()}` })
   }
 
   if (filters.query.trim() !== '') {
@@ -147,7 +147,7 @@ const activeFilterBadges = computed(() => {
 
   if (filters.creator !== 'all') {
     const creator = creatorFilterOptions.value.find((item) => String(item.id) === String(filters.creator))
-    badges.push({ key: 'creator', label: `CrÃ©ateur : ${creator?.name || filters.creator}` })
+    badges.push({ key: 'creator', label: `Créateur : ${creator?.name || filters.creator}` })
   }
 
   return badges
@@ -174,10 +174,10 @@ const projectMetrics = computed(() => {
   const projectsWithUrl = projects.value.filter((project) => Boolean(project.app_url)).length
 
   return [
-    { label: 'Projets', value: totalProjects, caption: 'Projets disponibles dans lâ€™espace de travail' },
-    { label: 'Testeurs assignÃ©s', value: totalAssignedTesters, caption: 'CapacitÃ© dâ€™exÃ©cution mobilisÃ©e' },
-    { label: 'User Stories liÃ©es', value: totalLinkedStories, caption: 'PÃ©rimÃ¨tre fonctionnel dÃ©jÃ  prÃ©parÃ©' },
-    { label: 'Environnements prÃªts', value: projectsWithUrl, caption: 'Projets disposant dâ€™une URL cible' },
+    { label: 'Projets', value: totalProjects, caption: 'Projets disponibles dans l'espace de travail' },
+    { label: 'Testeurs assignés', value: totalAssignedTesters, caption: 'Capacité d'exécution mobilisée' },
+    { label: 'User Stories liées', value: totalLinkedStories, caption: 'Périmètre fonctionnel déjÃ  préparé' },
+    { label: 'Environnements prêts', value: projectsWithUrl, caption: 'Projets disposant d'une URL cible' },
   ]
 })
 
@@ -258,7 +258,7 @@ function buildUserStoriesSuccessMessage(summary) {
   }
 
   if (importedCreated > 0) {
-    createdParts.push(`${importedCreated} User Stor${importedCreated > 1 ? 'ies importÃ©es' : 'y importÃ©e'}`)
+    createdParts.push(`${importedCreated} User Stor${importedCreated > 1 ? 'ies importées' : 'y importée'}`)
   }
 
   if (createdParts.length === 0) {
@@ -267,7 +267,7 @@ function buildUserStoriesSuccessMessage(summary) {
 
   const createdText = createdParts.join(' et ')
   const totalCreated = manualCreated + importedCreated
-  const addedVerb = totalCreated > 1 ? 'ajoutÃ©es' : 'ajoutÃ©e'
+  const addedVerb = totalCreated > 1 ? 'ajoutées' : 'ajoutée'
   if (ignoredCount > 0) {
     return localizeMessage(`Projet cree avec succes. ${createdText} ${addedVerb} et ${ignoredCount} ligne(s) ont ete ignoree(s).`, settings.language)
   }
@@ -565,18 +565,18 @@ function importedStoryErrorText(error) {
     message.includes('La description de la User Story est obligatoire.') ||
     message.includes('Les crit')
   ) {
-    return 'user stories mal structurÃ©es'
+    return 'user stories mal structurées'
   }
 
   return message
 }
 
 function projectNoTesterText() {
-  return 'Aucun testeur assignÃ©'
+  return 'Aucun testeur assigné'
 }
 
 function projectNoUrlText() {
-  return 'Aucune URL renseignÃ©e'
+  return 'Aucune URL renseignée'
 }
 
 function openCreateForm() {
@@ -809,7 +809,7 @@ watch(successMessage, (message) => {
         </button>
 
         <button v-if="hasActiveFilters" class="btn btn-secondary btn-sm" type="button" @click="clearAllFilters">
-          RÃ©initialiser
+          Réinitialiser
         </button>
       </div>
 
@@ -826,13 +826,13 @@ watch(successMessage, (message) => {
           </div>
 
           <div class="field">
-            <label class="field-label-strong">CatÃ©gorie</label>
-            <input v-model="filters.category" placeholder="Filtrer par catÃ©gorie" />
+            <label class="field-label-strong">Catégorie</label>
+            <input v-model="filters.category" placeholder="Filtrer par catégorie" />
           </div>
         </div>
 
         <div class="field field-tight">
-          <label class="field-label-strong">CrÃ©ateur</label>
+          <label class="field-label-strong">Créateur</label>
           <div class="chip-row">
             <button type="button" class="filter-chip" :class="{ active: filters.creator === 'all' }" @click="filters.creator = 'all'">
               Tous
@@ -852,7 +852,7 @@ watch(successMessage, (message) => {
       </div>
 
       <div v-if="hasActiveFilters" class="active-filters-row">
-        <span class="muted active-filters-label">Filtres appliquÃ©s :</span>
+        <span class="muted active-filters-label">Filtres appliqués :</span>
         <div class="chip-row">
           <span v-for="badge in activeFilterBadges" :key="badge.key" class="applied-chip">
             {{ badge.label }}
@@ -869,7 +869,7 @@ watch(successMessage, (message) => {
         <h2 class="section-heading-with-icon">
           <Pencil v-if="form.id" :size="20" :stroke-width="2.2" />
           <CirclePlus v-else :size="20" :stroke-width="2.2"  />
-          <span>{{ form.id ? 'Modifier le projet' : 'CrÃ©er projet' }}</span>
+          <span>{{ form.id ? 'Modifier le projet' : 'Créer projet' }}</span>
         </h2>
       </div>
 
@@ -886,30 +886,30 @@ watch(successMessage, (message) => {
               data-testid="projects-input-name"
               @blur="validateProjectName"
             />
-            <p v-if="checkingProjectName" class="muted helper-text">VÃ©rification du nom du projet...</p>
+            <p v-if="checkingProjectName" class="muted helper-text">Vérification du nom du projet...</p>
             <p v-else-if="projectNameError" class="error">{{ projectNameError }}</p>
           </div>
           <div class="field">
-            <label class="field-label-strong">URL de lâ€™application</label>
+            <label class="field-label-strong">URL de l'application</label>
             <input v-model="form.app_url" type="url" placeholder="https://example.com" required data-testid="projects-input-app-url" />
           </div>
         </div>
 
         <div class="field">
           <label class="field-label-strong">Description</label>
-          <textarea v-model="form.description" rows="3" placeholder="DÃ©crivez le contexte, le pÃ©rimÃ¨tre et les enjeux mÃ©tier du projet..." />
+          <textarea v-model="form.description" rows="3" placeholder="Décrivez le contexte, le périmètre et les enjeux métier du projet..." />
         </div>
 
         <div class="field">
           <label class="field-label-strong">Objectifs de test</label>
-          <textarea v-model="form.test_objectives" rows="3" placeholder="PrÃ©cisez les objectifs QA, les risques Ã  couvrir et les rÃ©sultats attendus..." />
+          <textarea v-model="form.test_objectives" rows="3" placeholder="Précisez les objectifs QA, les risques Ã  couvrir et les résultats attendus..." />
         </div>
 
         <div class="card project-setup-section">
           <div class="section-divider">
             <h3 class="section-heading-with-icon-sm">
               <Settings :size="18" :stroke-width="2.2" />
-              <span>Ã‰quipe assignÃ©e</span>
+              <span>Équipe assignée</span>
             </h3>
           </div>
 
@@ -919,7 +919,7 @@ watch(successMessage, (message) => {
               Assigner les testeurs
             </label>
             <p class="muted helper-text">
-              SÃ©lectionnez les testeurs responsables de la prÃ©paration des checklists et de lâ€™exÃ©cution des tests.
+              Sélectionnez les testeurs responsables de la préparation des checklists et de l'exécution des tests.
             </p>
             <div v-if="users.length === 0" class="muted empty-state-box">
               Aucun testeur disponible pour le moment.
@@ -946,14 +946,14 @@ watch(successMessage, (message) => {
           </div>
 
           <p class="muted helper-text">
-            PrÃ©parez le backlog initial du projet en ajoutant des User Stories manuellement ou en important un fichier structurÃ© dÃ¨s la crÃ©ation.
+            Préparez le backlog initial du projet en ajoutant des User Stories manuellement ou en important un fichier structuré dès la création.
           </p>
 
           <div class="story-source-summary">
             <span class="mini-chip">{{ manualValidUserStoriesCount }} User Story{{ manualValidUserStoriesCount > 1 ? 'ies manuelles' : ' manuelle' }}</span>
-            <span class="mini-chip">{{ importedValidUserStoriesCount }} User Story{{ importedValidUserStoriesCount > 1 ? 'ies' : 'y' }} importÃ©e{{ importedValidUserStoriesCount > 1 ? 's' : '' }}</span>
+            <span class="mini-chip">{{ importedValidUserStoriesCount }} User Story{{ importedValidUserStoriesCount > 1 ? 'ies' : 'y' }} importée{{ importedValidUserStoriesCount > 1 ? 's' : '' }}</span>
             <span v-if="importedInvalidUserStoriesCount > 0" class="mini-chip mini-chip-warn">
-              {{ importedInvalidUserStoriesCount }} ligne(s) ignorÃ©e(s)
+              {{ importedInvalidUserStoriesCount }} ligne(s) ignorée(s)
             </span>
           </div>
 
@@ -973,7 +973,7 @@ watch(successMessage, (message) => {
             </div>
 
             <p class="muted helper-text">
-              Ajoutez manuellement des User Stories si vous ne souhaitez pas passer par un fichier. Le titre, la description et les critÃ¨res dâ€™acceptation sont requis.
+              Ajoutez manuellement des User Stories si vous ne souhaitez pas passer par un fichier. Le titre, la description et les critères d'acceptation sont requis.
             </p>
 
             <div v-if="manualStories.length === 0" class="muted empty-state-box">
@@ -985,7 +985,7 @@ watch(successMessage, (message) => {
                 <div class="manual-story-card-head">
                   <div>
                     <strong>User Story {{ index + 1 }}</strong>
-                    <p class="muted">PrÃ©parez un besoin mÃ©tier prÃªt Ã  Ãªtre rattachÃ© au projet dÃ¨s sa crÃ©ation.</p>
+                    <p class="muted">Préparez un besoin métier prêt Ã  être rattaché au projet dès sa création.</p>
                   </div>
 
                   <button type="button" class="btn btn-danger btn-sm" @click="removeManualStory(story.localId)">
@@ -1001,7 +1001,7 @@ watch(successMessage, (message) => {
                   </div>
 
                   <div class="field">
-                    <label class="field-label-strong">PrioritÃ©</label>
+                    <label class="field-label-strong">Priorité</label>
                     <select v-model="story.priority">
                       <option value="critical">Critique</option>
                       <option value="high">Haute</option>
@@ -1013,13 +1013,13 @@ watch(successMessage, (message) => {
 
                 <div class="field">
                   <label class="field-label-strong">Description</label>
-                  <textarea v-model="story.description" rows="3" placeholder="DÃ©crivez le besoin utilisateur, le contexte et le comportement attendu..." />
+                  <textarea v-model="story.description" rows="3" placeholder="Décrivez le besoin utilisateur, le contexte et le comportement attendu..." />
                 </div>
 
                 <div class="form-grid-two">
                   <div class="field">
-                    <label class="field-label-strong">CritÃ¨res dâ€™acceptation</label>
-                    <textarea v-model="story.acceptance_criteria" rows="3" placeholder="Given / When / Then, rÃ¨gles de validation, cas attendus..." />
+                    <label class="field-label-strong">Critères d'acceptation</label>
+                    <textarea v-model="story.acceptance_criteria" rows="3" placeholder="Given / When / Then, règles de validation, cas attendus..." />
                   </div>
 
                   <div class="field">
@@ -1027,8 +1027,8 @@ watch(successMessage, (message) => {
                     <select v-model="story.status">
                       <option value="backlog">Backlog</option>
                       <option value="in_progress">En cours</option>
-                      <option value="ready_for_test">PrÃªt pour test</option>
-                      <option value="completed">TerminÃ©e</option>
+                      <option value="ready_for_test">Prêt pour test</option>
+                      <option value="completed">Terminée</option>
                     </select>
                   </div>
                 </div>
@@ -1045,7 +1045,7 @@ watch(successMessage, (message) => {
             </div>
 
             <p class="muted helper-text">
-              Importez un fichier CSV, XLSX ou JSON contenant plusieurs User Stories structurÃ©es.
+              Importez un fichier CSV, XLSX ou JSON contenant plusieurs User Stories structurées.
             </p>
 
             <div class="field">
@@ -1053,7 +1053,7 @@ watch(successMessage, (message) => {
               <input ref="userStoriesFileInput" type="file" accept=".csv,.xlsx,.json" @change="onUserStoriesFileChange" />
               <p v-if="importFileError" class="error">{{ importFileError }}</p>
               <p class="muted helper-text">
-                Formats acceptÃ©s : CSV, XLSX ou JSON. Cette option est recommandÃ©e pour importer rapidement un backlog volumineux.
+                Formats acceptés : CSV, XLSX ou JSON. Cette option est recommandée pour importer rapidement un backlog volumineux.
               </p>
             </div>
 
@@ -1062,8 +1062,8 @@ watch(successMessage, (message) => {
             <div v-if="importedStoriesFile" class="story-import-summary">
               <p><strong>{{ importedStoriesFile.name }}</strong></p>
               <p class="muted">
-                {{ importedValidUserStoriesCount }} User Story{{ importedValidUserStoriesCount > 1 ? 'ies' : 'y' }} importÃ©e{{ importedValidUserStoriesCount > 1 ? 's' : '' }}
-                <span v-if="importedInvalidUserStoriesCount > 0"> â€¢ {{ importedInvalidUserStoriesCount }} ligne(s) ignorÃ©e(s)</span>
+                {{ importedValidUserStoriesCount }} User Story{{ importedValidUserStoriesCount > 1 ? 'ies' : 'y' }} importée{{ importedValidUserStoriesCount > 1 ? 's' : '' }}
+                <span v-if="importedInvalidUserStoriesCount > 0"> â€¢ {{ importedInvalidUserStoriesCount }} ligne(s) ignorée(s)</span>
               </p>
               <button type="button" class="btn btn-secondary btn-sm" @click="clearUserStoriesFile">
                 <X :size="14" />
@@ -1072,7 +1072,7 @@ watch(successMessage, (message) => {
             </div>
 
             <div v-if="importedStoriesAnalysis?.errors?.length" class="stack stack-gap-sm">
-              <p class="muted">Lignes non importÃ©es :</p>
+              <p class="muted">Lignes non importées :</p>
               <div v-for="error in importedStoriesAnalysis.errors.slice(0, 5)" :key="`${error.row}-${error.message}`" class="error-row">
                 Ligne {{ error.row }} : {{ importedStoryErrorText(error) }}
               </div>
@@ -1085,7 +1085,7 @@ watch(successMessage, (message) => {
             <LoaderCircle v-if="creating" :size="16" class="spin" />
             <Save v-else-if="form.id" :size="16" />
             <Sparkles v-else :size="16" />
-            <span>{{ creating ? (form.id ? 'Mise Ã  jour...' : 'CrÃ©ation...') : (form.id ? 'Enregistrer les modifications' : 'CrÃ©er le projet') }}</span>
+            <span>{{ creating ? (form.id ? 'Mise Ã  jour...' : 'Création...') : (form.id ? 'Enregistrer les modifications' : 'Créer le projet') }}</span>
           </button>
           <button type="button" class="btn btn-secondary btn-inline-icon" @click="resetForm(true)">
             <X :size="16" />
@@ -1104,7 +1104,7 @@ watch(successMessage, (message) => {
       </div>
 
       <p class="muted">
-        Ouvrez un projet pour accÃ©der Ã  son espace de suivi et consulter ses user stories.
+        Ouvrez un projet pour accéder Ã  son espace de suivi et consulter ses user stories.
       </p>
 
       <p v-if="listError" class="error" data-testid="projects-msg-error-list">{{ listError }}</p>
@@ -1140,7 +1140,7 @@ watch(successMessage, (message) => {
                 <div class="project-line-testers">
                   <span v-for="tester in project.testers || []" :key="tester.id" class="mini-chip tester-chip">{{ tester.name }}</span>
                   <span v-if="!project.testers || project.testers.length === 0" class="muted project-line-fallback">{{ projectNoTesterText() }}</span>
-                  <span v-if="!project.testers || project.testers.length === 0" class="muted">Aucun testeur assignÃƒÂ©</span>
+                  <span v-if="!project.testers || project.testers.length === 0" class="muted">Aucun testeur assignÃƒ©</span>
                 </div>
               </td>
               <td>
@@ -1148,7 +1148,7 @@ watch(successMessage, (message) => {
                   {{ getHostname(project.app_url) }}
                 </a>
                 <span v-else class="muted app-url-text project-line-fallback">{{ projectNoUrlText() }}</span>
-                <span v-if="false" class="muted app-url-text">Aucune URL renseignÃƒÂ©e</span>
+                <span v-if="false" class="muted app-url-text">Aucune URL renseignÃƒ©e</span>
               </td>
               <td class="projects-actions-cell">
                 <div v-if="canManageProject(project)" class="project-card-actions" @click.stop>
@@ -1207,7 +1207,7 @@ watch(successMessage, (message) => {
             </div>
           </div>
 
-          <p class="muted description-fixed">{{ project.description || 'Aucun contexte projet renseignÃ©.' }}</p>
+          <p class="muted description-fixed">{{ project.description || 'Aucun contexte projet renseigné.' }}</p>
 
           <div class="project-meta-row">
             <span class="mini-label">Backlog</span>
@@ -1219,7 +1219,7 @@ watch(successMessage, (message) => {
           <div class="project-meta-row">
             <span class="mini-label">Objectifs</span>
             <div class="chip-row">
-              <span class="muted">{{ project.test_objectives || 'Aucun objectif de test dÃ©fini pour le moment.' }}</span>
+              <span class="muted">{{ project.test_objectives || 'Aucun objectif de test défini pour le moment.' }}</span>
             </div>
           </div>
 
@@ -1227,7 +1227,7 @@ watch(successMessage, (message) => {
             <span class="mini-label">Testeurs</span>
             <div class="chip-row">
               <span v-for="tester in project.testers || []" :key="tester.id" class="mini-chip tester-chip">{{ tester.name }}</span>
-              <span v-if="!project.testers || project.testers.length === 0" class="muted">Aucun testeur assignÃ©</span>
+              <span v-if="!project.testers || project.testers.length === 0" class="muted">Aucun testeur assigné</span>
             </div>
           </div>
 
@@ -1235,7 +1235,7 @@ watch(successMessage, (message) => {
             <a v-if="project.app_url" :href="project.app_url" target="_blank" rel="noopener noreferrer" class="muted app-url-text">
               {{ getHostname(project.app_url) }}
             </a>
-            <span v-else class="muted app-url-text">Aucune URL renseignÃ©e</span>
+            <span v-else class="muted app-url-text">Aucune URL renseignée</span>
 
             <div class="actions">
               <button v-if="canManageProject(project)" class="btn btn-danger btn-sm" @click="deleteProject(project.id)">
@@ -1248,13 +1248,13 @@ watch(successMessage, (message) => {
       </div>
 
       <div v-if="!loadingProjects && filteredProjects.length === 0" class="card empty-dashed-card">
-        <p class="muted">Aucun projet ne correspond aux filtres sÃ©lectionnÃ©s.</p>
+        <p class="muted">Aucun projet ne correspond aux filtres sélectionnés.</p>
       </div>
 
       <div class="pagination pagination-centered">
-        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="pagination.current_page <= 1" @click="loadProjects(pagination.current_page - 1)" title="Aller Ã  la page prÃ©cÃ©dente">
+        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="pagination.current_page <= 1" @click="loadProjects(pagination.current_page - 1)" title="Aller Ã  la page précédente">
           <ArrowLeft :size="14" />
-          <span>PrÃ©cÃ©dent</span>
+          <span>Précédent</span>
         </button>
         <span class="muted pagination-text">Page {{ pagination.current_page }} sur {{ pagination.last_page }}</span>
         <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="pagination.current_page >= pagination.last_page" @click="loadProjects(pagination.current_page + 1)" title="Aller Ã  la page suivante">
@@ -1268,16 +1268,16 @@ watch(successMessage, (message) => {
       <div class="section-divider">
         <h2 class="section-heading-with-icon">
           <Archive :size="20" :stroke-width="2.2" />
-          <span>Projets archivÃ©s</span>
+          <span>Projets archivés</span>
         </h2>
       </div>
 
       <p class="muted">
-        Les projets archivÃ©s sont masquÃ©s de la liste principale. Vous pouvez les restaurer ou les supprimer dÃ©finitivement.
+        Les projets archivés sont masqués de la liste principale. Vous pouvez les restaurer ou les supprimer définitivement.
       </p>
 
       <p v-if="listError" class="error">{{ listError }}</p>
-      <p v-if="loadingArchivedProjects" class="muted">Chargement des projets archivÃ©s...</p>
+      <p v-if="loadingArchivedProjects" class="muted">Chargement des projets archivés...</p>
 
       <div v-if="!loadingArchivedProjects && archivedProjects.length > 0" class="table-wrap" data-testid="projects-table-archived">
         <table class="projects-lines-table">
@@ -1306,16 +1306,16 @@ watch(successMessage, (message) => {
               <td>
                 <div class="project-line-testers">
                   <span v-for="tester in project.testers || []" :key="tester.id" class="mini-chip tester-chip">{{ tester.name }}</span>
-                  <span v-if="!project.testers || project.testers.length === 0" class="muted">Aucun testeur assignÃƒÂ©</span>
+                  <span v-if="!project.testers || project.testers.length === 0" class="muted">Aucun testeur assignÃƒ©</span>
                 </div>
               </td>
-              <td><span class="muted app-url-text">ArchivÃ©</span></td>
+              <td><span class="muted app-url-text">Archivé</span></td>
               <td class="projects-actions-cell">
                 <div v-if="canManageProject(project)" class="project-card-actions" @click.stop>
                   <button
                     type="button"
                     class="project-menu-trigger"
-                    aria-label="Ouvrir les actions du projet archivÃ©"
+                    aria-label="Ouvrir les actions du projet archivé"
                     @click.stop="toggleProjectMenu(`archived-${project.id}`)"
                   >
                     <Ellipsis :size="18" />
@@ -1328,7 +1328,7 @@ watch(successMessage, (message) => {
                     </button>
                     <button type="button" class="project-row-menu-item danger" @click="permanentlyDeleteProject(project)">
                       <Trash2 :size="16" />
-                      <span>Supprimer dÃ©finitivement</span>
+                      <span>Supprimer définitivement</span>
                     </button>
                   </div>
                 </div>
@@ -1354,7 +1354,7 @@ watch(successMessage, (message) => {
               <button
                 type="button"
                 class="project-menu-trigger"
-                aria-label="Ouvrir les actions du projet archivÃ©"
+                aria-label="Ouvrir les actions du projet archivé"
                 @click.stop="toggleProjectMenu(`archived-${project.id}`)"
               >
                 <Ellipsis :size="18" />
@@ -1367,13 +1367,13 @@ watch(successMessage, (message) => {
                 </button>
                 <button type="button" class="project-row-menu-item danger" @click="permanentlyDeleteProject(project)">
                   <Trash2 :size="16" />
-                  <span>Supprimer dÃ©finitivement</span>
+                  <span>Supprimer définitivement</span>
                 </button>
               </div>
             </div>
           </div>
 
-          <p class="muted description-fixed">{{ project.description || 'Aucun contexte projet renseignÃ©.' }}</p>
+          <p class="muted description-fixed">{{ project.description || 'Aucun contexte projet renseigné.' }}</p>
 
           <div class="project-meta-row">
             <span class="mini-label">Backlog</span>
@@ -1386,12 +1386,12 @@ watch(successMessage, (message) => {
             <span class="mini-label">Testeurs</span>
             <div class="chip-row">
               <span v-for="tester in project.testers || []" :key="tester.id" class="mini-chip tester-chip">{{ tester.name }}</span>
-              <span v-if="!project.testers || project.testers.length === 0" class="muted">Aucun testeur assignÃ©</span>
+              <span v-if="!project.testers || project.testers.length === 0" class="muted">Aucun testeur assigné</span>
             </div>
           </div>
 
           <div class="project-card-footer">
-            <span class="muted app-url-text">ArchivÃ©</span>
+            <span class="muted app-url-text">Archivé</span>
 
             <div class="actions">
               <button v-if="canManageProject(project)" class="btn btn-secondary btn-sm" @click="restoreProject(project)">
@@ -1408,13 +1408,13 @@ watch(successMessage, (message) => {
       </div>
 
       <div v-if="!loadingArchivedProjects && archivedProjects.length === 0" class="card empty-dashed-card">
-        <p class="muted">Aucun projet archivÃ© pour le moment.</p>
+        <p class="muted">Aucun projet archivé pour le moment.</p>
       </div>
 
       <div class="pagination pagination-centered">
-        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="archivedPagination.current_page <= 1" @click="loadArchivedProjects(archivedPagination.current_page - 1)" title="Aller Ã  la page prÃ©cÃ©dente">
+        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="archivedPagination.current_page <= 1" @click="loadArchivedProjects(archivedPagination.current_page - 1)" title="Aller Ã  la page précédente">
           <ArrowLeft :size="14" />
-          <span>PrÃ©cÃ©dent</span>
+          <span>Précédent</span>
         </button>
         <span class="muted pagination-text">Page {{ archivedPagination.current_page }} sur {{ archivedPagination.last_page }}</span>
         <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="archivedPagination.current_page >= archivedPagination.last_page" @click="loadArchivedProjects(archivedPagination.current_page + 1)" title="Aller Ã  la page suivante">

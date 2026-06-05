@@ -149,7 +149,7 @@ function runImport() {
           <thead>
             <tr>
               <th>Ligne</th>
-              <th>RÃ©fÃ©rence</th>
+              <th>Référence</th>
               <th>Titre</th>
               <th>Description</th>
             </tr>

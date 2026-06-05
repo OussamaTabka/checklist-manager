@@ -24,7 +24,7 @@ const selectedFilter = ref('all')
 
 const emptyMessage = computed(() => {
   if (selectedFilter.value === 'archived') {
-    return 'Aucune notification archivÃ©e pour le moment.'
+    return 'Aucune notification archivée pour le moment.'
   }
 
   if (selectedFilter.value === 'unread') {
@@ -214,7 +214,7 @@ onMounted(async () => {
           <span>Notifications</span>
         </h1>
         <p class="page-subtitle">
-          Retrouvez les alertes utiles selon votre rÃ´le, avec accÃ¨s direct Ã  la bonne section.
+          Retrouvez les alertes utiles selon votre rôle, avec accès direct Ã  la bonne section.
         </p>
       </div>
 

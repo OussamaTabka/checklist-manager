@@ -62,7 +62,7 @@ async function onSubmit() {
     <div class="card stack">
       <div>
         <h1>Connexion</h1>
-        <p class="muted">Utilisez vos identifiants pour accÃ©der Ã  IntelliTest.</p>
+        <p class="muted">Utilisez vos identifiants pour accéder Ã  IntelliTest.</p>
       </div>
 
       <p v-if="errorMessage" class="error" data-testid="login-msg-error">{{ errorMessage }}</p>
@@ -90,7 +90,7 @@ async function onSubmit() {
         </div>
 
         <div class="auth-link-row">
-          <RouterLink :to="{ name: 'forgot-password' }" class="muted">Mot de passe oubliÃ© ?</RouterLink>
+          <RouterLink :to="{ name: 'forgot-password' }" class="muted">Mot de passe oublié ?</RouterLink>
         </div>
 
         <button

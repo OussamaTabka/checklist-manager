@@ -59,9 +59,9 @@ const form = reactive({
 
 const checklistPageCopy = computed(() => ({
   kicker: 'Espace checklists',
-  title: 'BibliothÃ¨que de checklists',
+  title: 'Bibliothèque de checklists',
   description:
-    'CrÃ©ez, adaptez et rÃ©utilisez des checklists de test pour prÃ©parer lâ€™exÃ©cution QA sur vos projets.',
+    'Créez, adaptez et réutilisez des checklists de test pour préparer l'exécution QA sur vos projets.',
 }))
 
 const addableExistingItems = computed(() => {
@@ -114,7 +114,7 @@ const activeFilterBadges = computed(() => {
   }
 
   if (filters.category.trim() !== '') {
-    badges.push({ key: 'category', label: `CatÃ©gorie : ${filters.category.trim()}` })
+    badges.push({ key: 'category', label: `Catégorie : ${filters.category.trim()}` })
   }
 
   return badges
@@ -129,10 +129,10 @@ const checklistMetrics = computed(() => {
   const categorizedChecklists = checklists.value.filter((checklist) => Boolean(checklist.category)).length
 
   return [
-    { label: 'Checklists', value: totalChecklists, caption: 'BibliothÃ¨que rÃ©utilisable de checklists QA' },
+    { label: 'Checklists', value: totalChecklists, caption: 'Bibliothèque réutilisable de checklists QA' },
     { label: 'Actives', value: activeChecklists, caption: 'Disponibles pour les suggestions et les projets' },
-    { label: 'Items', value: totalItems, caption: 'Cas de test rÃ©utilisables dans la bibliothÃ¨que' },
-    { label: 'CatÃ©gorisÃ©es', value: categorizedChecklists, caption: 'Checklists classÃ©es par domaine QA' },
+    { label: 'Items', value: totalItems, caption: 'Cas de test réutilisables dans la bibliothèque' },
+    { label: 'Catégorisées', value: categorizedChecklists, caption: 'Checklists classées par domaine QA' },
   ]
 })
 
@@ -475,7 +475,7 @@ watch(
           @click="openCreateChecklistForm"
         >
           <CirclePlus :size="16" />
-          <span>CrÃ©er checklist</span>
+          <span>Créer checklist</span>
         </button>
       </div>
     </div>
@@ -493,7 +493,7 @@ watch(
     </div>
 
     <div v-if="!auth.canManageChecklists" class="card error">
-      <p>Seuls les chefs de projet et les administrateurs peuvent crÃ©er ou modifier des checklists.</p>
+      <p>Seuls les chefs de projet et les administrateurs peuvent créer ou modifier des checklists.</p>
     </div>
 
     <div class="card stack stack-gap-sm">
@@ -512,7 +512,7 @@ watch(
         </button>
 
         <button v-if="hasActiveFilters" class="btn btn-secondary btn-sm" type="button" @click="clearAllFilters">
-          RÃ©initialiser
+          Réinitialiser
         </button>
       </div>
 
@@ -526,13 +526,13 @@ watch(
           <input v-model="filters.type" placeholder="Filtrer par type de checklist" />
         </div>
         <div class="field">
-          <label>CatÃ©gorie</label>
-          <input v-model="filters.category" placeholder="Filtrer par catÃ©gorie de checklist" />
+          <label>Catégorie</label>
+          <input v-model="filters.category" placeholder="Filtrer par catégorie de checklist" />
         </div>
       </div>
 
       <div v-if="hasActiveFilters" class="active-filters-row">
-        <span class="muted active-filters-label">Filtres appliquÃ©s :</span>
+        <span class="muted active-filters-label">Filtres appliqués :</span>
         <div class="chip-row">
           <span v-for="badge in activeFilterBadges" :key="badge.key" class="applied-chip">
             {{ badge.label }}
@@ -545,7 +545,7 @@ watch(
     </div>
 
     <div v-if="auth.canManageChecklists && showChecklistForm" class="card stack">
-      <h2>{{ form.id ? `Modifier la checklist #${form.id}` : 'CrÃ©er une checklist' }}</h2>
+      <h2>{{ form.id ? `Modifier la checklist #${form.id}` : 'Créer une checklist' }}</h2>
       <p class="muted">
         {{ projectId || form.project_id ? `Contexte projet : ${projectId || form.project_id}` : 'Contexte : checklist systeme reutilisable, non attachee a une User Story.' }}
       </p>
@@ -561,7 +561,7 @@ watch(
             <label>Statut</label>
             <select v-model="form.is_active">
               <option :value="true">Active</option>
-              <option :value="false">ArchivÃ©e</option>
+              <option :value="false">Archivée</option>
             </select>
           </div>
         </div>
@@ -572,8 +572,8 @@ watch(
         </div>
 
         <div class="field">
-          <label>CatÃ©gorie</label>
-          <input v-model="form.category" placeholder="Ex. : Automatisation, sÃ©curitÃ©, performance" />
+          <label>Catégorie</label>
+          <input v-model="form.category" placeholder="Ex. : Automatisation, sécurité, performance" />
         </div>
 
         <div class="stack">
@@ -590,13 +590,13 @@ watch(
           </div>
 
           <div class="card stack">
-            <h4>Cas de test rÃ©utilisables</h4>
-            <p class="muted">SÃ©lectionnez un item existant pour lâ€™ajouter Ã  cette checklist.</p>
+            <h4>Cas de test réutilisables</h4>
+            <p class="muted">Sélectionnez un item existant pour l'ajouter Ã  cette checklist.</p>
             <div class="grid">
               <div class="field">
                 <label>Item existant</label>
                 <select v-model="selectedExistingItemId">
-                  <option value="">SÃ©lectionner un item existant</option>
+                  <option value="">Sélectionner un item existant</option>
                   <option v-for="existingItem in addableExistingItems" :key="existingItem.id" :value="existingItem.id">
                     {{ existingItem.title }} ({{ existingItem.priority }} / {{ existingItem.criticality }})
                   </option>
@@ -609,7 +609,7 @@ watch(
                   :disabled="!selectedExistingItemId"
                   @click="addExistingItemToForm"
                 >
-                  Ajouter lâ€™item sÃ©lectionnÃ©
+                  Ajouter l'item sélectionné
                 </button>
               </div>
             </div>
@@ -638,13 +638,13 @@ watch(
                     <strong>{{ suggestion.title }}</strong>
                     <div class="autocomplete-desc">{{ suggestion.description || 'Aucune description' }}</div>
                     <div class="autocomplete-meta">
-                      PrioritÃ© : {{ suggestion.priority }} | CriticitÃ© : {{ suggestion.criticality }}
+                      Priorité : {{ suggestion.priority }} | Criticité : {{ suggestion.criticality }}
                     </div>
                   </div>
                 </div>
               </div>
               <div class="field">
-                <label>PrioritÃ©</label>
+                <label>Priorité</label>
                 <select v-model="item.priority" required>
                   <option value="Low">Basse</option>
                   <option value="Medium">Moyenne</option>
@@ -652,7 +652,7 @@ watch(
                 </select>
               </div>
               <div class="field">
-                <label>CriticitÃ©</label>
+                <label>Criticité</label>
                 <select v-model="item.criticality" required>
                   <option value="Minor">Mineure</option>
                   <option value="Major">Majeure</option>
@@ -667,7 +667,7 @@ watch(
             </div>
 
             <div class="actions">
-              <button type="button" class="btn btn-danger btn-sm" @click="removeItem(index)">Retirer lâ€™item</button>
+              <button type="button" class="btn btn-danger btn-sm" @click="removeItem(index)">Retirer l'item</button>
             </div>
           </div>
         </div>
@@ -684,7 +684,7 @@ watch(
     <div class="card stack">
       <h2>Liste des checklists</h2>
       <p class="muted">
-        Les checklists restent rÃ©utilisables. Lâ€™exÃ©cution automatique intervient une fois la checklist transformÃ©e en version projet dans lâ€™espace dâ€™exÃ©cution.
+        Les checklists restent réutilisables. L'exécution automatique intervient une fois la checklist transformée en version projet dans l'espace d'exécution.
       </p>
 
       <p v-if="loading" class="muted">Chargement des checklists...</p>
@@ -695,9 +695,9 @@ watch(
             <tr>
               <th>ID</th>
               <th>Titre</th>
-              <th>CatÃ©gorie</th>
+              <th>Catégorie</th>
               <th>Statut</th>
-              <th>Nombre dâ€™items</th>
+              <th>Nombre d'items</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -713,7 +713,7 @@ watch(
               <td>{{ checklist.category || '-' }}</td>
               <td>
                 <span class="tag" :class="checklist.is_active ? 'active' : 'inactive'">
-                  {{ checklist.is_active ? 'Active' : 'ArchivÃ©e' }}
+                  {{ checklist.is_active ? 'Active' : 'Archivée' }}
                 </span>
               </td>
               <td>{{ checklist.items?.length || 0 }}</td>
@@ -742,7 +742,7 @@ watch(
               </td>
             </tr>
             <tr v-if="filteredChecklists.length === 0">
-              <td colspan="6" class="muted">Aucune checklist ne correspond aux filtres appliquÃ©s.</td>
+              <td colspan="6" class="muted">Aucune checklist ne correspond aux filtres appliqués.</td>
             </tr>
           </tbody>
         </table>
@@ -754,7 +754,7 @@ watch(
           :disabled="pagination.current_page <= 1"
           @click="loadChecklists(pagination.current_page - 1)"
         >
-          PrÃ©cÃ©dent
+          Précédent
         </button>
         <button
           class="btn btn-secondary btn-sm"

@@ -387,7 +387,7 @@ onBeforeUnmount(() => {
           @click="showUserForm = true"
           data-testid="users-btn-open-create"
         >
-          CrÃ©er utilisateur
+          Créer utilisateur
         </button>
       </div>
 

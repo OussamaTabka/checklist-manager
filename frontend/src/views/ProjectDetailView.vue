@@ -94,18 +94,18 @@ const reportFormats = computed(() => [
     soon: false,
   },
 ])
-const reportTypeLabel = computed(() => (reportOptions.value.type === 'summary' ? 'SynthÃ©tique' : 'DÃ©taillÃ©'))
+const reportTypeLabel = computed(() => (reportOptions.value.type === 'summary' ? 'Synthétique' : 'Détaillé'))
 const reportTypes = computed(() => [
   {
     value: 'summary',
-    label: 'SynthÃ©tique',
-    description: 'KPI et rÃ©sumÃ© global',
+    label: 'Synthétique',
+    description: 'KPI et résumé global',
     disabled: false,
   },
   {
     value: 'detailed',
-    label: 'DÃ©taillÃ©',
-    description: 'DonnÃ©es complÃ¨tes et traÃ§abilitÃ©',
+    label: 'Détaillé',
+    description: 'Données complètes et traçabilité',
     disabled: false,
   },
 ])
@@ -280,8 +280,8 @@ async function exportProjectReport() {
     toast.success('Rapport du projet exporte avec succes.')
   } catch (error) {
     if (error?.status === 403) {
-      reportModalError.value = "Vous n'Ãªtes pas autorisÃ© Ã  exporter ce rapport."
-      toast.error("Vous n'Ãªtes pas autorisÃ© Ã  exporter ce rapport.")
+      reportModalError.value = "Vous n'êtes pas autorisé Ã  exporter ce rapport."
+      toast.error("Vous n'êtes pas autorisé Ã  exporter ce rapport.")
       return
     }
 
@@ -612,7 +612,7 @@ onBeforeUnmount(() => {
                 <div class="report-format-copy">
                   <div class="report-format-title-row">
                     <strong>{{ formatOption.label }}</strong>
-                    <span v-if="formatOption.soon" class="report-soon-badge">BientÃ´t</span>
+                    <span v-if="formatOption.soon" class="report-soon-badge">Bientôt</span>
                   </div>
                   <span>{{ formatOption.description }}</span>
                 </div>
@@ -624,7 +624,7 @@ onBeforeUnmount(() => {
           <div class="stack stack-xs report-modal-section">
             <div class="report-section-head">
               <span class="report-section-title">Type de rapport</span>
-              <span class="report-section-caption">Choix simple entre rÃ©sumÃ© global et vue complÃ¨te</span>
+              <span class="report-section-caption">Choix simple entre résumé global et vue complète</span>
             </div>
             <div class="report-type-segmented">
               <button
@@ -652,7 +652,7 @@ onBeforeUnmount(() => {
             </div>
             <div class="report-content-groups">
               <div class="report-content-group">
-                <span class="report-group-title">DonnÃ©es principales</span>
+                <span class="report-group-title">Données principales</span>
                 <div class="report-options-list">
                   <label class="report-option-row">
                     <input v-model="reportOptions.include_user_stories" type="checkbox">
@@ -665,20 +665,20 @@ onBeforeUnmount(() => {
                 </div>
               </div>
               <div class="report-content-group">
-                <span class="report-group-title">RÃ©sultats</span>
+                <span class="report-group-title">Résultats</span>
                 <div class="report-options-list">
                   <label class="report-option-row">
                     <input v-model="reportOptions.include_execution_results" type="checkbox">
-                    <span>RÃ©sultats d'exÃ©cution</span>
+                    <span>Résultats d'exécution</span>
                   </label>
                   <label class="report-option-row">
                     <input v-model="reportOptions.include_failed_blocked" type="checkbox">
-                    <span>Tests Ã©chouÃ©s / bloquÃ©s</span>
+                    <span>Tests échoués / bloqués</span>
                   </label>
                 </div>
               </div>
               <div class="report-content-group">
-                <span class="report-group-title">TraÃ§abilitÃ©</span>
+                <span class="report-group-title">Traçabilité</span>
                 <div class="report-options-list">
                   <label class="report-option-row">
                     <input v-model="reportOptions.include_comments" type="checkbox">
@@ -703,16 +703,16 @@ onBeforeUnmount(() => {
         <div class="report-modal-footer">
           <div class="report-modal-summary">
             <span>{{ reportOptions.format.toUpperCase() }}</span>
-            <span>Â·</span>
+            <span>·</span>
             <span>{{ reportTypeLabel }}</span>
-            <span>Â·</span>
+            <span>·</span>
             <span>{{ enabledReportSectionsCount }} sections incluses</span>
           </div>
           <div class="report-modal-actions">
             <button type="button" class="ghost-button" :disabled="exportLoading" @click="closeReportModal">Annuler</button>
             <button type="button" class="report-export-button" :disabled="exportLoading" @click="exportProjectReport">
               <Download :size="16" />
-              <span>{{ exportLoading ? 'GÃ©nÃ©ration...' : 'Exporter le rapport' }}</span>
+              <span>{{ exportLoading ? 'Génération...' : 'Exporter le rapport' }}</span>
             </button>
           </div>
         </div>
