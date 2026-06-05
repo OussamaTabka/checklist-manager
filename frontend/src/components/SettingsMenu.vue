@@ -11,7 +11,7 @@ const isOpen = ref(false)
 
 const currentLanguage = computed(() => {
   const lang = settingsStore.languages.find(l => l.code === settingsStore.language)
-  return lang?.flag || 'ðŸ‡«ðŸ‡·'
+  return lang?.flag || '🇫🇷'
 })
 
 function openSettings() {
@@ -51,11 +51,11 @@ function closeMenu() {
       <div
         v-if="isOpen"
         @click:outside="closeMenu"
-        class="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-50 border border-gray-200 dark:border-gray-700 overflow-hidden"
+        class="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-lg shadow-xl z-50 border border-gray-200 dark:border-slate-700 overflow-hidden"
       >
         <!-- Language Section -->
-        <div class="p-3 border-b border-gray-200 dark:border-gray-700">
-          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
+        <div class="p-3 border-b border-gray-200 dark:border-slate-700">
+          <p class="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
             <Globe :size="14" />
             {{ t('settings.language', settingsStore.language) }}
           </p>
@@ -77,12 +77,12 @@ function closeMenu() {
         </div>
 
         <!-- Dark Mode Section -->
-        <div class="p-3 border-b border-gray-200 dark:border-gray-700">
+        <div class="p-3 border-b border-gray-200 dark:border-slate-700">
           <button
             @click="toggleDarkMode"
-            class="w-full flex items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition"
+            class="w-full flex items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition"
           >
-            <span class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <span class="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
               <component :is="settingsStore.darkMode ? Moon : Sun" :size="16" />
               {{ settingsStore.darkMode ? 'Dark Mode' : 'Light Mode' }}
             </span>
@@ -107,7 +107,7 @@ function closeMenu() {
         <!-- Settings Link -->
         <button
           @click="openSettings"
-          class="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition flex items-center gap-2"
+          class="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition flex items-center gap-2"
         >
           <Settings :size="16" />
           {{ t('settings.title', settingsStore.language) }}

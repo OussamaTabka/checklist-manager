@@ -67,10 +67,10 @@ const runForm = reactive({
 })
 
 const statusIcons = {
-  'Not Tested': { icon: Square, color: 'text-slate-500', label: 'Non testÃ©' },
-  Passed: { icon: CheckCircle, color: 'text-emerald-600', label: 'RÃ©ussi' },
-  Failed: { icon: TriangleAlert, color: 'text-rose-600', label: 'Ã‰chec' },
-  Blocked: { icon: AlertCircle, color: 'text-amber-600', label: 'BloquÃ©' },
+  'Not Tested': { icon: Square, color: 'text-slate-500', label: 'Non testé' },
+  Passed: { icon: CheckCircle, color: 'text-emerald-600', label: 'Réussi' },
+  Failed: { icon: TriangleAlert, color: 'text-rose-600', label: 'Échec' },
+  Blocked: { icon: AlertCircle, color: 'text-amber-600', label: 'Bloqué' },
 }
 
 const criticalityColors = {
@@ -82,7 +82,7 @@ const criticalityColors = {
   Minor: 'bg-slate-100 text-slate-700',
 }
 
-const fallbackItemStatus = { icon: Square, color: 'text-slate-500', label: 'Non testÃ©' }
+const fallbackItemStatus = { icon: Square, color: 'text-slate-500', label: 'Non testé' }
 
 const checklist = computed(() => checklistsStore.currentChecklist)
 const relatedChecklistOptions = computed(() => {
@@ -156,18 +156,18 @@ const checklistReuseScore = computed(() => {
 
 const checklistSourceLabel = computed(() => {
   if (checklist.value?.source_checklist_name) {
-    return `RÃ©utilisÃ©e depuis la checklist : ${checklist.value.source_checklist_name}`
+    return `Réutilisée depuis la checklist : ${checklist.value.source_checklist_name}`
   }
 
   if (projectContextName.value) {
-    return `GÃ©nÃ©rÃ©e pour le projet : ${projectContextName.value}`
+    return `Générée pour le projet : ${projectContextName.value}`
   }
 
   if (checklist.value?.generated_from) {
     return `Source : ${String(checklist.value.generated_from)}`
   }
 
-  return 'CrÃ©Ã©e dans lâ€™espace dâ€™exÃ©cution QA'
+  return 'Créée dans l'espace d'exécution QA'
 })
 
 const checklistStoryDescription = computed(() => {
@@ -200,25 +200,25 @@ function getItemPriorityClass(priority) {
 }
 
 function formatChecklistPriority(priority) {
-  if (!priority) return 'Non dÃ©finie'
+  if (!priority) return 'Non définie'
   const value = String(priority)
   return value.charAt(0).toUpperCase() + value.slice(1)
 }
 
 function formatChecklistStatus(status) {
-  if (!status) return 'Non dÃ©fini'
+  if (!status) return 'Non défini'
   const labels = {
     backlog: 'Backlog',
     in_progress: 'En cours',
-    ready_for_test: 'PrÃªt pour test',
-    completed: 'TerminÃ©e',
+    ready_for_test: 'Prêt pour test',
+    completed: 'Terminée',
     pending: 'En attente',
-    passed: 'RÃ©ussi',
-    failed: 'Ã‰chec',
-    blocked: 'BloquÃ©',
+    passed: 'Réussi',
+    failed: 'Échec',
+    blocked: 'Bloqué',
     draft: 'Brouillon',
-    approved: 'ApprouvÃ©e',
-    archived: 'ArchivÃ©e',
+    approved: 'Approuvée',
+    archived: 'Archivée',
   }
   return labels[String(status)] || String(status).replaceAll('_', ' ')
 }
@@ -244,13 +244,13 @@ function executionStateLabel(state) {
     case 'queued':
       return 'En file'
     case 'running':
-      return 'ExÃ©cution en cours'
+      return 'Exécution en cours'
     case 'passed':
-      return 'ExÃ©cution rÃ©ussie'
+      return 'Exécution Réussie'
     case 'failed':
-      return 'ExÃ©cution en Ã©chec'
+      return 'Exécution en Ã©chec'
     case 'blocked':
-      return 'ExÃ©cution bloquÃ©e'
+      return 'Exécution Bloquée'
     default:
       return 'En attente'
   }
@@ -767,7 +767,7 @@ function maskExecutionInputValue(input) {
   const value = typeof input?.value === 'string' ? input.value : ''
   if (!value) return 'Non renseigne'
   if (input.kind === 'password' || /password|secret|token|cvv/i.test(input.key || '')) {
-    return 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢'
+    return '••••••••'
   }
   if (input.kind === 'file') {
     return value.split(/[\\/]/).pop() || value
@@ -935,7 +935,7 @@ function itemLastUpdate(item) {
   if (testerName && testedAt) return `${testerName} - ${testedAt}`
   if (testerName) return testerName
   if (testedAt) return testedAt
-  return 'Aucune exÃ©cution rÃ©cente'
+  return 'Aucune Exécution récente'
 }
 
 function historyDetail(change) {
@@ -951,13 +951,13 @@ function historyActionTitle(change) {
     case 'status_changed':
       return 'Statut modifie'
     case 'comment_added':
-      return 'Commentaire ajoutÃ©'
+      return 'Commentaire ajouté'
     case 'comment_updated':
       return 'Commentaire mis Ã  jour'
     case 'automated_test_started':
-      return 'ExÃ©cution automatique lancÃ©e'
+      return 'Exécution automatique lancée'
     case 'automated_test_finished':
-      return 'ExÃ©cution automatique terminÃ©e'
+      return 'Exécution automatique Terminée'
     default:
       return 'Mise a jour'
   }
@@ -1022,11 +1022,11 @@ onBeforeUnmount(() => {
             <ArrowLeft :size="18" />
           </button>
           <div class="min-w-0">
-            <p class="project-execution-kicker">Espace dâ€™exÃ©cution QA</p>
+            <p class="project-execution-kicker">Espace d'exécution QA</p>
             <p v-if="projectContextName" class="project-context-label">{{ projectContextName }}</p>
             <h1 class="project-execution-title">{{ checklist?.name || 'Chargement...' }}</h1>
             <p class="project-execution-subtitle compact">
-              ExÃ©cutez les scÃ©narios, lancez lâ€™agent automatique et suivez les rÃ©sultats de validation.
+              ExÃ©cutez les scénarios, lancez lâ€™agent automatique et suivez les résultats de validation.
             </p>
           </div>
         </div>
@@ -1034,7 +1034,7 @@ onBeforeUnmount(() => {
 
       <div class="project-execution-side compact">
         <div class="project-execution-app-card compact">
-          <span class="project-execution-side-label">ExÃ©cution active</span>
+          <span class="project-execution-side-label">Exécution active</span>
           <p class="muted">Le runner, lâ€™orchestrateur et le polling restent actifs pour cette checklist.</p>
         </div>
 
@@ -1085,7 +1085,7 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="info-stat-chip">
-            <p class="info-stat-label">ScÃ©narios</p>
+            <p class="info-stat-label">scénarios</p>
             <span class="tag text-slate-900 border-slate-300 bg-slate-100">
               {{ scenariosStats.total }} au total
             </span>
@@ -1255,7 +1255,7 @@ onBeforeUnmount(() => {
 
                   <div v-else class="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-6 text-center">
                     <p class="text-sm font-medium text-slate-700">Aucun historique disponible pour ce test case.</p>
-                    <p class="mt-2 text-sm text-slate-500">Les changements de statut et dâ€™exÃ©cution apparaÃ®tront ici.</p>
+                    <p class="mt-2 text-sm text-slate-500">Les changements de statut et d'exécution apparaÃ®tront ici.</p>
                   </div>
 
                   <button class="btn btn-secondary btn-sm mt-4" @click="toggleItemHistory(item.id)">

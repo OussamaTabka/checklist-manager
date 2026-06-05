@@ -108,8 +108,12 @@ function refreshPage() {
   color: #0f172a;
 }
 
+:global(.dark) .part1 {
+  color: #f8fafc;
+}
+
 .part2 {
-  background: linear-gradient(180deg, #1f6feb, #174fbb);
+  background: linear-gradient(180deg, #6366F1, #4F46E5);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -124,8 +128,12 @@ function refreshPage() {
   font-weight: 700;
 }
 
+:global(.dark) .brand-subtitle {
+  color: #94A3B8;
+}
+
 .logo-header:focus-visible {
-  outline: 2px solid rgba(31, 111, 235, 0.45);
+  outline: 2px solid rgba(99, 102, 241, 0.45);
   outline-offset: 4px;
   border-radius: 0.75rem;
 }
