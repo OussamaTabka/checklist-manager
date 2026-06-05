@@ -305,7 +305,7 @@ onMounted(async () => {
             <BookOpenCheck :size="18" />
             <div>
               <h2>Contexte fonctionnel</h2>
-              <p>Un titre clair et une référence rendent la story facile Ã  retrouver dans le projet.</p>
+              <p>Un titre clair et une référence rendent la story facile   retrouver dans le projet.</p>
             </div>
           </div>
 
@@ -338,7 +338,7 @@ onMounted(async () => {
             <textarea
               v-model="form.description"
               rows="5"
-              placeholder="En tant que client, je veux me connecter avec mon email afin d'accéder Ã  mon espace personnel."
+              placeholder="En tant que client, je veux me connecter avec mon email afin d'accéder   mon espace personnel."
               :class="{ 'is-invalid': errors.description }"
             ></textarea>
             <small v-if="errors.description">{{ errors.description }}</small>
@@ -434,7 +434,7 @@ onMounted(async () => {
           </button>
           <button type="submit" :disabled="submitting" class="story-primary-button">
             <BadgeCheck :size="18" />
-            {{ submitting ? 'Enregistrement...' : isEditing ? 'Mettre Ã  jour' : 'Créer' }}
+            {{ submitting ? 'Enregistrement...' : isEditing ? 'Mettre   jour' : 'Créer' }}
           </button>
         </div>
       </form>
@@ -490,7 +490,7 @@ onMounted(async () => {
 
         <section class="story-summary-card">
           <span class="story-eyebrow">Résumé</span>
-          <h3>{{ form.title || 'Titre Ã  définir' }}</h3>
+          <h3>{{ form.title || 'Titre   définir' }}</h3>
           <div class="story-summary-meta">
             <span>{{ selectedPriority?.label }}</span>
           </div>

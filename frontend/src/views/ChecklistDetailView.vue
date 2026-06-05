@@ -953,7 +953,7 @@ function historyActionTitle(change) {
     case 'comment_added':
       return 'Commentaire ajouté'
     case 'comment_updated':
-      return 'Commentaire mis Ã  jour'
+      return 'Commentaire mis   jour'
     case 'automated_test_started':
       return 'Exécution automatique lancée'
     case 'automated_test_finished':
@@ -1406,7 +1406,7 @@ onBeforeUnmount(() => {
 
                   <div v-else class="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-6 text-center">
                     <p class="text-sm font-semibold text-slate-700">Aucun commentaire enregistré pour ce test case.</p>
-                    <p class="mt-2 text-sm text-slate-500">Soyez le premier Ã  ajouter une observation.</p>
+                    <p class="mt-2 text-sm text-slate-500">Soyez le premier   ajouter une observation.</p>
                   </div>
 
                   <div v-if="getArtifactUrl(item)" class="mt-4 rounded-2xl border border-brand-200 bg-brand-50/80 p-4">

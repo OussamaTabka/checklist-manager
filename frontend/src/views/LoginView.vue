@@ -62,7 +62,7 @@ async function onSubmit() {
     <div class="card stack">
       <div>
         <h1>Connexion</h1>
-        <p class="muted">Utilisez vos identifiants pour accéder Ã  IntelliTest.</p>
+        <p class="muted">Utilisez vos identifiants pour accéder   IntelliTest.</p>
       </div>
 
       <p v-if="errorMessage" class="error" data-testid="login-msg-error">{{ errorMessage }}</p>

@@ -280,8 +280,8 @@ async function exportProjectReport() {
     toast.success('Rapport du projet exporte avec succes.')
   } catch (error) {
     if (error?.status === 403) {
-      reportModalError.value = "Vous n'êtes pas autorisé Ã  exporter ce rapport."
-      toast.error("Vous n'êtes pas autorisé Ã  exporter ce rapport.")
+      reportModalError.value = "Vous n'êtes pas autorisé   exporter ce rapport."
+      toast.error("Vous n'êtes pas autorisé   exporter ce rapport.")
       return
     }
 

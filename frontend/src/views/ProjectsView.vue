@@ -98,7 +98,7 @@ const projectPageCopy = computed(() => {
         kicker: 'Espace d'exécution',
         title: 'Projets assignés',
         description:
-          'Consultez les projets qui vous sont assignés, comprenez leur périmètre et accédez rapidement Ã  l'exécution des tests.',
+          'Consultez les projets qui vous sont assignés, comprenez leur périmètre et accédez rapidement   l'exécution des tests.',
       }
     default:
       return {
@@ -176,7 +176,7 @@ const projectMetrics = computed(() => {
   return [
     { label: 'Projets', value: totalProjects, caption: 'Projets disponibles dans l'espace de travail' },
     { label: 'Testeurs assignés', value: totalAssignedTesters, caption: 'Capacité d'exécution mobilisée' },
-    { label: 'User Stories liées', value: totalLinkedStories, caption: 'Périmètre fonctionnel déjÃ  préparé' },
+    { label: 'User Stories liées', value: totalLinkedStories, caption: 'Périmètre fonctionnel déj  préparé' },
     { label: 'Environnements prêts', value: projectsWithUrl, caption: 'Projets disposant d'une URL cible' },
   ]
 })
@@ -902,7 +902,7 @@ watch(successMessage, (message) => {
 
         <div class="field">
           <label class="field-label-strong">Objectifs de test</label>
-          <textarea v-model="form.test_objectives" rows="3" placeholder="Précisez les objectifs QA, les risques Ã  couvrir et les résultats attendus..." />
+          <textarea v-model="form.test_objectives" rows="3" placeholder="Précisez les objectifs QA, les risques   couvrir et les résultats attendus..." />
         </div>
 
         <div class="card project-setup-section">
@@ -985,7 +985,7 @@ watch(successMessage, (message) => {
                 <div class="manual-story-card-head">
                   <div>
                     <strong>User Story {{ index + 1 }}</strong>
-                    <p class="muted">Préparez un besoin métier prêt Ã  être rattaché au projet dès sa création.</p>
+                    <p class="muted">Préparez un besoin métier prêt   être rattaché au projet dès sa création.</p>
                   </div>
 
                   <button type="button" class="btn btn-danger btn-sm" @click="removeManualStory(story.localId)">
@@ -1085,7 +1085,7 @@ watch(successMessage, (message) => {
             <LoaderCircle v-if="creating" :size="16" class="spin" />
             <Save v-else-if="form.id" :size="16" />
             <Sparkles v-else :size="16" />
-            <span>{{ creating ? (form.id ? 'Mise Ã  jour...' : 'Création...') : (form.id ? 'Enregistrer les modifications' : 'Créer le projet') }}</span>
+            <span>{{ creating ? (form.id ? 'Mise   jour...' : 'Création...') : (form.id ? 'Enregistrer les modifications' : 'Créer le projet') }}</span>
           </button>
           <button type="button" class="btn btn-secondary btn-inline-icon" @click="resetForm(true)">
             <X :size="16" />
@@ -1104,7 +1104,7 @@ watch(successMessage, (message) => {
       </div>
 
       <p class="muted">
-        Ouvrez un projet pour accéder Ã  son espace de suivi et consulter ses user stories.
+        Ouvrez un projet pour accéder   son espace de suivi et consulter ses user stories.
       </p>
 
       <p v-if="listError" class="error" data-testid="projects-msg-error-list">{{ listError }}</p>
@@ -1140,7 +1140,7 @@ watch(successMessage, (message) => {
                 <div class="project-line-testers">
                   <span v-for="tester in project.testers || []" :key="tester.id" class="mini-chip tester-chip">{{ tester.name }}</span>
                   <span v-if="!project.testers || project.testers.length === 0" class="muted project-line-fallback">{{ projectNoTesterText() }}</span>
-                  <span v-if="!project.testers || project.testers.length === 0" class="muted">Aucun testeur assignÃƒ©</span>
+                  <span v-if="!project.testers || project.testers.length === 0" class="muted">Aucun testeur assignƒ©</span>
                 </div>
               </td>
               <td>
@@ -1148,7 +1148,7 @@ watch(successMessage, (message) => {
                   {{ getHostname(project.app_url) }}
                 </a>
                 <span v-else class="muted app-url-text project-line-fallback">{{ projectNoUrlText() }}</span>
-                <span v-if="false" class="muted app-url-text">Aucune URL renseignÃƒ©e</span>
+                <span v-if="false" class="muted app-url-text">Aucune URL renseignƒ©e</span>
               </td>
               <td class="projects-actions-cell">
                 <div v-if="canManageProject(project)" class="project-card-actions" @click.stop>
@@ -1252,12 +1252,12 @@ watch(successMessage, (message) => {
       </div>
 
       <div class="pagination pagination-centered">
-        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="pagination.current_page <= 1" @click="loadProjects(pagination.current_page - 1)" title="Aller Ã  la page précédente">
+        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="pagination.current_page <= 1" @click="loadProjects(pagination.current_page - 1)" title="Aller   la page précédente">
           <ArrowLeft :size="14" />
           <span>Précédent</span>
         </button>
         <span class="muted pagination-text">Page {{ pagination.current_page }} sur {{ pagination.last_page }}</span>
-        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="pagination.current_page >= pagination.last_page" @click="loadProjects(pagination.current_page + 1)" title="Aller Ã  la page suivante">
+        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="pagination.current_page >= pagination.last_page" @click="loadProjects(pagination.current_page + 1)" title="Aller   la page suivante">
           <span>Suivant</span>
           <ArrowRight :size="14" />
         </button>
@@ -1306,7 +1306,7 @@ watch(successMessage, (message) => {
               <td>
                 <div class="project-line-testers">
                   <span v-for="tester in project.testers || []" :key="tester.id" class="mini-chip tester-chip">{{ tester.name }}</span>
-                  <span v-if="!project.testers || project.testers.length === 0" class="muted">Aucun testeur assignÃƒ©</span>
+                  <span v-if="!project.testers || project.testers.length === 0" class="muted">Aucun testeur assignƒ©</span>
                 </div>
               </td>
               <td><span class="muted app-url-text">Archivé</span></td>
@@ -1412,12 +1412,12 @@ watch(successMessage, (message) => {
       </div>
 
       <div class="pagination pagination-centered">
-        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="archivedPagination.current_page <= 1" @click="loadArchivedProjects(archivedPagination.current_page - 1)" title="Aller Ã  la page précédente">
+        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="archivedPagination.current_page <= 1" @click="loadArchivedProjects(archivedPagination.current_page - 1)" title="Aller   la page précédente">
           <ArrowLeft :size="14" />
           <span>Précédent</span>
         </button>
         <span class="muted pagination-text">Page {{ archivedPagination.current_page }} sur {{ archivedPagination.last_page }}</span>
-        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="archivedPagination.current_page >= archivedPagination.last_page" @click="loadArchivedProjects(archivedPagination.current_page + 1)" title="Aller Ã  la page suivante">
+        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="archivedPagination.current_page >= archivedPagination.last_page" @click="loadArchivedProjects(archivedPagination.current_page + 1)" title="Aller   la page suivante">
           <span>Suivant</span>
           <ArrowRight :size="14" />
         </button>

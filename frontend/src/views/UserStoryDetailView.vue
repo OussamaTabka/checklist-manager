@@ -576,18 +576,18 @@ function handlePrimaryAction() {
 
 function localizeGeneratedText(text) {
   return String(text || '')
-    .replace(/Ãƒ©/g, 'é')
-    .replace(/Ãƒ¨/g, 'è')
-    .replace(/Ãƒª/g, 'ê')
-    .replace(/Ãƒ /g, 'Ã ')
-    .replace(/Ãƒ¢/g, 'â')
-    .replace(/Ãƒ®/g, 'î')
-    .replace(/Ãƒ´/g, 'ô')
-    .replace(/Ãƒ¹/g, 'ù')
-    .replace(/Ãƒ»/g, 'û')
-    .replace(/Ãƒ§/g, 'ç')
+    .replace(/ƒ©/g, 'é')
+    .replace(/ƒ¨/g, 'è')
+    .replace(/ƒª/g, 'ê')
+    .replace(/ƒ /g, ' ')
+    .replace(/ƒ¢/g, 'â')
+    .replace(/ƒ®/g, 'î')
+    .replace(/ƒ´/g, 'ô')
+    .replace(/ƒ¹/g, 'ù')
+    .replace(/ƒ»/g, 'û')
+    .replace(/ƒ§/g, 'ç')
     .replace(/ââ‚¬â„¢/g, "'")
-    .replace(/Ã‚/g, '')
+    .replace(/‚/g, '')
 }
 
 function provenanceLabel(item) {
@@ -1402,7 +1402,7 @@ onBeforeUnmount(() => {
                 </button>
               </div>
               <p class="mt-3 text-sm text-slate-500">
-                éutilisez rapidement des items déjÃ  présents dans la bibliothèque de checklists.
+                éutilisez rapidement des items déj  présents dans la bibliothèque de checklists.
               </p>
             </div>
 

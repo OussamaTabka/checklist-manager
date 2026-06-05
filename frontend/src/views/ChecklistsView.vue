@@ -591,7 +591,7 @@ watch(
 
           <div class="card stack">
             <h4>Cas de test réutilisables</h4>
-            <p class="muted">Sélectionnez un item existant pour l'ajouter Ã  cette checklist.</p>
+            <p class="muted">Sélectionnez un item existant pour l'ajouter   cette checklist.</p>
             <div class="grid">
               <div class="field">
                 <label>Item existant</label>
@@ -624,7 +624,7 @@ watch(
                   required
                   @input="itemSearchQueries[index] = item.title"
                   @focus="loadAvailableItems"
-                  placeholder="Commencez Ã  saisir pour rechercher un item existant..."
+                  placeholder="Commencez   saisir pour rechercher un item existant..."
                 />
                 <!-- Autocomplete suggestions dropdown -->
                 <div
