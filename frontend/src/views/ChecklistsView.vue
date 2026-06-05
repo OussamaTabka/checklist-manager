@@ -684,7 +684,7 @@ watch(
     <div class="card stack">
       <h2>Liste des checklists</h2>
       <p class="muted">
-        Les checklists restent réutilisables. L'exécution automatique intervient une fois la checklist transformée en version projet dans l"espace d'exécution.
+        Les checklists restent réutilisables. L'exécution automatique intervient une fois la checklist transformée en version projet dans l'espace d'exécution.
       </p>
 
       <p v-if="loading" class="muted">Chargement des checklists...</p>

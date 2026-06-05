@@ -334,7 +334,7 @@ onMounted(() => {
 
         <div class="field">
           <label>Je veux</label>
-          <textarea v-model="form.i_want_that" rows="2" placeholder="Décrivez ce que l"utilisateur souhaite réaliser"></textarea>
+          <textarea v-model="form.i_want_that" rows="2" placeholder="Décrivez ce que l'utilisateur souhaite réaliser"></textarea>
         </div>
 
         <div class="field">

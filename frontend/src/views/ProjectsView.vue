@@ -1018,7 +1018,7 @@ watch(successMessage, (message) => {
 
                 <div class="form-grid-two">
                   <div class="field">
-                    <label class="field-label-strong">Critères d"acceptation</label>
+                    <label class="field-label-strong">Critères d'acceptation</label>
                     <textarea v-model="story.acceptance_criteria" rows="3" placeholder="Given / When / Then, règles de validation, cas attendus..." />
                   </div>
 

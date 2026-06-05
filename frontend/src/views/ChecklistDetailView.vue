@@ -1150,7 +1150,7 @@ onBeforeUnmount(() => {
               <h2>Test cases exécutables</h2>
               <span class="tag text-brand-900 border-brand-300 bg-brand-100">{{ scenariosStats.total }}</span>
             </div>
-            <p class="muted test-case-section-note">Lancez les tests, ajustez le statut final et consultez rapidement l"historique et les observations QA.</p>
+            <p class="muted test-case-section-note">Lancez les tests, ajustez le statut final et consultez rapidement l'historique et les observations QA.</p>
           </div>
 
         </div>

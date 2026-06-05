@@ -154,8 +154,8 @@ const PHRASES = {
   placeholder_story_title: { en: 'Connexion avec email et mot de passe', fr: 'Connexion avec email et mot de passe', ar: "تسجيل الدخول بالبريد الالكتروني وكلمة المرور" },
   placeholder_story_description: {
     en: "En tant que client, je veux me connecter avec mon email afin d'acceder a mon espace personnel.",
-    fr: "En tant que client, je veux me connecter avec mon email afin d"acceder a mon espace personnel.",
-    ar: "بصفتي عميلا، اريد تسجيل الدخول بالبريد الالكتروني للوصول الى مساحتي الشخصية.',
+    fr: "En tant que client, je veux me connecter avec mon email afin d'acceder a mon espace personnel.",
+    ar: "بصفتي عميلا، اريد تسجيل الدخول بالبريد الالكتروني للوصول الى مساحتي الشخصية.",
   },
   placeholder_story_gwt: {
     en: 'Given valid credentials, When user submits the login form, Then dashboard loads Given invalid credentials, When user submits the form, Then an error message is displayed',
