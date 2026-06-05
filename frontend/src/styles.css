@@ -97,7 +97,10 @@
   .sidebar-nav {@apply grid gap-2;}
   .sidebar-nav a {@apply px-4 py-3 rounded-lg text-gray-700 font-medium text-sm transition-all;}
   .sidebar-nav a:hover {@apply bg-gray-200 text-gray-900;}
-  .sidebar-nav a.router-link-active {@apply bg-gradient-to-r from-brand-600 to-brand-700 text-white shadow-md;}
+  .sidebar-nav a.router-link-active {
+    @apply text-white shadow-md;
+    background: linear-gradient(to right, #4F46E5, #4338CA);
+  }
   .portal-content {@apply p-8;}
   .auth-content {@apply min-h-screen grid place-items-center;}
   .page {@apply max-w-6xl mx-auto w-full;}
