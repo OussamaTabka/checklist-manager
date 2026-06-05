@@ -38,7 +38,7 @@ const isAdminExperience = computed(() => auth.primaryRole === 'admin')
 const workspaceLabel = computed(() => {
   if (auth.roles.includes('chef')) return tr('Project Command')
   if (auth.roles.includes('admin')) return tr('Administration')
-  if (auth.roles.includes('testeur')) return 'Espace d'exécution'
+  if (auth.roles.includes('testeur')) return tr("Espace d'exécution")
   return tr('Workspace')
 })
 const roleLabel = computed(() => {
