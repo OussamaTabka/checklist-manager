@@ -1,0 +1,111 @@
+{
+    "timestamp": "2026-06-04T23:49:24+02:00",
+    "test_execution_summary": {
+        "total_test_runs": 128,
+        "total_test_results": 128,
+        "status_distribution": [
+            {
+                "status": "blocked",
+                "count": 70,
+                "percentage": 54.7
+            },
+            {
+                "status": "failed",
+                "count": 7,
+                "percentage": 5.5
+            },
+            {
+                "status": "passed",
+                "count": 51,
+                "percentage": 39.8
+            }
+        ]
+    },
+    "error_analysis": {
+        "total_failed": 7,
+        "total_blocked": 70,
+        "total_errors_recorded": 77,
+        "error_distribution": {
+            "url_unreachable": {
+                "count": 26,
+                "percentage": 33.8,
+                "status_breakdown": {
+                    "in_failed": 0,
+                    "in_blocked": 26
+                }
+            },
+            "input_data_missing": {
+                "count": 21,
+                "percentage": 27.3,
+                "status_breakdown": {
+                    "in_failed": 0,
+                    "in_blocked": 21
+                }
+            },
+            "script_generation_failed": {
+                "count": 9,
+                "percentage": 11.7,
+                "status_breakdown": {
+                    "in_failed": 0,
+                    "in_blocked": 9
+                }
+            },
+            "infra_error": {
+                "count": 7,
+                "percentage": 9.1,
+                "status_breakdown": {
+                    "in_failed": 0,
+                    "in_blocked": 7
+                }
+            },
+            "timeout": {
+                "count": 5,
+                "percentage": 6.5,
+                "status_breakdown": {
+                    "in_failed": 0,
+                    "in_blocked": 5
+                }
+            },
+            "assertion_failed": {
+                "count": 3,
+                "percentage": 3.9,
+                "status_breakdown": {
+                    "in_failed": 3,
+                    "in_blocked": 0
+                }
+            },
+            "selector_not_found": {
+                "count": 3,
+                "percentage": 3.9,
+                "status_breakdown": {
+                    "in_failed": 3,
+                    "in_blocked": 0
+                }
+            },
+            "unexpected_error": {
+                "count": 2,
+                "percentage": 2.6,
+                "status_breakdown": {
+                    "in_failed": 0,
+                    "in_blocked": 2
+                }
+            },
+            "navigation_timeout": {
+                "count": 1,
+                "percentage": 1.3,
+                "status_breakdown": {
+                    "in_failed": 1,
+                    "in_blocked": 0
+                }
+            }
+        }
+    },
+    "validity_analysis": {
+        "total_runspecs": 53,
+        "specs_parsed": 53,
+        "specs_with_metadata": 17,
+        "retry_distribution": {
+            "fallback_used": 17
+        }
+    }
+}

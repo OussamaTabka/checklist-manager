@@ -1,0 +1,60 @@
+{
+    "timestamp": "2026-06-04T23:48:49+02:00",
+    "test_execution_summary": {
+        "total_test_runs": 141,
+        "total_test_results": 128,
+        "status_distribution": {
+            "blocked": {
+                "count": 70,
+                "percentage": 54.7
+            },
+            "failed": {
+                "count": 7,
+                "percentage": 5.5
+            },
+            "passed": {
+                "count": 51,
+                "percentage": 39.8
+            }
+        },
+        "error_distribution": {
+            "infra_error": {
+                "count": 7,
+                "percentage": 100
+            },
+            "assertion_failed": {
+                "count": 3,
+                "percentage": 42.9
+            },
+            "input_data_missing": {
+                "count": 21,
+                "percentage": 300
+            },
+            "unexpected_error": {
+                "count": 2,
+                "percentage": 28.6
+            },
+            "timeout": {
+                "count": 5,
+                "percentage": 71.4
+            },
+            "script_generation_failed": {
+                "count": 9,
+                "percentage": 128.6
+            },
+            "url_unreachable": {
+                "count": 26,
+                "percentage": 371.4
+            },
+            "selector_not_found": {
+                "count": 3,
+                "percentage": 42.9
+            },
+            "navigation_timeout": {
+                "count": 1,
+                "percentage": 14.3
+            }
+        }
+    },
+    "retry_analysis": []
+}

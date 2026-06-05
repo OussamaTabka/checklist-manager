@@ -1,0 +1,129 @@
+external_id,test_case_title,status,error_type,error_message_excerpt,classification
+128,"Verify valid login reaches the logged-in page",blocked,infra_error,"Missing built runner entrypoint dist/main.js. Run npm run build in playwright-runner-job.",ENVIRONNEMENT
+127,"Verify locked_out_user login is rejected",failed,assertion_failed,"Expected text containing 'locked out' but got '' for css=[role=""alert""], [data-test=""error""], h3[dat",HALLUCINATION
+126,"Verify successful login with standard_user",blocked,infra_error,"Missing built runner entrypoint dist/main.js. Run npm run build in playwright-runner-job.",ENVIRONNEMENT
+125,"Verify successful login with standard_user",blocked,input_data_missing,"Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.",DESIGN
+124,"Verify successful login with standard_user",blocked,input_data_missing,"Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.",DESIGN
+123,"Verify successful login with standard_user",blocked,unexpected_error,"[chrome] page.screenshot: Target page, context or browser has been closed",TO_EXAMINE
+122,"Verify successful login with standard_user",blocked,timeout,"Run timed out: the execution process ended before reporting a result. Marked blocked by runs:reap.",ENVIRONNEMENT
+118,"Verify successful login with standard_user",blocked,timeout,"Run timed out: the execution process ended before reporting a result. Marked blocked by runs:reap.",ENVIRONNEMENT
+119,"Verify valid login reaches the logged-in page",blocked,timeout,"Run timed out: the execution process ended before reporting a result. Marked blocked by runs:reap.",ENVIRONNEMENT
+120,"Verify searching for dress returns visible results",blocked,timeout,"Run timed out: the execution process ended before reporting a result. Marked blocked by runs:reap.",ENVIRONNEMENT
+121,"Verify searching for dress returns visible results",blocked,timeout,"Run timed out: the execution process ended before reporting a result. Marked blocked by runs:reap.",ENVIRONNEMENT
+117,"Verify locked_out_user login is rejected",failed,assertion_failed,"Expected text containing 'locked out' but got '' for css=[role=""alert""], [data-test=""error""], h3[dat",HALLUCINATION
+116,"TC-01 | Successful login page validation",blocked,infra_error,"Missing built runner entrypoint dist/main.js. Run npm run build in playwright-runner-job.",ENVIRONNEMENT
+115,"TC-01 | Successful login page validation",blocked,input_data_missing,"Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.",DESIGN
+114,"Valid user can login",passed,,"",PASSED
+113,"Valid user can login",passed,,"",PASSED
+112,"Valid user can login",passed,,"",PASSED
+111,"Verify successful login with standard_user",passed,,"",PASSED
+110,"Verify successful login with standard_user",blocked,script_generation_failed,"The Playwright script could not be generated for this test case. Details: The command """"C:\Program F",HALLUCINATION
+109,"Verify successful login with standard_user",blocked,script_generation_failed,"The Playwright script could not be generated for this test case. Details: The command """"C:\Program F",HALLUCINATION
+108,"Verify successful login with standard_user",blocked,script_generation_failed,"The Playwright script could not be generated for this test case. Details: The command """"C:\Program F",HALLUCINATION
+107,"Verify successful login with standard_user",blocked,script_generation_failed,"The Playwright script could not be generated for this test case. Details: The command """"C:\Program F",HALLUCINATION
+106,"Verify successful login with standard_user",blocked,script_generation_failed,"The Playwright script could not be generated for this test case. Details: The command """"C:\Program F",HALLUCINATION
+105,"Verify successful login with standard_user",blocked,script_generation_failed,"The Playwright script could not be generated for this test case. Details: The command """"C:\Program F",HALLUCINATION
+104,"Verify successful login with standard_user",blocked,script_generation_failed,"The Playwright script could not be generated for this test case. Details: The command """"C:\Program F",HALLUCINATION
+103,"TC-01 | Cas nominal",passed,,"",PASSED
+102,"Missing username prevents login",blocked,input_data_missing,"Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.",DESIGN
+101,"Locked out user cannot login",failed,assertion_failed,"Expected text containing 'locked out' but got '' for css=[role=""alert""], [data-test=""error""], h3[dat",HALLUCINATION
+100,"Valid user can login",passed,,"",PASSED
+99,"Sort price low to high",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED a",ENVIRONNEMENT
+98,"Sort product names Z to A",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED a",ENVIRONNEMENT
+97,"Sort product names A to Z",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED a",ENVIRONNEMENT
+96,"Back to products returns inventory list",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED a",ENVIRONNEMENT
+95,"Product detail page opens from inventory",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED a",ENVIRONNEMENT
+94,"Cart retains added item after opening cart",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED a",ENVIRONNEMENT
+93,"Remove backpack from cart page",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED a",ENVIRONNEMENT
+92,"Remove backpack from inventory page",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED a",ENVIRONNEMENT
+91,"Cart badge updates after adding two items",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED a",ENVIRONNEMENT
+90,"Add bike light to cart",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED a",ENVIRONNEMENT
+89,"Add backpack to cart",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED a",ENVIRONNEMENT
+88,"Cart page requires login",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED a",ENVIRONNEMENT
+87,"Inventory page requires login",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED a",ENVIRONNEMENT
+86,"Invalid username shows login error",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED a",ENVIRONNEMENT
+85,"Invalid password shows login error",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED a",ENVIRONNEMENT
+84,"Missing username and password prevents login",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED a",ENVIRONNEMENT
+83,"Missing password prevents login",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED a",ENVIRONNEMENT
+82,"Missing username prevents login",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED a",ENVIRONNEMENT
+81,"Locked out user cannot login",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED a",ENVIRONNEMENT
+80,"Valid user can login",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_CONNECTION_REFUSED a",ENVIRONNEMENT
+79,"Sort price low to high",passed,,"",PASSED
+78,"Back to products returns inventory list",failed,selector_not_found,"A required element did not appear before the timeout expired.",HALLUCINATION
+77,"Sort product names Z to A",passed,,"",PASSED
+76,"Sort product names A to Z",passed,,"",PASSED
+75,"Remove backpack from cart page",failed,selector_not_found,"A required element did not appear before the timeout expired.",HALLUCINATION
+74,"Product detail page opens from inventory",passed,,"",PASSED
+73,"Cart retains added item after opening cart",passed,,"",PASSED
+72,"Remove backpack from inventory page",passed,,"",PASSED
+71,"Cart badge updates after adding two items",passed,,"",PASSED
+70,"Add bike light to cart",passed,,"",PASSED
+69,"Add backpack to cart",passed,,"",PASSED
+68,"Cart page requires login",passed,,"",PASSED
+67,"Inventory page requires login",passed,,"",PASSED
+66,"Invalid username shows login error",passed,,"",PASSED
+65,"Invalid password shows login error",passed,,"",PASSED
+64,"Missing username and password prevents login",blocked,input_data_missing,"Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.",DESIGN
+63,"Missing username prevents login",passed,,"",PASSED
+62,"Missing password prevents login",blocked,input_data_missing,"Le champ 'Password' est requis mais aucune valeur n'a ete fournie.",DESIGN
+61,"Locked out user cannot login",passed,,"",PASSED
+60,"Valid user can login",passed,,"",PASSED
+59,"Missing username and password prevents login",passed,,"",PASSED
+58,"Cart page requires login",passed,,"",PASSED
+57,"Inventory page requires login",passed,,"",PASSED
+56,"Missing username prevents login",passed,,"",PASSED
+55,"Missing username and password prevents login",blocked,input_data_missing,"Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.",DESIGN
+54,"Add backpack to cart",passed,,"",PASSED
+53,"Cart page requires login",blocked,input_data_missing,"Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.",DESIGN
+52,"Inventory page requires login",blocked,input_data_missing,"Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.",DESIGN
+51,"Invalid username shows login error",passed,,"",PASSED
+50,"Invalid password shows login error",passed,,"",PASSED
+49,"Missing username and password prevents login",blocked,input_data_missing,"Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.",DESIGN
+48,"Missing password prevents login",passed,,"",PASSED
+47,"Missing username prevents login",blocked,input_data_missing,"Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.",DESIGN
+46,"Locked out user cannot login",passed,,"",PASSED
+45,"Valid user can login",passed,,"",PASSED
+44,"Add backpack to cart",passed,,"",PASSED
+43,"Invalid username shows login error",passed,,"",PASSED
+42,"Cart page requires login",blocked,script_generation_failed,"The Playwright script could not be generated for this test case. Details: The command """"C:\Program F",HALLUCINATION
+40,"Invalid password shows login error",passed,,"",PASSED
+41,"Inventory page requires login",blocked,script_generation_failed,"The Playwright script could not be generated for this test case. Details: The command """"C:\Program F",HALLUCINATION
+39,"Missing username and password prevents login",blocked,input_data_missing,"Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.",DESIGN
+38,"Missing username prevents login",passed,,"",PASSED
+37,"Missing password prevents login",blocked,input_data_missing,"Le champ 'Password' est requis mais aucune valeur n'a ete fournie.",DESIGN
+36,"Locked out user cannot login",passed,,"",PASSED
+35,"Valid user can login",passed,,"",PASSED
+34,"Missing username prevents login",blocked,input_data_missing,"Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.",DESIGN
+33,"Locked out user cannot login",passed,,"",PASSED
+32,"Valid user can login",passed,,"",PASSED
+31,"Valid user can login",failed,navigation_timeout,"The page navigation did not finish in time.",ENVIRONNEMENT
+30,"Missing username prevents login",passed,,"",PASSED
+29,"Locked out user cannot login",passed,,"",PASSED
+28,"Valid user can login",failed,selector_not_found,"A required element did not appear before the timeout expired.",HALLUCINATION
+27,"Missing username prevents login",blocked,input_data_missing,"Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.",DESIGN
+26,"Locked out user cannot login",blocked,unexpected_error,"[chrome] page.screenshot: Target page, context or browser has been closed",TO_EXAMINE
+25,"Missing username prevents login",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_NETWORK_ACCESS_DENIE",ENVIRONNEMENT
+24,"Missing username prevents login",blocked,input_data_missing,"Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.",DESIGN
+23,"Locked out user cannot login",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_NETWORK_ACCESS_DENIE",ENVIRONNEMENT
+22,"Valid user can login",passed,,"",PASSED
+21,"Missing username prevents login",blocked,input_data_missing,"Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.",DESIGN
+20,"Locked out user cannot login",blocked,url_unreachable,"The target URL could not be reached by Playwright. Details: page.goto: net::ERR_NETWORK_ACCESS_DENIE",ENVIRONNEMENT
+19,"Valid user can login",passed,,"",PASSED
+18,"Missing username prevents login",blocked,url_unreachable,"The target URL could not be reached by Playwright.",ENVIRONNEMENT
+17,"Locked out user cannot login",blocked,url_unreachable,"The target URL could not be reached by Playwright.",ENVIRONNEMENT
+16,"Valid user can login",passed,,"",PASSED
+15,"Missing username prevents login",blocked,input_data_missing,"Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.",DESIGN
+14,"Locked out user cannot login",blocked,url_unreachable,"The target URL could not be reached by Playwright.",ENVIRONNEMENT
+13,"Valid user can login",passed,,"",PASSED
+12,"Valid user can login",passed,,"",PASSED
+10,"Locked out user cannot login",blocked,infra_error,"result.json was not generated by orchestrator/runner. from-dsl exit code: 3 | stderr: [scenario-clas",ENVIRONNEMENT
+11,"Missing username prevents login",blocked,infra_error,"result.json was not generated by orchestrator/runner. from-dsl exit code: 3 | stderr: [scenario-clas",ENVIRONNEMENT
+9,"Valid user can login",passed,,"",PASSED
+7,"Locked out user cannot login",blocked,infra_error,"file_put_contents(C:\Users\Yahia Ghoufa\Desktop\checklist-manager\playwright-orchestrator\tmp\run-si",ENVIRONNEMENT
+8,"Missing username prevents login",blocked,infra_error,"file_put_contents(C:\Users\Yahia Ghoufa\Desktop\checklist-manager\playwright-orchestrator\tmp\run-si",ENVIRONNEMENT
+6,"Missing username prevents login",blocked,input_data_missing,"Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.",DESIGN
+5,"Locked out user cannot login",blocked,input_data_missing,"Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.",DESIGN
+4,"Valid user can login",blocked,input_data_missing,"Le champ 'Email or username' est requis mais aucune valeur n'a ete fournie.",DESIGN
+3,"TC-01 | Cas nominal",passed,,"",PASSED
+2,"TC-01 | Cas nominal",passed,,"",PASSED
+1,"TC-01 | Cas nominal",passed,,"",PASSED

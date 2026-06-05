@@ -1,0 +1,14 @@
+{
+    "timestamp": "2026-06-05T00:38:31+02:00",
+    "total_test_results": 128,
+    "status_breakdown": {
+        "passed": 51,
+        "hallucination": 15,
+        "environnement": 39,
+        "design": 21,
+        "to_examine": 2
+    },
+    "effective_pool": 68,
+    "resistance_rate_percent": 77.9,
+    "note_out_of_5": 2
+}

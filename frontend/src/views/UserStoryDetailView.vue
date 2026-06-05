@@ -133,12 +133,12 @@ const storyTabs = computed(() => [
 ])
 const primaryAction = computed(() => {
   if (hasAttachedChecklists.value) {
-    return { key: 'execution', label: 'Ouvrir l espace d execution' }
+    return { key: 'exécution', label: "Ouvrir l'espace d'exécution" }
   }
   if (hasDrafts.value) {
     return { key: 'drafts', label: 'Continuer la validation' }
   }
-  return { key: 'prepare', label: 'Preparer une checklist' }
+  return { key: 'prépare', label: 'Préparer une checklist' }
 })
 const generatorStatus = computed(() => {
   if (storiesStore.isGenerating) {
@@ -167,7 +167,7 @@ const generatorStatus = computed(() => {
 
   return {
     label: 'Pret',
-    description: 'Choisissez une methode pour preparer la checklist.',
+    description: 'Choisissez une méthode pour préparer la checklist.',
     tone: 'neutral',
   }
 })
