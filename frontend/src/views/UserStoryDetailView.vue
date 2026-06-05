@@ -586,7 +586,7 @@ function localizeGeneratedText(text) {
     .replace(/Ãƒ¹/g, 'ù')
     .replace(/Ãƒ»/g, 'û')
     .replace(/Ãƒ§/g, 'ç')
-    .replace(/ââ‚¬â„¢/g, ''')
+    .replace(/ââ‚¬â„¢/g, "'")
     .replace(/Ã‚/g, '')
 }
 
