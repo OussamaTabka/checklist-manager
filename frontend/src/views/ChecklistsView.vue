@@ -61,7 +61,7 @@ const checklistPageCopy = computed(() => ({
   kicker: 'Espace checklists',
   title: 'Bibliothèque de checklists',
   description:
-    'Créez, adaptez et réutilisez des checklists de test pour préparer l'exécution QA sur vos projets.',
+    "Créez, adaptez et réutilisez des checklists de test pour préparer l'exécution QA sur vos projets.",
 }))
 
 const addableExistingItems = computed(() => {
@@ -684,7 +684,7 @@ watch(
     <div class="card stack">
       <h2>Liste des checklists</h2>
       <p class="muted">
-        Les checklists restent réutilisables. L'exécution automatique intervient une fois la checklist transformée en version projet dans l'espace d'exécution.
+        Les checklists restent réutilisables. L'exécution automatique intervient une fois la checklist transformée en version projet dans l"espace d'exécution.
       </p>
 
       <p v-if="loading" class="muted">Chargement des checklists...</p>
@@ -705,7 +705,7 @@ watch(
             <tr v-for="checklist in filteredChecklists" :key="checklist.id">
               <td>{{ checklist.id }}</td>
               <td>
-                <RouterLink :to="{ name: 'checklist-detail', params: { id: checklist.id } }" class="checklist-row-link">
+                <RouterLink :to="{ name: "checklist-detail', params: { id: checklist.id } }" class="checklist-row-link">
                   <strong class="checklist-row-title">{{ checklist.name }}</strong>
                   <div class="muted">{{ checklist.description || '-' }}</div>
                 </RouterLink>

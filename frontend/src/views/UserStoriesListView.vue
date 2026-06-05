@@ -34,14 +34,14 @@ const roleStoryCopy = computed(() => {
         kicker: 'Espace administrateur',
         title: 'Pilotage des User Stories',
         description:
-          'Supervisez la qualité du backlog, la structuration des besoins et la réutilisation des checklists   l'échelle de la plateforme.',
+          "Supervisez la qualité du backlog, la structuration des besoins et la réutilisation des checklists à l'échelle de la plateforme.",
       }
     case 'testeur':
       return {
-        kicker: 'Espace d'exécution',
+        kicker: "Espace d'exécution",
         title: 'User Stories assignées',
         description:
-          'Consultez les User Stories liées   vos projets, évaluez leur niveau de préparation et accédez au contexte nécessaire avant l'exécution des tests.',
+          "Consultez les User Stories liées à vos projets, évaluez leur niveau de préparation et accédez au contexte nécessaire avant l'exécution des tests.",
       }
     default:
       return {
@@ -368,7 +368,7 @@ watch(
       <Sparkles :size="28" />
       <h3>Aucune User Story trouvée</h3>
       <p>
-        Commencez par sélectionner un projet, puis ajoutez des User Stories qui serviront de base   la génération intelligente de checklists.
+        Commencez par sélectionner un projet, puis ajoutez des User Stories qui serviront de base à la génération intelligente de checklists.
       </p>
       <RouterLink
         v-if="canAddStories && projectId"

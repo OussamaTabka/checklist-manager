@@ -91,14 +91,14 @@ const projectPageCopy = computed(() => {
         kicker: 'Espace administrateur',
         title: 'Projets',
         description:
-          'Supervisez la configuration des projets, leur périmètre fonctionnel et l'organisation globale de la plateforme.',
+          "Supervisez la configuration des projets, leur périmètre fonctionnel et l'organisation globale de la plateforme.",
       }
     case 'testeur':
       return {
-        kicker: 'Espace d'exécution',
+        kicker: "Espace d'exécution",
         title: 'Projets assignés',
         description:
-          'Consultez les projets qui vous sont assignés, comprenez leur périmètre et accédez rapidement   l'exécution des tests.',
+          "Consultez les projets qui vous sont assignés, comprenez leur périmètre et accédez rapidement à l'exécution des tests.",
       }
     default:
       return {
@@ -174,10 +174,10 @@ const projectMetrics = computed(() => {
   const projectsWithUrl = projects.value.filter((project) => Boolean(project.app_url)).length
 
   return [
-    { label: 'Projets', value: totalProjects, caption: 'Projets disponibles dans l'espace de travail' },
-    { label: 'Testeurs assignés', value: totalAssignedTesters, caption: 'Capacité d'exécution mobilisée' },
+    { label: 'Projets', value: totalProjects, caption: "Projets disponibles dans l'espace de travail" },
+    { label: 'Testeurs assignés', value: totalAssignedTesters, caption: "Capacité d'exécution mobilisée" },
     { label: 'User Stories liées', value: totalLinkedStories, caption: 'Périmètre fonctionnel déj  préparé' },
-    { label: 'Environnements prêts', value: projectsWithUrl, caption: 'Projets disposant d'une URL cible' },
+    { label: 'Environnements prêts', value: projectsWithUrl, caption: "Projets disposant d'une URL cible" },
   ]
 })
 
@@ -951,7 +951,7 @@ watch(successMessage, (message) => {
 
           <div class="story-source-summary">
             <span class="mini-chip">{{ manualValidUserStoriesCount }} User Story{{ manualValidUserStoriesCount > 1 ? 'ies manuelles' : ' manuelle' }}</span>
-            <span class="mini-chip">{{ importedValidUserStoriesCount }} User Story{{ importedValidUserStoriesCount > 1 ? 'ies' : 'y' }} importée{{ importedValidUserStoriesCount > 1 ? 's' : '' }}</span>
+            <span class="mini-chip">{{ importedValidUserStoriesCount }} User Story{{ importedValidUserStoriesCount > 1 ? 'ies' : 'y' }} importée{{ importedValidUserStoriesCount > 1 ? 's' : "" }}</span>
             <span v-if="importedInvalidUserStoriesCount > 0" class="mini-chip mini-chip-warn">
               {{ importedInvalidUserStoriesCount }} ligne(s) ignorée(s)
             </span>
@@ -1018,7 +1018,7 @@ watch(successMessage, (message) => {
 
                 <div class="form-grid-two">
                   <div class="field">
-                    <label class="field-label-strong">Critères d'acceptation</label>
+                    <label class="field-label-strong">Critères d"acceptation</label>
                     <textarea v-model="story.acceptance_criteria" rows="3" placeholder="Given / When / Then, règles de validation, cas attendus..." />
                   </div>
 
@@ -1062,7 +1062,7 @@ watch(successMessage, (message) => {
             <div v-if="importedStoriesFile" class="story-import-summary">
               <p><strong>{{ importedStoriesFile.name }}</strong></p>
               <p class="muted">
-                {{ importedValidUserStoriesCount }} User Story{{ importedValidUserStoriesCount > 1 ? 'ies' : 'y' }} importée{{ importedValidUserStoriesCount > 1 ? 's' : '' }}
+                {{ importedValidUserStoriesCount }} User Story{{ importedValidUserStoriesCount > 1 ? "ies' : 'y' }} importée{{ importedValidUserStoriesCount > 1 ? 's' : '' }}
                 <span v-if="importedInvalidUserStoriesCount > 0"> â€¢ {{ importedInvalidUserStoriesCount }} ligne(s) ignorée(s)</span>
               </p>
               <button type="button" class="btn btn-secondary btn-sm" @click="clearUserStoriesFile">
@@ -1252,12 +1252,12 @@ watch(successMessage, (message) => {
       </div>
 
       <div class="pagination pagination-centered">
-        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="pagination.current_page <= 1" @click="loadProjects(pagination.current_page - 1)" title="Aller   la page précédente">
+        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="pagination.current_page <= 1" @click="loadProjects(pagination.current_page - 1)" title="Allerà la page précédente">
           <ArrowLeft :size="14" />
           <span>Précédent</span>
         </button>
         <span class="muted pagination-text">Page {{ pagination.current_page }} sur {{ pagination.last_page }}</span>
-        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="pagination.current_page >= pagination.last_page" @click="loadProjects(pagination.current_page + 1)" title="Aller   la page suivante">
+        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="pagination.current_page >= pagination.last_page" @click="loadProjects(pagination.current_page + 1)" title="Allerà la page suivante">
           <span>Suivant</span>
           <ArrowRight :size="14" />
         </button>
@@ -1412,12 +1412,12 @@ watch(successMessage, (message) => {
       </div>
 
       <div class="pagination pagination-centered">
-        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="archivedPagination.current_page <= 1" @click="loadArchivedProjects(archivedPagination.current_page - 1)" title="Aller   la page précédente">
+        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="archivedPagination.current_page <= 1" @click="loadArchivedProjects(archivedPagination.current_page - 1)" title="Allerà la page précédente">
           <ArrowLeft :size="14" />
           <span>Précédent</span>
         </button>
         <span class="muted pagination-text">Page {{ archivedPagination.current_page }} sur {{ archivedPagination.last_page }}</span>
-        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="archivedPagination.current_page >= archivedPagination.last_page" @click="loadArchivedProjects(archivedPagination.current_page + 1)" title="Aller   la page suivante">
+        <button class="btn btn-secondary btn-sm btn-nav-icon" :disabled="archivedPagination.current_page >= archivedPagination.last_page" @click="loadArchivedProjects(archivedPagination.current_page + 1)" title="Allerà la page suivante">
           <span>Suivant</span>
           <ArrowRight :size="14" />
         </button>

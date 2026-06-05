@@ -339,7 +339,7 @@ onMounted(async () => {
               v-model="form.description"
               rows="5"
               placeholder="En tant que client, je veux me connecter avec mon email afin d'accéder   mon espace personnel."
-              :class="{ 'is-invalid': errors.description }"
+              :class="{ 'is-invalid": errors.description }"
             ></textarea>
             <small v-if="errors.description">{{ errors.description }}</small>
           </label>
@@ -391,7 +391,7 @@ onMounted(async () => {
               rows="7"
               class="story-mono"
               placeholder="Given valid credentials, When user submits the login form, Then dashboard loads&#10;Given invalid credentials, When user submits the form, Then an error message is displayed"
-              :class="{ 'is-invalid': errors.acceptance_criteria }"
+              :class="{ "is-invalid': errors.acceptance_criteria }"
             ></textarea>
             <small v-if="errors.acceptance_criteria">{{ errors.acceptance_criteria }}</small>
           </label>

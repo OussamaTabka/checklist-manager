@@ -214,7 +214,7 @@ onMounted(async () => {
           <span>Notifications</span>
         </h1>
         <p class="page-subtitle">
-          Retrouvez les alertes utiles selon votre rôle, avec accès direct   la bonne section.
+          Retrouvez les alertes utiles selon votre rôle, avec accès directà la bonne section.
         </p>
       </div>
 
