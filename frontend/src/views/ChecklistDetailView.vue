@@ -1072,7 +1072,7 @@ onBeforeUnmount(() => {
         <div class="info-stat-grid">
           <div class="info-stat-chip">
             <p class="info-stat-label">Priorité</p>
-            <span :class="["tag", getChecklistPriorityTagClass(checklist.priority)]">
+            <span :class="['tag', getChecklistPriorityTagClass(checklist.priority)]">
               {{ formatChecklistPriority(checklist.priority) }}
             </span>
           </div>
@@ -1178,7 +1178,7 @@ onBeforeUnmount(() => {
                   </div>
 
                   <div class="flex flex-col gap-2.5 xl:min-w-[500px] xl:flex-row xl:items-center xl:justify-end">
-                    <span :class="["inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold', getItemCriticalityClass(item.criticality)]">
+                    <span :class="['inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold', getItemCriticalityClass(item.criticality)]">
                       Criticité : {{ item.criticality || 'N/A' }}
                     </span>
                     <label class="qa-card-status-field">
@@ -1259,7 +1259,7 @@ onBeforeUnmount(() => {
                   </div>
 
                   <button class="btn btn-secondary btn-sm mt-4" @click="toggleItemHistory(item.id)">
-                    {{ showItemHistory[item.id] ? 'Réduire l'historique' : "Afficher tout l'historique' }}
+                    {{ showItemHistory[item.id] ? "Réduire l'historique" : "Afficher tout l'historique" }}
                   </button>
                 </section>
 

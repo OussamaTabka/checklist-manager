@@ -2485,7 +2485,15 @@
   }
 
   .dashboard-eyebrow,
-  .story-kicker,
+  .story-kicker {
+    margin: 0 0 0.45rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
   .dashboard-section-kicker {
     margin: 0 0 0.45rem;
     font-size: 0.68rem;
@@ -2509,7 +2517,7 @@
     margin: 0.85rem 0 0;
     max-width: 56ch;
     font-size: 0.98rem;
-    color: #475569;
+    color: rgba(255, 255, 255, 0.85);
   }
 
   .dashboard-command-actions,

@@ -40,7 +40,7 @@ export const t = (key, lang = 'fr') => {
       'stories.status': 'Statut',
       'stories.priority': 'Priorité',
       'stories.description': 'Description',
-      'stories.criteria': "Critères d'Acceptation',
+      'stories.criteria': "Critères d'Acceptation",
 
       'checklists.title': 'Listes de Vérification',
       'checklists.new': 'Nouvelle Checklist',

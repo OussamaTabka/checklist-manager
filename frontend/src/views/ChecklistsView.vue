@@ -705,7 +705,7 @@ watch(
             <tr v-for="checklist in filteredChecklists" :key="checklist.id">
               <td>{{ checklist.id }}</td>
               <td>
-                <RouterLink :to="{ name: "checklist-detail', params: { id: checklist.id } }" class="checklist-row-link">
+                <RouterLink :to="{ name: 'checklist-detail', params: { id: checklist.id } }" class="checklist-row-link">
                   <strong class="checklist-row-title">{{ checklist.name }}</strong>
                   <div class="muted">{{ checklist.description || '-' }}</div>
                 </RouterLink>

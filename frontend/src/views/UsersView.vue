@@ -419,7 +419,7 @@ onBeforeUnmount(() => {
 
         <div class="actions">
           <button class="btn btn-primary" type="submit" data-testid="users-btn-submit">
-            {{ form.id ? 'Enregistrer le role' : "Creer l'utilisateur' }}
+            {{ form.id ? 'Enregistrer le role' : "Creer l'utilisateur" }}
           </button>
           <button class="btn btn-secondary" type="button" @click="resetForm">
             {{ form.id ? 'Annuler' : 'Reinitialiser' }}

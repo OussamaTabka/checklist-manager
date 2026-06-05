@@ -1062,7 +1062,7 @@ watch(successMessage, (message) => {
             <div v-if="importedStoriesFile" class="story-import-summary">
               <p><strong>{{ importedStoriesFile.name }}</strong></p>
               <p class="muted">
-                {{ importedValidUserStoriesCount }} User Story{{ importedValidUserStoriesCount > 1 ? "ies' : 'y' }} importée{{ importedValidUserStoriesCount > 1 ? 's' : '' }}
+                {{ importedValidUserStoriesCount }} User Story{{ importedValidUserStoriesCount > 1 ? 'ies' : 'y' }} importée{{ importedValidUserStoriesCount > 1 ? 's' : '' }}
                 <span v-if="importedInvalidUserStoriesCount > 0"> â€¢ {{ importedInvalidUserStoriesCount }} ligne(s) ignorée(s)</span>
               </p>
               <button type="button" class="btn btn-secondary btn-sm" @click="clearUserStoriesFile">
