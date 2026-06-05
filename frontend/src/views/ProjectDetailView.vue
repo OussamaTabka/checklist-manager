@@ -293,7 +293,7 @@ async function exportProjectReport() {
 
     if (reportOptions.value.format === 'zip' && (error?.status === 422 || error?.status === 501)) {
       reportModalError.value = "L'export ZIP n'est pas encore disponible."
-      toast.error("L'export ZIP n'est pas encore disponible.")
+      toast.error('L'export ZIP n'est pas encore disponible.")
       return
     }
 

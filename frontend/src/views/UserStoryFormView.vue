@@ -391,7 +391,7 @@ onMounted(async () => {
               rows="7"
               class="story-mono"
               placeholder="Given valid credentials, When user submits the login form, Then dashboard loads&#10;Given invalid credentials, When user submits the form, Then an error message is displayed"
-              :class="{ "is-invalid': errors.acceptance_criteria }"
+              :class="{ 'is-invalid': errors.acceptance_criteria }"
             ></textarea>
             <small v-if="errors.acceptance_criteria">{{ errors.acceptance_criteria }}</small>
           </label>

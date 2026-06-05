@@ -359,7 +359,7 @@ onMounted(() => {
           <Grid3x3 :size="20" class="text-brand-600" />
           <h2>Règles métier</h2>
         </div>
-        <ChevronDown :size="20" :class="["transition-transform', expandedSections.businessRules ? 'rotate-180' : '']" />
+        <ChevronDown :size="20" :class="['transition-transform', expandedSections.businessRules ? 'rotate-180' : '']" />
       </button>
 
       <div v-show="expandedSections.businessRules" class="space-y-2">

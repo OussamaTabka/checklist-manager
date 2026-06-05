@@ -1259,7 +1259,7 @@ onBeforeUnmount(() => {
                   </div>
 
                   <button class="btn btn-secondary btn-sm mt-4" @click="toggleItemHistory(item.id)">
-                    {{ showItemHistory[item.id] ? 'Réduire l'historique' : "Afficher tout l'historique" }}
+                    {{ showItemHistory[item.id] ? 'Réduire l'historique' : "Afficher tout l'historique' }}
                   </button>
                 </section>
 

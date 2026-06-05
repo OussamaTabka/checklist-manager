@@ -97,14 +97,14 @@ const PHRASES = {
     fr: "Ajustez la langue de l'interface et l'apparence pour le travail d'administration.",
     ar: 'اضبط لغة الواجهة والمظهر من اجل مهام الادارة.',
   },
-  settings_execution_preferences: { en: 'Execution Preferences', fr: "Preferences d'execution", ar: 'تفضيلات التنفيذ' },
+  settings_execution_preferences: { en: 'Execution Preferences', fr: "Preferences d'execution', ar: 'تفضيلات التنفيذ' },
   settings_tester_settings: { en: 'Tester Settings', fr: 'Parametres testeur', ar: 'اعدادات المختبر' },
   settings_tester_description: {
     en: 'Tune the workspace for faster reading, execution, and day-to-day testing comfort.',
     fr: "Ajustez l'espace de travail pour une lecture, une execution et un confort de test quotidiens.",
     ar: 'اضبط مساحة العمل لقراءة اسرع وتنفيذ اسهل وراحة يومية في الاختبار.',
   },
-  settings_workspace_preferences: { en: 'Workspace Preferences', fr: "Preferences de l'espace", ar: 'تفضيلات مساحة العمل' },
+  settings_workspace_preferences: { en: 'Workspace Preferences', fr: "Preferences de l'espace', ar: 'تفضيلات مساحة العمل' },
   settings_workspace_description: {
     en: 'Configure language and display behavior for your project-management workspace.',
     fr: "Configurez la langue et l'affichage pour votre espace de gestion de projet.",

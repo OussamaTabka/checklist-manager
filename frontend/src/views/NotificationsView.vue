@@ -67,10 +67,6 @@ const unreadCounterLabel = computed(() => {
     return `${count} unread`
   }
 
-  if (settings.language === 'ar') {
-    return `${count} ØºÙŠØ± Ù…Ù‚Ø±ÙˆØ¡Ø©`
-  }
-
   return `${count} non lue${count !== 1 ? 's' : ''}`
 })
 
