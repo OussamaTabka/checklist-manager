@@ -338,8 +338,8 @@ onMounted(async () => {
             <textarea
               v-model="form.description"
               rows="5"
-              placeholder="En tant que client, je veux me connecter avec mon email afin d'accéder   mon espace personnel."
-              :class="{ 'is-invalid": errors.description }"
+              placeholder="En tant que client, je veux me connecter avec mon email afin d'accéder à mon espace personnel."
+              :class="{ 'is-invalid': errors.description }"
             ></textarea>
             <small v-if="errors.description">{{ errors.description }}</small>
           </label>
