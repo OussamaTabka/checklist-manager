@@ -1019,7 +1019,7 @@ onBeforeUnmount(() => {
             @click="generateChecklist"
           >
             <div class="flex items-center gap-3">
-              <span class="rounded-2xl bg-violet-50 p-3 text-violet-700">
+              <span class="rounded-2xl bg-brand-50 p-3 text-brand-700">
                 <Sparkles :size="18" />
               </span>
               <div>

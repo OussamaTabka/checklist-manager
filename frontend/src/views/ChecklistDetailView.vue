@@ -1130,7 +1130,7 @@ onBeforeUnmount(() => {
 
       <div v-if="checklist.business_rules && checklist.business_rules.length > 0" class="card stack">
         <div class="flex items-center gap-3 pb-3 border-b border-gray-200 mb-4">
-          <Grid3x3 :size="20" class="text-violet-600" />
+          <Grid3x3 :size="20" class="text-brand-600" />
           <h2>Règles métier</h2>
         </div>
 

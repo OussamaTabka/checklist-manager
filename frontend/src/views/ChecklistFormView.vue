@@ -356,7 +356,7 @@ onMounted(() => {
         class="flex items-center justify-between w-full text-left mb-4 pb-4 border-b border-gray-200"
       >
         <div class="flex items-center gap-3">
-          <Grid3x3 :size="20" class="text-purple-600" />
+          <Grid3x3 :size="20" class="text-brand-600" />
           <h2>Règles métier</h2>
         </div>
         <ChevronDown :size="20" :class="['transition-transform', expandedSections.businessRules ? 'rotate-180' : '']" />
