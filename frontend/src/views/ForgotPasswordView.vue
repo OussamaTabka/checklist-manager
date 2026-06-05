@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref } from 'vue'
 import { localizeError, tr } from '@/lib/localization'
 import { useAuthStore } from '@/stores/auth'

@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { Archive, Ellipsis, Mail, Pencil, RotateCcw, ShieldX, Trash2 } from 'lucide-vue-next'
 import { apiRequest, withQuery } from '@/lib/api'
@@ -387,7 +387,7 @@ onBeforeUnmount(() => {
           @click="showUserForm = true"
           data-testid="users-btn-open-create"
         >
-          Créer utilisateur
+          CrÃ©er utilisateur
         </button>
       </div>
 

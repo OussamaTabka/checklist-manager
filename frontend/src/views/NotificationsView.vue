@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { Archive, Bell, FolderKanban, MessageSquareText, RefreshCw, ShieldAlert, TestTube2 } from 'lucide-vue-next'
 import { apiRequest, withQuery } from '@/lib/api'
@@ -24,7 +24,7 @@ const selectedFilter = ref('all')
 
 const emptyMessage = computed(() => {
   if (selectedFilter.value === 'archived') {
-    return 'Aucune notification archivée pour le moment.'
+    return 'Aucune notification archivÃ©e pour le moment.'
   }
 
   if (selectedFilter.value === 'unread') {
@@ -39,7 +39,7 @@ const visibleEmptyMessage = computed(() => {
     return {
       fr: 'Aucune notification archivee pour le moment.',
       en: 'No archived notifications for now.',
-      ar: 'لا توجد إشعارات مؤرشفة حاليا.',
+      ar: 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¥Ø´Ø¹Ø§Ø±Ø§Øª Ù…Ø¤Ø±Ø´ÙØ© Ø­Ø§Ù„ÙŠØ§.',
     }[settings.language]
   }
 
@@ -47,14 +47,14 @@ const visibleEmptyMessage = computed(() => {
     return {
       fr: 'Aucune notification non lue pour le moment.',
       en: 'No unread notifications for now.',
-      ar: 'لا توجد إشعارات غير مقروءة حاليا.',
+      ar: 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¥Ø´Ø¹Ø§Ø±Ø§Øª ØºÙŠØ± Ù…Ù‚Ø±ÙˆØ¡Ø© Ø­Ø§Ù„ÙŠØ§.',
     }[settings.language]
   }
 
   return {
     fr: 'Aucune notification pour le moment.',
     en: 'No notifications for now.',
-    ar: 'لا توجد إشعارات حاليا.',
+    ar: 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¥Ø´Ø¹Ø§Ø±Ø§Øª Ø­Ø§Ù„ÙŠØ§.',
   }[settings.language]
 })
 
@@ -68,7 +68,7 @@ const unreadCounterLabel = computed(() => {
   }
 
   if (settings.language === 'ar') {
-    return `${count} غير مقروءة`
+    return `${count} ØºÙŠØ± Ù…Ù‚Ø±ÙˆØ¡Ø©`
   }
 
   return `${count} non lue${count !== 1 ? 's' : ''}`
@@ -214,7 +214,7 @@ onMounted(async () => {
           <span>Notifications</span>
         </h1>
         <p class="page-subtitle">
-          Retrouvez les alertes utiles selon votre rôle, avec accès direct à la bonne section.
+          Retrouvez les alertes utiles selon votre rÃ´le, avec accÃ¨s direct Ã  la bonne section.
         </p>
       </div>
 

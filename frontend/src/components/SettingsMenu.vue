@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref, computed } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useRouter } from 'vue-router'
@@ -11,7 +11,7 @@ const isOpen = ref(false)
 
 const currentLanguage = computed(() => {
   const lang = settingsStore.languages.find(l => l.code === settingsStore.language)
-  return lang?.flag || '🇫🇷'
+  return lang?.flag || 'ðŸ‡«ðŸ‡·'
 })
 
 function openSettings() {
@@ -65,7 +65,7 @@ function closeMenu() {
               :key="lang.code"
               @click="changeLanguage(lang.code); closeMenu()"
               :class="{
-                'bg-blue-600 text-white': settingsStore.language === lang.code,
+                'bg-brand-600 text-white': settingsStore.language === lang.code,
                 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600': settingsStore.language !== lang.code,
               }"
               class="flex-1 px-2 py-1 rounded text-sm font-medium transition"
@@ -88,7 +88,7 @@ function closeMenu() {
             </span>
             <div
               :class="{
-                'bg-blue-600': settingsStore.darkMode,
+                'bg-brand-600': settingsStore.darkMode,
                 'bg-gray-300 dark:bg-gray-600': !settingsStore.darkMode,
               }"
               class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors"

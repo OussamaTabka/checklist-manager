@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import {
@@ -38,7 +38,7 @@ const isAdminExperience = computed(() => auth.primaryRole === 'admin')
 const workspaceLabel = computed(() => {
   if (auth.roles.includes('chef')) return tr('Project Command')
   if (auth.roles.includes('admin')) return tr('Administration')
-  if (auth.roles.includes('testeur')) return 'Espace d’exécution'
+  if (auth.roles.includes('testeur')) return 'Espace dâ€™exÃ©cution'
   return tr('Workspace')
 })
 const roleLabel = computed(() => {
@@ -121,7 +121,7 @@ const sidebarSections = computed(() => {
       title: tr('ADMIN'),
       items: [
         {
-          label: 'Utilisateurs et rôles',
+          label: 'Utilisateurs et rÃ´les',
           route: { name: 'users' },
           icon: UsersRound,
           show: auth.canManageUsers,
@@ -143,7 +143,7 @@ const quickActions = computed(() => {
 
   if (auth.canManageProjects) {
     actions.push({
-      label: 'Créer un projet',
+      label: 'CrÃ©er un projet',
       route: { name: 'projects', query: { create: '1' } },
     })
   }
@@ -182,7 +182,7 @@ const legacyNotificationItems = computed(() => {
     items.push({
       key: 'tests-failed',
       tone: 'danger',
-      text: `${headerMetrics.testsFailed} test(s) ont échoué récemment`,
+      text: `${headerMetrics.testsFailed} test(s) ont Ã©chouÃ© rÃ©cemment`,
     })
   }
 
@@ -190,7 +190,7 @@ const legacyNotificationItems = computed(() => {
     items.push({
       key: 'critical-failed',
       tone: 'warning',
-      text: `${headerMetrics.failedCriticalItems} élément(s) critique(s) sont en échec`,
+      text: `${headerMetrics.failedCriticalItems} Ã©lÃ©ment(s) critique(s) sont en Ã©chec`,
     })
   }
 
@@ -617,7 +617,7 @@ watch(
             </button>
 
             <p v-if="globalSearchResults.length === 0" class="search-result-empty">
-              Aucun résultat correspondant.
+              Aucun rÃ©sultat correspondant.
             </p>
           </div>
         </div>
@@ -686,8 +686,8 @@ watch(
 
             <div v-if="showProfileMenu" class="profile-menu">
               <button type="button" class="profile-menu-item" @click="goToProfile">Profil</button>
-              <button type="button" class="profile-menu-item" @click="goToSettings">Paramètres</button>
-              <button type="button" class="profile-menu-item danger" @click="handleLogout">Déconnexion</button>
+              <button type="button" class="profile-menu-item" @click="goToSettings">ParamÃ¨tres</button>
+              <button type="button" class="profile-menu-item danger" @click="handleLogout">DÃ©connexion</button>
             </div>
           </div>
         </div>
@@ -701,7 +701,7 @@ watch(
               class="sidebar-toggle"
               type="button"
               @click="toggleSidebar"
-              :title="isSidebarCollapsed ? 'Développer' : 'Réduire'"
+              :title="isSidebarCollapsed ? 'DÃ©velopper' : 'RÃ©duire'"
             >
               <Menu :size="16" />
             </button>

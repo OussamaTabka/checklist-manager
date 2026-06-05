@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="run-tests-container">
     <button
       @click="handleRunTests"

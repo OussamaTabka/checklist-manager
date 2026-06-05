@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Ellipsis, ExternalLink, Pencil, Trash2 } from 'lucide-vue-next'

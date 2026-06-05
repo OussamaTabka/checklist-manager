@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 function refreshPage() {
   if (typeof window !== 'undefined') {
     window.location.reload()
@@ -58,7 +58,7 @@ function refreshPage() {
 .icon {
   width: 42px;
   height: 42px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.88));
+  background: linear-gradient(135deg, #6366F1, #8B5CF6);
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 12px;
   display: flex;

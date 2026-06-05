@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStoriesStore } from '@/stores/userStories'
@@ -52,19 +52,19 @@ const statusOptions = [
   {
     value: 'in_progress',
     label: 'En Cours',
-    hint: 'En préparation',
+    hint: 'En prÃ©paration',
     icon: Rocket,
   },
   {
     value: 'ready_for_test',
-    label: 'Prêt pour Test',
+    label: 'PrÃªt pour Test',
     hint: 'Testable',
     icon: ClipboardCheck,
   },
   {
     value: 'completed',
-    label: 'Complété',
-    hint: 'Validé',
+    label: 'ComplÃ©tÃ©',
+    hint: 'ValidÃ©',
     icon: CheckCircle2,
   },
 ]
@@ -111,7 +111,7 @@ function splitLines(value) {
 
 const readiness = computed(() => [
   {
-    label: 'Story liée au projet',
+    label: 'Story liÃ©e au projet',
     done: Boolean(projectId.value),
   },
   {
@@ -119,11 +119,11 @@ const readiness = computed(() => [
     done: form.value.description.trim().length >= 20,
   },
   {
-    label: 'Critères Given-When-Then',
+    label: 'CritÃ¨res Given-When-Then',
     done: acceptanceLines.value.some((line) => /given.+when.+then/i.test(line)),
   },
   {
-    label: 'Priorité définie',
+    label: 'PrioritÃ© dÃ©finie',
     done: Boolean(form.value.priority),
   },
 ])
@@ -174,7 +174,7 @@ function validate() {
   errors.value = {}
 
   if (!projectId.value) {
-    errors.value.project = 'Aucun projet sélectionné. Ouvrez la création depuis un projet.'
+    errors.value.project = 'Aucun projet sÃ©lectionnÃ©. Ouvrez la crÃ©ation depuis un projet.'
   }
   if (!form.value.title.trim()) {
     errors.value.title = 'Le titre est requis'
@@ -183,7 +183,7 @@ function validate() {
     errors.value.description = 'La description est requise'
   }
   if (!form.value.acceptance_criteria.trim()) {
-    errors.value.acceptance_criteria = 'Les critères d\'acceptation sont requis'
+    errors.value.acceptance_criteria = 'Les critÃ¨res d\'acceptation sont requis'
   }
 
   return Object.keys(errors.value).length === 0
@@ -191,19 +191,19 @@ function validate() {
 
 function applyTemplate() {
   if (!form.value.description.trim()) {
-    form.value.description = 'En tant que [type utilisateur], je veux [objectif] afin de [valeur métier].'
+    form.value.description = 'En tant que [type utilisateur], je veux [objectif] afin de [valeur mÃ©tier].'
   }
 
   if (!form.value.acceptance_criteria.trim()) {
     form.value.acceptance_criteria = [
-      'Given [contexte initial], When [action utilisateur], Then [résultat attendu]',
+      'Given [contexte initial], When [action utilisateur], Then [rÃ©sultat attendu]',
       'Given [cas invalide ou limite], When [action utilisateur], Then [message ou comportement attendu]',
-      'Given [droits ou données nécessaires], When [exécution du scénario], Then [traçabilité ou état final attendu]',
+      'Given [droits ou donnÃ©es nÃ©cessaires], When [exÃ©cution du scÃ©nario], Then [traÃ§abilitÃ© ou Ã©tat final attendu]',
     ].join('\n')
   }
   if (!form.value.business_rules.trim()) {
     form.value.business_rules = [
-      'La régle metier 1 s applique avant validation',
+      'La rÃ©gle metier 1 s applique avant validation',
       'L action ne doit pas etre autorisee si les prerequis sont absents',
     ].join('\n')
   }
@@ -278,15 +278,15 @@ onMounted(async () => {
 
       <div class="story-header-copy">
         <span class="story-eyebrow">User Story Workspace</span>
-        <h1>{{ isEditing ? 'Éditer la user story' : 'Nouvelle user story' }}</h1>
+        <h1>{{ isEditing ? 'Ã‰diter la user story' : 'Nouvelle user story' }}</h1>
         <p>
-          Reliez le besoin métier au projet, préparez les critères de test, puis ouvrez directement la génération de checklist.
+          Reliez le besoin mÃ©tier au projet, prÃ©parez les critÃ¨res de test, puis ouvrez directement la gÃ©nÃ©ration de checklist.
         </p>
       </div>
 
       <button type="button" class="story-template-button" @click="applyTemplate">
         <Sparkles :size="17" />
-        Modèle testable
+        ModÃ¨le testable
       </button>
     </div>
 
@@ -305,13 +305,13 @@ onMounted(async () => {
             <BookOpenCheck :size="18" />
             <div>
               <h2>Contexte fonctionnel</h2>
-              <p>Un titre clair et une référence rendent la story facile à retrouver dans le projet.</p>
+              <p>Un titre clair et une rÃ©fÃ©rence rendent la story facile Ã  retrouver dans le projet.</p>
             </div>
           </div>
 
           <div class="story-two-columns">
             <label class="story-field">
-              <span>Référence</span>
+              <span>RÃ©fÃ©rence</span>
               <input
                 v-model="form.story_id"
                 type="text"
@@ -338,7 +338,7 @@ onMounted(async () => {
             <textarea
               v-model="form.description"
               rows="5"
-              placeholder="En tant que client, je veux me connecter avec mon email afin d'accéder à mon espace personnel."
+              placeholder="En tant que client, je veux me connecter avec mon email afin d'accÃ©der Ã  mon espace personnel."
               :class="{ 'is-invalid': errors.description }"
             ></textarea>
             <small v-if="errors.description">{{ errors.description }}</small>
@@ -349,29 +349,29 @@ onMounted(async () => {
           <div class="story-section-title">
             <Layers3 :size="18" />
             <div>
-              <h2>Logique métier</h2>
-              <p>Ajoutez les règles et scénarios métier qui doivent guider la recommandation et la génération de checklist.</p>
+              <h2>Logique mÃ©tier</h2>
+              <p>Ajoutez les rÃ¨gles et scÃ©narios mÃ©tier qui doivent guider la recommandation et la gÃ©nÃ©ration de checklist.</p>
             </div>
           </div>
 
           <label class="story-field">
-            <span>Règles métier</span>
+            <span>RÃ¨gles mÃ©tier</span>
             <textarea
               v-model="form.business_rules"
               rows="5"
               placeholder="- Seuls les rendez-vous futurs peuvent etre annules&#10;- Le creneau libere doit redevenir disponible"
             ></textarea>
-            <small>Une ligne = une règle métier</small>
+            <small>Une ligne = une rÃ¨gle mÃ©tier</small>
           </label>
 
           <label class="story-field">
-            <span>Scénarios métier</span>
+            <span>ScÃ©narios mÃ©tier</span>
             <textarea
               v-model="form.scenarios"
               rows="4"
               placeholder="- Cas nominal&#10;- Refus utilisateur&#10;- Echec technique"
             ></textarea>
-            <small>Une ligne = un scénario métier</small>
+            <small>Une ligne = un scÃ©nario mÃ©tier</small>
           </label>
         </section>
 
@@ -379,13 +379,13 @@ onMounted(async () => {
           <div class="story-section-title">
             <ListChecks :size="18" />
             <div>
-              <h2>Critères d'acceptation</h2>
-              <p>Ces lignes alimentent les suggestions de checklists et l'agent de génération.</p>
+              <h2>CritÃ¨res d'acceptation</h2>
+              <p>Ces lignes alimentent les suggestions de checklists et l'agent de gÃ©nÃ©ration.</p>
             </div>
           </div>
 
           <label class="story-field">
-            <span>Scénarios Given-When-Then *</span>
+            <span>ScÃ©narios Given-When-Then *</span>
             <textarea
               v-model="form.acceptance_criteria"
               rows="7"
@@ -397,8 +397,8 @@ onMounted(async () => {
           </label>
 
           <div class="story-criteria-preview">
-            <span>{{ acceptanceLines.length }} scénario{{ acceptanceLines.length > 1 ? 's' : '' }}</span>
-            <span>{{ readyCount }}/{{ readiness.length }} points prêts pour test</span>
+            <span>{{ acceptanceLines.length }} scÃ©nario{{ acceptanceLines.length > 1 ? 's' : '' }}</span>
+            <span>{{ readyCount }}/{{ readiness.length }} points prÃªts pour test</span>
           </div>
         </section>
 
@@ -407,12 +407,12 @@ onMounted(async () => {
             <Flag :size="18" />
             <div>
               <h2>Workflow QA</h2>
-              <p>Le statut et la priorité pilotent la visibilité côté testeur.</p>
+              <p>Le statut et la prioritÃ© pilotent la visibilitÃ© cÃ´tÃ© testeur.</p>
             </div>
           </div>
 
           <div class="story-option-block">
-            <span class="story-option-label">Priorité</span>
+            <span class="story-option-label">PrioritÃ©</span>
             <div class="story-priority-grid">
               <button
                 v-for="option in priorityOptions"
@@ -434,16 +434,16 @@ onMounted(async () => {
           </button>
           <button type="submit" :disabled="submitting" class="story-primary-button">
             <BadgeCheck :size="18" />
-            {{ submitting ? 'Enregistrement...' : isEditing ? 'Mettre à jour' : 'Créer' }}
+            {{ submitting ? 'Enregistrement...' : isEditing ? 'Mettre Ã  jour' : 'CrÃ©er' }}
           </button>
         </div>
       </form>
 
       <aside class="story-side-panel">
         <section class="story-context-card">
-          <span class="story-eyebrow">Projet lié</span>
-          <h2>{{ loadingContext ? 'Chargement...' : project?.name || 'Projet sélectionné' }}</h2>
-          <p>{{ project?.description || 'La story sera attachée au projet actif et visible dans son tableau de stories.' }}</p>
+          <span class="story-eyebrow">Projet liÃ©</span>
+          <h2>{{ loadingContext ? 'Chargement...' : project?.name || 'Projet sÃ©lectionnÃ©' }}</h2>
+          <p>{{ project?.description || 'La story sera attachÃ©e au projet actif et visible dans son tableau de stories.' }}</p>
 
           <div class="story-context-stats">
             <div>
@@ -461,14 +461,14 @@ onMounted(async () => {
           <div class="story-link-row">
             <Layers3 :size="18" />
             <div>
-              <strong>Chaîne de traçabilité</strong>
-              <span>Projet → User story → Checklist → Items de test</span>
+              <strong>ChaÃ®ne de traÃ§abilitÃ©</strong>
+              <span>Projet â†’ User story â†’ Checklist â†’ Items de test</span>
             </div>
           </div>
           <div class="story-link-row">
             <Link2 :size="18" />
             <div>
-              <strong>Après création</strong>
+              <strong>AprÃ¨s crÃ©ation</strong>
               <span>Ouverture directe de la story pour lancer l'agent ou attacher une checklist.</span>
             </div>
           </div>
@@ -477,7 +477,7 @@ onMounted(async () => {
         <section class="story-readiness-card">
           <div class="story-readiness-head">
             <ClipboardCheck :size="18" />
-            <strong>Qualité testable</strong>
+            <strong>QualitÃ© testable</strong>
           </div>
 
           <ul>
@@ -489,8 +489,8 @@ onMounted(async () => {
         </section>
 
         <section class="story-summary-card">
-          <span class="story-eyebrow">Résumé</span>
-          <h3>{{ form.title || 'Titre à définir' }}</h3>
+          <span class="story-eyebrow">RÃ©sumÃ©</span>
+          <h3>{{ form.title || 'Titre Ã  dÃ©finir' }}</h3>
           <div class="story-summary-meta">
             <span>{{ selectedPriority?.label }}</span>
           </div>

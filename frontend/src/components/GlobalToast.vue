@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed } from 'vue'
 import { AlertCircle, CheckCircle2 } from 'lucide-vue-next'
 import { localizeMessage } from '@/lib/localization'

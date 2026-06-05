@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref, computed, watch } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
 import { t } from '@/lib/translations'
@@ -28,7 +28,7 @@ function tr(text) {
 
 const currentLanguageLabel = computed(() => {
   const lang = settingsStore.languages.find((item) => item.code === settingsStore.language)
-  return lang ? `${lang.flag} ${lang.name}` : 'Français'
+  return lang ? `${lang.flag} ${lang.name}` : 'FranÃ§ais'
 })
 
 const settingsCopy = computed(() => {
@@ -240,7 +240,7 @@ watch(
 
       <article class="settings-panel-pro">
         <div class="settings-panel-head">
-          <div class="settings-panel-icon bg-blue-50 text-blue-700">
+          <div class="settings-panel-icon bg-brand-50 text-brand-700">
             <Globe :size="18" />
           </div>
           <div>

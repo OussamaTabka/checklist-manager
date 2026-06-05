@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, ref } from 'vue'
 import { Upload } from 'lucide-vue-next'
 import { analyzeImportedUserStories } from '@/lib/projectUserStories'
@@ -149,7 +149,7 @@ function runImport() {
           <thead>
             <tr>
               <th>Ligne</th>
-              <th>Référence</th>
+              <th>RÃ©fÃ©rence</th>
               <th>Titre</th>
               <th>Description</th>
             </tr>

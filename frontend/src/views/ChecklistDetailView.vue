@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useChecklistsStore } from '@/stores/checklists'
@@ -67,10 +67,10 @@ const runForm = reactive({
 })
 
 const statusIcons = {
-  'Not Tested': { icon: Square, color: 'text-slate-500', label: 'Non testé' },
-  Passed: { icon: CheckCircle, color: 'text-emerald-600', label: 'Réussi' },
-  Failed: { icon: TriangleAlert, color: 'text-rose-600', label: 'Échec' },
-  Blocked: { icon: AlertCircle, color: 'text-amber-600', label: 'Bloqué' },
+  'Not Tested': { icon: Square, color: 'text-slate-500', label: 'Non testÃ©' },
+  Passed: { icon: CheckCircle, color: 'text-emerald-600', label: 'RÃ©ussi' },
+  Failed: { icon: TriangleAlert, color: 'text-rose-600', label: 'Ã‰chec' },
+  Blocked: { icon: AlertCircle, color: 'text-amber-600', label: 'BloquÃ©' },
 }
 
 const criticalityColors = {
@@ -82,7 +82,7 @@ const criticalityColors = {
   Minor: 'bg-slate-100 text-slate-700',
 }
 
-const fallbackItemStatus = { icon: Square, color: 'text-slate-500', label: 'Non testé' }
+const fallbackItemStatus = { icon: Square, color: 'text-slate-500', label: 'Non testÃ©' }
 
 const checklist = computed(() => checklistsStore.currentChecklist)
 const relatedChecklistOptions = computed(() => {
@@ -156,18 +156,18 @@ const checklistReuseScore = computed(() => {
 
 const checklistSourceLabel = computed(() => {
   if (checklist.value?.source_checklist_name) {
-    return `Réutilisée depuis la checklist : ${checklist.value.source_checklist_name}`
+    return `RÃ©utilisÃ©e depuis la checklist : ${checklist.value.source_checklist_name}`
   }
 
   if (projectContextName.value) {
-    return `Générée pour le projet : ${projectContextName.value}`
+    return `GÃ©nÃ©rÃ©e pour le projet : ${projectContextName.value}`
   }
 
   if (checklist.value?.generated_from) {
     return `Source : ${String(checklist.value.generated_from)}`
   }
 
-  return 'Créée dans l’espace d’exécution QA'
+  return 'CrÃ©Ã©e dans lâ€™espace dâ€™exÃ©cution QA'
 })
 
 const checklistStoryDescription = computed(() => {
@@ -200,25 +200,25 @@ function getItemPriorityClass(priority) {
 }
 
 function formatChecklistPriority(priority) {
-  if (!priority) return 'Non définie'
+  if (!priority) return 'Non dÃ©finie'
   const value = String(priority)
   return value.charAt(0).toUpperCase() + value.slice(1)
 }
 
 function formatChecklistStatus(status) {
-  if (!status) return 'Non défini'
+  if (!status) return 'Non dÃ©fini'
   const labels = {
     backlog: 'Backlog',
     in_progress: 'En cours',
-    ready_for_test: 'Prêt pour test',
-    completed: 'Terminée',
+    ready_for_test: 'PrÃªt pour test',
+    completed: 'TerminÃ©e',
     pending: 'En attente',
-    passed: 'Réussi',
-    failed: 'Échec',
-    blocked: 'Bloqué',
+    passed: 'RÃ©ussi',
+    failed: 'Ã‰chec',
+    blocked: 'BloquÃ©',
     draft: 'Brouillon',
-    approved: 'Approuvée',
-    archived: 'Archivée',
+    approved: 'ApprouvÃ©e',
+    archived: 'ArchivÃ©e',
   }
   return labels[String(status)] || String(status).replaceAll('_', ' ')
 }
@@ -244,13 +244,13 @@ function executionStateLabel(state) {
     case 'queued':
       return 'En file'
     case 'running':
-      return 'Exécution en cours'
+      return 'ExÃ©cution en cours'
     case 'passed':
-      return 'Exécution réussie'
+      return 'ExÃ©cution rÃ©ussie'
     case 'failed':
-      return 'Exécution en échec'
+      return 'ExÃ©cution en Ã©chec'
     case 'blocked':
-      return 'Exécution bloquée'
+      return 'ExÃ©cution bloquÃ©e'
     default:
       return 'En attente'
   }
@@ -767,7 +767,7 @@ function maskExecutionInputValue(input) {
   const value = typeof input?.value === 'string' ? input.value : ''
   if (!value) return 'Non renseigne'
   if (input.kind === 'password' || /password|secret|token|cvv/i.test(input.key || '')) {
-    return '••••••••'
+    return 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢'
   }
   if (input.kind === 'file') {
     return value.split(/[\\/]/).pop() || value
@@ -935,7 +935,7 @@ function itemLastUpdate(item) {
   if (testerName && testedAt) return `${testerName} - ${testedAt}`
   if (testerName) return testerName
   if (testedAt) return testedAt
-  return 'Aucune exécution récente'
+  return 'Aucune exÃ©cution rÃ©cente'
 }
 
 function historyDetail(change) {
@@ -951,13 +951,13 @@ function historyActionTitle(change) {
     case 'status_changed':
       return 'Statut modifie'
     case 'comment_added':
-      return 'Commentaire ajouté'
+      return 'Commentaire ajoutÃ©'
     case 'comment_updated':
-      return 'Commentaire mis à jour'
+      return 'Commentaire mis Ã  jour'
     case 'automated_test_started':
-      return 'Exécution automatique lancée'
+      return 'ExÃ©cution automatique lancÃ©e'
     case 'automated_test_finished':
-      return 'Exécution automatique terminée'
+      return 'ExÃ©cution automatique terminÃ©e'
     default:
       return 'Mise a jour'
   }
@@ -1022,11 +1022,11 @@ onBeforeUnmount(() => {
             <ArrowLeft :size="18" />
           </button>
           <div class="min-w-0">
-            <p class="project-execution-kicker">Espace d’exécution QA</p>
+            <p class="project-execution-kicker">Espace dâ€™exÃ©cution QA</p>
             <p v-if="projectContextName" class="project-context-label">{{ projectContextName }}</p>
             <h1 class="project-execution-title">{{ checklist?.name || 'Chargement...' }}</h1>
             <p class="project-execution-subtitle compact">
-              Exécutez les scénarios, lancez l’agent automatique et suivez les résultats de validation.
+              ExÃ©cutez les scÃ©narios, lancez lâ€™agent automatique et suivez les rÃ©sultats de validation.
             </p>
           </div>
         </div>
@@ -1034,8 +1034,8 @@ onBeforeUnmount(() => {
 
       <div class="project-execution-side compact">
         <div class="project-execution-app-card compact">
-          <span class="project-execution-side-label">Exécution active</span>
-          <p class="muted">Le runner, l’orchestrateur et le polling restent actifs pour cette checklist.</p>
+          <span class="project-execution-side-label">ExÃ©cution active</span>
+          <p class="muted">Le runner, lâ€™orchestrateur et le polling restent actifs pour cette checklist.</p>
         </div>
 
         <label v-if="projectContextId" class="execution-checklist-selector compact">
@@ -1059,19 +1059,19 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-if="checklistsStore.loading" class="flex justify-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border border-blue-500 border-t-transparent"></div>
+      <div class="animate-spin rounded-full h-8 w-8 border border-brand-500 border-t-transparent"></div>
     </div>
 
     <div v-else-if="checklist" class="stack">
       <div class="card stack compact-info-card">
         <div class="flex items-center gap-3 pb-3 border-b border-gray-200 mb-4">
-          <FileText :size="20" class="text-blue-600" />
-          <h2>Informations générales</h2>
+          <FileText :size="20" class="text-brand-600" />
+          <h2>Informations gÃ©nÃ©rales</h2>
         </div>
 
         <div class="info-stat-grid">
           <div class="info-stat-chip">
-            <p class="info-stat-label">Priorité</p>
+            <p class="info-stat-label">PrioritÃ©</p>
             <span :class="['tag', getChecklistPriorityTagClass(checklist.priority)]">
               {{ formatChecklistPriority(checklist.priority) }}
             </span>
@@ -1079,27 +1079,27 @@ onBeforeUnmount(() => {
 
           <div class="info-stat-chip">
             <p class="info-stat-label">Statut</p>
-            <span class="tag text-blue-900 border-blue-300 bg-blue-100">
+            <span class="tag text-brand-900 border-brand-300 bg-brand-100">
               {{ formatChecklistStatus(checklist.status) }}
             </span>
           </div>
 
           <div class="info-stat-chip">
-            <p class="info-stat-label">Scénarios</p>
+            <p class="info-stat-label">ScÃ©narios</p>
             <span class="tag text-slate-900 border-slate-300 bg-slate-100">
               {{ scenariosStats.total }} au total
             </span>
           </div>
 
           <div v-if="checklistReuseScore" class="info-stat-chip">
-            <p class="info-stat-label">Score de réutilisation</p>
+            <p class="info-stat-label">Score de rÃ©utilisation</p>
             <span class="tag text-emerald-900 border-emerald-300 bg-emerald-100">
               {{ checklistReuseScore }}
             </span>
           </div>
 
           <div v-if="checklistGeneratedAt" class="info-stat-chip">
-            <p class="info-stat-label">Date de génération</p>
+            <p class="info-stat-label">Date de gÃ©nÃ©ration</p>
             <span class="tag text-slate-900 border-slate-300 bg-slate-100">
               {{ formatTimestamp(checklistGeneratedAt) }}
             </span>
@@ -1118,7 +1118,7 @@ onBeforeUnmount(() => {
           </section>
 
           <section v-if="acceptanceCriteriaItems.length" class="info-section">
-            <p class="info-section-title">Critères d’acceptation</p>
+            <p class="info-section-title">CritÃ¨res dâ€™acceptation</p>
             <ol class="info-list">
               <li v-for="(criterion, index) in acceptanceCriteriaItems" :key="`${index}-${criterion}`">
                 {{ criterion }}
@@ -1131,12 +1131,12 @@ onBeforeUnmount(() => {
       <div v-if="checklist.business_rules && checklist.business_rules.length > 0" class="card stack">
         <div class="flex items-center gap-3 pb-3 border-b border-gray-200 mb-4">
           <Grid3x3 :size="20" class="text-violet-600" />
-          <h2>Règles métier</h2>
+          <h2>RÃ¨gles mÃ©tier</h2>
         </div>
 
         <ul class="space-y-2">
           <li v-for="(rule, index) in checklist.business_rules" :key="index" class="flex items-start gap-3 text-gray-700">
-            <span class="inline-block w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
+            <span class="inline-block w-1.5 h-1.5 bg-brand-600 rounded-full mt-2 flex-shrink-0"></span>
             {{ rule }}
           </li>
         </ul>
@@ -1147,10 +1147,10 @@ onBeforeUnmount(() => {
           <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div class="flex items-center gap-3">
               <CheckSquare :size="20" class="text-orange-600" />
-              <h2>Test cases exécutables</h2>
-              <span class="tag text-blue-900 border-blue-300 bg-blue-100">{{ scenariosStats.total }}</span>
+              <h2>Test cases exÃ©cutables</h2>
+              <span class="tag text-brand-900 border-brand-300 bg-brand-100">{{ scenariosStats.total }}</span>
             </div>
-            <p class="muted test-case-section-note">Lancez les tests, ajustez le statut final et consultez rapidement l’historique et les observations QA.</p>
+            <p class="muted test-case-section-note">Lancez les tests, ajustez le statut final et consultez rapidement lâ€™historique et les observations QA.</p>
           </div>
 
         </div>
@@ -1179,7 +1179,7 @@ onBeforeUnmount(() => {
 
                   <div class="flex flex-col gap-2.5 xl:min-w-[500px] xl:flex-row xl:items-center xl:justify-end">
                     <span :class="['inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold', getItemCriticalityClass(item.criticality)]">
-                      Criticité : {{ item.criticality || 'N/A' }}
+                      CriticitÃ© : {{ item.criticality || 'N/A' }}
                     </span>
                     <label class="qa-card-status-field">
                       <select
@@ -1206,7 +1206,7 @@ onBeforeUnmount(() => {
                 <section class="p-4 sm:p-5 lg:border-r lg:border-slate-200">
                   <div class="flex flex-wrap items-center justify-between gap-3">
                     <div class="flex items-center gap-3">
-                      <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+                      <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
                         <Clock :size="16" />
                       </div>
                       <div>
@@ -1217,7 +1217,7 @@ onBeforeUnmount(() => {
                   </div>
 
                   <div v-if="historyLoadingByItemId[item.id]" class="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-500">
-                    Chargement de l’historique...
+                    Chargement de lâ€™historique...
                   </div>
 
                   <div v-else-if="visibleHistory(item).length" class="mt-4 space-y-3">
@@ -1234,7 +1234,7 @@ onBeforeUnmount(() => {
                               v-for="pill in historyStatusPills(change)"
                               :key="pill.key"
                               :class="pill.tone === 'active'
-                                ? 'inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700'
+                                ? 'inline-flex items-center rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-700'
                                 : pill.tone === 'neutral'
                                   ? 'inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700'
                                   : 'inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600'"
@@ -1255,18 +1255,18 @@ onBeforeUnmount(() => {
 
                   <div v-else class="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-6 text-center">
                     <p class="text-sm font-medium text-slate-700">Aucun historique disponible pour ce test case.</p>
-                    <p class="mt-2 text-sm text-slate-500">Les changements de statut et d’exécution apparaîtront ici.</p>
+                    <p class="mt-2 text-sm text-slate-500">Les changements de statut et dâ€™exÃ©cution apparaÃ®tront ici.</p>
                   </div>
 
                   <button class="btn btn-secondary btn-sm mt-4" @click="toggleItemHistory(item.id)">
-                    {{ showItemHistory[item.id] ? 'Réduire l’historique' : 'Afficher tout l’historique' }}
+                    {{ showItemHistory[item.id] ? 'RÃ©duire lâ€™historique' : 'Afficher tout lâ€™historique' }}
                   </button>
                 </section>
 
                 <section class="border-t border-slate-200 p-4 sm:p-5 lg:border-t-0">
                   <div class="flex flex-wrap items-center justify-between gap-3">
                     <div class="flex items-center gap-3">
-                      <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+                      <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
                         <MessageSquare :size="16" />
                       </div>
                       <div>
@@ -1363,7 +1363,7 @@ onBeforeUnmount(() => {
                             :href="entry.href"
                             target="_blank"
                             rel="noreferrer"
-                            class="mt-1 inline-flex break-all text-sm font-semibold text-blue-700 hover:text-blue-800"
+                            class="mt-1 inline-flex break-all text-sm font-semibold text-brand-700 hover:text-brand-800"
                           >
                             {{ entry.label }}
                           </a>
@@ -1398,24 +1398,24 @@ onBeforeUnmount(() => {
                     <div class="flex flex-wrap items-center justify-between gap-3">
                       <p class="text-sm font-semibold text-slate-900">{{ item.tester?.name || item.tested_by?.name || 'Observation QA' }}</p>
                       <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                        {{ item.tested_at ? formatTimestamp(item.tested_at) : 'Commentaire enregistré' }}
+                        {{ item.tested_at ? formatTimestamp(item.tested_at) : 'Commentaire enregistrÃ©' }}
                       </span>
                     </div>
                     <p class="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{{ item.qa_comment }}</p>
                   </div>
 
                   <div v-else class="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-6 text-center">
-                    <p class="text-sm font-semibold text-slate-700">Aucun commentaire enregistré pour ce test case.</p>
-                    <p class="mt-2 text-sm text-slate-500">Soyez le premier à ajouter une observation.</p>
+                    <p class="text-sm font-semibold text-slate-700">Aucun commentaire enregistrÃ© pour ce test case.</p>
+                    <p class="mt-2 text-sm text-slate-500">Soyez le premier Ã  ajouter une observation.</p>
                   </div>
 
-                  <div v-if="getArtifactUrl(item)" class="mt-4 rounded-2xl border border-blue-200 bg-blue-50/80 p-4">
-                    <p class="text-xs font-bold uppercase tracking-wider text-blue-700">Artefacts d execution</p>
+                  <div v-if="getArtifactUrl(item)" class="mt-4 rounded-2xl border border-brand-200 bg-brand-50/80 p-4">
+                    <p class="text-xs font-bold uppercase tracking-wider text-brand-700">Artefacts d execution</p>
                     <a
                       :href="getArtifactUrl(item)"
                       target="_blank"
                       rel="noreferrer"
-                      class="mt-2 inline-flex items-center text-sm font-semibold text-blue-700 hover:text-blue-800"
+                      class="mt-2 inline-flex items-center text-sm font-semibold text-brand-700 hover:text-brand-800"
                     >
                       Consulter la derniere preuve d execution
                     </a>
