@@ -464,7 +464,7 @@ watch(
       <div>
         <p class="dashboard-eyebrow">{{ checklistPageCopy.kicker }}</p>
         <h1>{{ checklistPageCopy.title }}</h1>
-        <p class="muted page-subtitle">{{ checklistPageCopy.description }}</p>
+        <p class="dashboard-command-text">{{ checklistPageCopy.description }}</p>
       </div>
 
       <div class="dashboard-command-actions">
@@ -481,7 +481,7 @@ watch(
     </div>
 
     <div v-if="auth.canManageChecklists && !projectId" class="card">
-      <p class="muted">Vous pouvez creer ici une checklist systeme reutilisable, sans association directe a une User Story. Pour creer une checklist d execution projet, ouvrez cette page depuis un projet assigne.</p>
+      <p class="muted">Vous pouvez créer ici une checklist système réutilisable, sans association directe à une User Story. Pour créer une checklist d'exécution projet, ouvrez cette page depuis un projet assigné.</p>
     </div>
 
     <div class="story-detail-metrics">
@@ -547,7 +547,7 @@ watch(
     <div v-if="auth.canManageChecklists && showChecklistForm" class="card stack">
       <h2>{{ form.id ? `Modifier la checklist #${form.id}` : 'Créer une checklist' }}</h2>
       <p class="muted">
-        {{ projectId || form.project_id ? `Contexte projet : ${projectId || form.project_id}` : 'Contexte : checklist systeme reutilisable, non attachee a une User Story.' }}
+        {{ projectId || form.project_id ? `Contexte projet : ${projectId || form.project_id}` : 'Contexte : checklist système réutilisable, non attachée à une User Story.' }}
       </p>
 
       <p v-if="errorMessage" class="error" data-testid="checklists-msg-error">{{ errorMessage }}</p>
@@ -767,10 +767,10 @@ watch(
     </div>
 
     <div v-if="auth.canManageChecklists" class="card stack">
-      <h2>Checklists archivees</h2>
-      <p class="muted">Retrouvez ici les checklists archivees et restaurez-les si besoin, ou supprimez-les definitivement.</p>
+      <h2>Checklists archivées</h2>
+      <p class="muted">Retrouvez ici les checklists archivées et restaurez-les si besoin, ou supprimez-les définitivement.</p>
 
-      <p v-if="loadingArchived" class="muted">Chargement des checklists archivees...</p>
+      <p v-if="loadingArchived" class="muted">Chargement des checklists archivées...</p>
 
       <div class="table-wrap" v-if="!loadingArchived">
         <table>
@@ -778,9 +778,9 @@ watch(
             <tr>
               <th>ID</th>
               <th>Titre</th>
-              <th>Categorie</th>
+              <th>Catégorie</th>
               <th>Statut</th>
-              <th>Nombre d items</th>
+              <th>Nombre d'items</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -795,7 +795,7 @@ watch(
               </td>
               <td>{{ checklist.category || '-' }}</td>
               <td>
-                <span class="tag inactive">Archivee</span>
+                <span class="tag inactive">Archivée</span>
               </td>
               <td>{{ checklist.items?.length || 0 }}</td>
               <td class="checklists-actions-cell">
@@ -803,7 +803,7 @@ watch(
                   <button
                     type="button"
                     class="checklist-menu-trigger"
-                    aria-label="Ouvrir les actions de la checklist archivee"
+                    aria-label="Ouvrir les actions de la checklist archivée"
                     @click.stop="toggleArchivedChecklistMenu(checklist.id)"
                   >
                     <Ellipsis :size="18" />
@@ -816,14 +816,14 @@ watch(
                     </button>
                     <button type="button" class="checklist-row-menu-item danger" @click="permanentlyDeleteChecklist(checklist.id)">
                       <Archive :size="16" />
-                      <span>Supprimer definitivement</span>
+                      <span>Supprimer définitivement</span>
                     </button>
                   </div>
                 </div>
               </td>
             </tr>
             <tr v-if="archivedChecklists.length === 0">
-              <td colspan="6" class="muted">Aucune checklist archivee pour le moment.</td>
+              <td colspan="6" class="muted">Aucune checklist archivée pour le moment.</td>
             </tr>
           </tbody>
         </table>

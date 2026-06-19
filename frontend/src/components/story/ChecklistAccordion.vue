@@ -36,7 +36,7 @@ const expanded = ref(false)
 const menuOpen = ref(false)
 
 const itemCount = computed(() => Array.isArray(props.checklist?.items) ? props.checklist.items.length : 0)
-const statusLabel = computed(() => props.checklist?.lifecycle_status || props.checklist?.status || 'associee')
+const statusLabel = computed(() => props.checklist?.lifecycle_status || props.checklist?.status || 'associée')
 const globalCriticality = computed(() => {
   const items = Array.isArray(props.checklist?.items) ? props.checklist.items : []
   const rank = { Critical: 4, High: 3, Major: 3, Medium: 2, Low: 1, Minor: 1 }

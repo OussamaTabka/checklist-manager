@@ -1,0 +1,21 @@
+{
+  "run_id": "dsl-diag-001",
+  "external_id": 3001,
+  "test_case_title": "La page de login Practice Test se charge correctement",
+  "test_case_description": "Vérifier que la page de login se charge, affiche le champ Username et le bouton Submit sans erreur.",
+  "test_case_text": "Ouvrir https://practicetestautomation.com/practice-test-login/ et vérifier que la page se charge. Le champ 'Username' et le bouton 'Submit' doivent être visibles. Aucune saisie requise.",
+  "base_url": "https://practicetestautomation.com/practice-test-login/",
+  "use_auth": false,
+  "environment_name": "production-public",
+  "notes": "Page publique sans authentification. Test de chargement pur.",
+  "priority": "High",
+  "criticality": "Medium",
+  "current_status": "pending",
+  "target_type": "version_item",
+  "source_app": "practice_test_automation",
+  "provided_inputs": {},
+  "expected_result": {
+    "visible_text_contains": "Username",
+    "assertion_keywords": ["Username", "Password", "Submit"]
+  }
+}

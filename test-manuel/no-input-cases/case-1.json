@@ -1,0 +1,21 @@
+{
+  "run_id": "no-input-case-1-404-page",
+  "external_id": 1001,
+  "test_case_title": "404 — Naviguer vers une URL inexistante affiche une page d'erreur",
+  "test_case_description": "Vérifier que naviguer vers un chemin inexistant (/url-qui-nexiste-pas) affiche soit une page 404 soit un retour vers l'accueil, et que l'application ne plante pas.",
+  "test_case_text": "Charger https://www.saucedemo.com/url-qui-nexiste-pas. Vérifier qu'une page d'erreur est affichée (code 404, message 'Not Found', ou tout indicateur visuel similaire), ou que l'application redirige l'utilisateur vers la page d'accueil / la page de login.",
+  "base_url": "https://www.saucedemo.com",
+  "use_auth": false,
+  "environment_name": "production-public",
+  "notes": "Page publique Sauce Demo. Aucun identifiant requis. Aucun champ de saisie impliqué.",
+  "priority": "Medium",
+  "criticality": "Medium",
+  "current_status": "pending",
+  "target_type": "version_item",
+  "source_app": "sauce_demo",
+  "provided_inputs": {},
+  "expected_result": {
+    "visible_text_contains": "404",
+    "assertion_keywords": ["404", "Not Found", "page not found", "error"]
+  }
+}

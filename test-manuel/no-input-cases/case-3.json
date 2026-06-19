@@ -1,0 +1,20 @@
+{
+  "run_id": "no-input-case-3-console-errors",
+  "external_id": 1003,
+  "test_case_title": "Console — Aucune erreur JavaScript n'apparaît au chargement de la page d'accueil",
+  "test_case_description": "Vérifier qu'aucun message de type 'error' n'est émis dans la console navigateur lors du chargement initial de https://www.saucedemo.com.",
+  "test_case_text": "Charger https://www.saucedemo.com. Écouter les messages de console via page.on('console'). Après le chargement complet de la page, vérifier qu'aucun message de type 'error' n'a été capturé. Les avertissements (warnings) sont tolérés. Aucun champ de saisie n'est nécessaire.",
+  "base_url": "https://www.saucedemo.com",
+  "use_auth": false,
+  "environment_name": "production-public",
+  "notes": "Test de qualité JavaScript. Utiliser page.on('console') pour capturer les erreurs avant navigation. Aucun login requis. Aucune saisie utilisateur.",
+  "priority": "High",
+  "criticality": "High",
+  "current_status": "pending",
+  "target_type": "version_item",
+  "source_app": "sauce_demo",
+  "provided_inputs": {},
+  "expected_result": {
+    "assertion_keywords": ["no console errors", "console error count 0", "clean console"]
+  }
+}

@@ -108,7 +108,7 @@ async function parseJsonObjectOrThrow(rawResponse: string, model: string): Promi
     })
   }
 
-  if (looksLikeRawPlaywrightCode(cleaned)) {
+  if (!cleaned.startsWith('{') && looksLikeRawPlaywrightCode(cleaned)) {
     const debugFilePath = await maybeWriteDebugRawResponse(rawResponse)
     throw new LLMProviderError('OpenAI returned raw Playwright code instead of JSON', {
       provider: 'openai',

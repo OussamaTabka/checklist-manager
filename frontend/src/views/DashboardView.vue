@@ -525,7 +525,6 @@ onMounted(async () => {
                 <th>Success Rate</th>
                 <th>Completion</th>
                 <th>Failed Items</th>
-                <th>Status</th>
               </tr>
             </thead>
             <tbody>
@@ -569,12 +568,9 @@ onMounted(async () => {
                   </div>
                 </td>
                 <td>{{ row.failed }}</td>
-                <td>
-                  <span class="status-pill" :class="`status-${row.status.tone}`">{{ row.status.label }}</span>
-                </td>
               </tr>
               <tr v-if="filteredRows.length === 0">
-                <td colspan="6" class="muted">No projects available.</td>
+                <td colspan="5" class="muted">No projects available.</td>
               </tr>
             </tbody>
           </table>

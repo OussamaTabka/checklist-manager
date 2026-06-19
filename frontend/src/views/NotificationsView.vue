@@ -37,7 +37,7 @@ const emptyMessage = computed(() => {
 const visibleEmptyMessage = computed(() => {
   if (selectedFilter.value === 'archived') {
     return {
-      fr: 'Aucune notification archivee pour le moment.',
+      fr: 'Aucune notification archivée pour le moment.',
       en: 'No archived notifications for now.',
       ar: 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¥Ø´Ø¹Ø§Ø±Ø§Øª Ù…Ø¤Ø±Ø´ÙØ© Ø­Ø§Ù„ÙŠØ§.',
     }[settings.language]
@@ -153,7 +153,7 @@ function maybeShowDeletedStoryToast(item) {
     return
   }
 
-  toast.info('La user story concernee a ete supprimee. Verifiez les checklists associees.')
+  toast.info('La user story concernée a été supprimée. Vérifiez les checklists associées.')
 }
 
 async function archiveNotification(item) {
@@ -210,7 +210,7 @@ onMounted(async () => {
           <span>Notifications</span>
         </h1>
         <p class="page-subtitle">
-          Retrouvez les alertes utiles selon votre rôle, avec accès directà la bonne section.
+          Retrouvez les alertes utiles selon votre rôle, avec accès direct à la bonne section.
         </p>
       </div>
 

@@ -1348,18 +1348,16 @@ function buildStepsAndAsserts(input: GeneratorInput, coverageType: CoverageType,
   }
 }
 
-function inferRuntimeBrowsers(input: GeneratorInput): Array<'chromium' | 'firefox' | 'webkit' | 'msedge'> | undefined {
+function inferRuntimeBrowsers(input: GeneratorInput): Array<'chromium' | 'firefox' | 'webkit'> | undefined {
   const text = normalizeText(input)
-  const requested = new Set<'chromium' | 'firefox' | 'webkit' | 'msedge'>()
+  const requested = new Set<'chromium' | 'firefox' | 'webkit'>()
   if (/\bchrome\b|\bchromium\b/.test(text)) requested.add('chromium')
   if (/\bfirefox\b/.test(text)) requested.add('firefox')
   if (/\bsafari\b|\bwebkit\b/.test(text)) requested.add('webkit')
-  if (/\bedge\b|\bmsedge\b/.test(text)) requested.add('msedge')
   if (/cross\s*-?\s*browser|compatibility/.test(text) && requested.size === 0) {
     requested.add('chromium')
     requested.add('firefox')
     requested.add('webkit')
-    requested.add('msedge')
   }
   return requested.size > 0 ? Array.from(requested) : undefined
 }

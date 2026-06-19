@@ -1,0 +1,114 @@
+{
+  "schema_version": "1.0",
+  "run_id": "dsl-diag-002",
+  "runner_run_id": "runner-1781885251799",
+  "base_url_used": "https://the-internet.herokuapp.com",
+  "status": "done",
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 3002,
+      "status": "passed",
+      "attempt": 1,
+      "duration_ms": 15609,
+      "error_type": null,
+      "error_message": null,
+      "generated_plan": {
+        "title": "La page d'accueil the-internet se charge correctement",
+        "intent_summary": "Vérifier que la page d'accueil publique de the-internet est accessible et affiche les éléments de navigation attendus.",
+        "coverage_type": "navigation_routing",
+        "preflight_checks": [],
+        "steps": [
+          {
+            "action": "goto",
+            "url": "https://the-internet.herokuapp.com/"
+          },
+          {
+            "action": "wait_for_selector",
+            "selector": {
+              "by": "role",
+              "role": "heading",
+              "name": "Welcome to the-internet",
+              "exact": true
+            },
+            "state": "visible",
+            "timeout_ms": 15000
+          },
+          {
+            "action": "wait_for_selector",
+            "selector": {
+              "by": "text",
+              "text": "Available Examples",
+              "exact": true
+            },
+            "state": "visible",
+            "timeout_ms": 15000
+          },
+          {
+            "action": "screenshot",
+            "name": "the-internet-homepage-loaded"
+          }
+        ],
+        "asserts": [
+          {
+            "type": "expect_url_contains",
+            "value": "the-internet.herokuapp.com/"
+          },
+          {
+            "type": "expect_visible",
+            "selector": {
+              "by": "role",
+              "role": "heading",
+              "name": "Welcome to the-internet",
+              "exact": true
+            }
+          },
+          {
+            "type": "expect_visible",
+            "selector": {
+              "by": "text",
+              "text": "Available Examples",
+              "exact": true
+            }
+          }
+        ],
+        "expected_observations": [
+          "La page d'accueil se charge depuis l'URL racine du site.",
+          "Le titre visible 'Welcome to the-internet' apparaît sur la page.",
+          "La section ou le texte 'Available Examples' est visible pour confirmer la présence des liens de navigation."
+        ]
+      },
+      "failure_source": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      },
+      "execution_trace": [
+        "[chrome] Planning: browser context starting",
+        "[chrome] Planning: Vérifier que la page d'accueil publique de the-internet est accessible et affiche les éléments de navigation attendus.",
+        "[chrome] Preflight 0: page_accessible -> started (attempt 1/3, url=https://the-internet.herokuapp.com/)",
+        "[chrome] Preflight 0: page_accessible -> ok (attempt 1/3)",
+        "[chrome] Step 2: wait_for_selector role=heading, name=Welcome to the-internet state=visible -> started",
+        "[chrome] Step 2: wait_for_selector role=heading, name=Welcome to the-internet state=visible -> ok (34ms)",
+        "[chrome] Step 3: wait_for_selector text=Available Examples state=visible -> started",
+        "[chrome] Step 3: wait_for_selector text=Available Examples state=visible -> ok (12ms)",
+        "[chrome] Step 4: screenshot the-internet-homepage-loaded -> started",
+        "[chrome] Step 4: screenshot the-internet-homepage-loaded -> ok (121ms)",
+        "[chrome] Assert 1: expect_url_contains 'the-internet.herokuapp.com/' -> started",
+        "[chrome] Assert 1: expect_url_contains 'the-internet.herokuapp.com/' -> ok (1ms)",
+        "[chrome] Assert 2: expect_visible role=heading, name=Welcome to the-internet -> started",
+        "[chrome] Assert 2: expect_visible role=heading, name=Welcome to the-internet -> ok (15ms)",
+        "[chrome] Assert 3: expect_visible text=Available Examples -> started",
+        "[chrome] Assert 3: expect_visible text=Available Examples -> ok (9ms)",
+        "[chrome] Failure analysis: none",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

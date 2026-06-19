@@ -30,6 +30,7 @@ const toast = useToastStore()
 
 const checklistId = computed(() => route.params.id)
 const projectContextId = computed(() => route.query.projectId || null)
+const storyContextId = computed(() => route.query.storyId || null)
 const showItemHistory = ref({})
 const historyLoadingByItemId = ref({})
 const commentEditorOpenByItemId = ref({})
@@ -384,8 +385,16 @@ async function loadExecutionContext() {
 
     projectContextName.value = project?.name || ''
 
+    const allStories = Array.isArray(stories) ? stories : []
+
+    // When coming from a user story detail page, restrict the dropdown
+    // to only the checklists attached to that specific story.
+    const filteredStories = storyContextId.value
+      ? allStories.filter((s) => String(s.id) === String(storyContextId.value))
+      : allStories
+
     const unique = new Map()
-    for (const story of Array.isArray(stories) ? stories : []) {
+    for (const story of filteredStories) {
       for (const item of story.checklists || []) {
         if (!unique.has(String(item.id))) {
           unique.set(String(item.id), item)
@@ -949,22 +958,22 @@ function historyDetail(change) {
 function historyActionTitle(change) {
   switch (change.change_type) {
     case 'status_changed':
-      return 'Statut modifie'
+      return 'Statut modifié'
     case 'comment_added':
       return 'Commentaire ajouté'
     case 'comment_updated':
-      return 'Commentaire mis   jour'
+      return 'Commentaire mis à jour'
     case 'automated_test_started':
       return 'Exécution automatique lancée'
     case 'automated_test_finished':
-      return 'Exécution automatique Terminée'
+      return 'Exécution automatique terminée'
     default:
-      return 'Mise a jour'
+      return 'Mise à jour'
   }
 }
 
 function historyActor(change) {
-  return change.changed_by?.name || 'Systeme'
+  return change.changed_by?.name || 'Système'
 }
 
 function historyStatusPills(change) {
@@ -999,7 +1008,7 @@ watch(
 )
 
 watch(
-  () => route.query.projectId,
+  () => [route.query.projectId, route.query.storyId],
   () => {
     loadExecutionContext()
   },
@@ -1406,18 +1415,18 @@ onBeforeUnmount(() => {
 
                   <div v-else class="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-6 text-center">
                     <p class="text-sm font-semibold text-slate-700">Aucun commentaire enregistré pour ce test case.</p>
-                    <p class="mt-2 text-sm text-slate-500">Soyez le premier   ajouter une observation.</p>
+                    <p class="mt-2 text-sm text-slate-500">Soyez le premier à ajouter une observation.</p>
                   </div>
 
                   <div v-if="getArtifactUrl(item)" class="mt-4 rounded-2xl border border-brand-200 bg-brand-50/80 p-4">
-                    <p class="text-xs font-bold uppercase tracking-wider text-brand-700">Artefacts d execution</p>
+                    <p class="text-xs font-bold uppercase tracking-wider text-brand-700">Artefacts d'exécution</p>
                     <a
                       :href="getArtifactUrl(item)"
                       target="_blank"
                       rel="noreferrer"
                       class="mt-2 inline-flex items-center text-sm font-semibold text-brand-700 hover:text-brand-800"
                     >
-                      Consulter la derniere preuve d execution
+                      Consulter la dernière preuve d'exécution
                     </a>
                   </div>
                 </section>

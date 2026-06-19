@@ -247,7 +247,19 @@ class StoryContextExtractor
     private function stringifyList(mixed $value): string
     {
         if (is_array($value)) {
-            return implode("\n", array_map(fn ($item) => trim((string) $item), $value));
+            return implode("\n", array_map(function ($item) {
+                if (!is_array($item)) {
+                    return trim((string) $item);
+                }
+                // Flatten nested arrays (e.g. scenario objects: {titre: '...', etapes: [...]})
+                $parts = [];
+                foreach ($item as $v) {
+                    $parts[] = is_array($v)
+                        ? implode(', ', array_map('strval', $v))
+                        : trim((string) $v);
+                }
+                return implode(' - ', array_filter($parts));
+            }, $value));
         }
 
         return trim((string) ($value ?? ''));

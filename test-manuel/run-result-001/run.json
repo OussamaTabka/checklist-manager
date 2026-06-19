@@ -1,0 +1,78 @@
+{
+  "schema_version": "1.0",
+  "run_id": "cross-browser-diag-001",
+  "generation_mode": "python_script",
+  "target": {
+    "base_url": "https://practicetestautomation.com/practice-test-login/"
+  },
+  "runtime": {
+    "headless": true,
+    "slow_mo_ms": 0,
+    "hold_open_ms": 0,
+    "browsers": [
+      "chromium",
+      "firefox",
+      "webkit"
+    ],
+    "timeout_ms": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "trace": "off",
+    "video": "off",
+    "screenshot": "off"
+  },
+  "generation_metadata": {
+    "engine": "python-gen",
+    "requested_engine": "openai"
+  },
+  "cases": [
+    {
+      "external_id": 2001,
+      "title": "Compatibilité cross-browser — La page de login Practice se charge sur Chromium, Firefox et WebKit",
+      "severity": "major",
+      "use_auth": false,
+      "execution_profile": {
+        "intent_summary": "Vérifier que la page publique de login Practice se charge correctement et affiche ses éléments principaux sans interaction utilisateur.",
+        "coverage_type": "generic_ui",
+        "preconditions": [
+          "La page de login Practice Test Automation doit être accessible à l'URL de base.",
+          "Aucune authentification préalable n'est requise pour accéder à la page.",
+          "Le test est exécuté dans un navigateur déjà lancé par l'environnement Playwright."
+        ],
+        "required_inputs": [],
+        "expected_observations": [
+          "Le titre principal de la page de login ou un élément équivalent est visible après le chargement.",
+          "Les champs Username et Password sont visibles sur la page.",
+          "Le bouton Submit est visible sans effectuer d'action utilisateur."
+        ],
+        "diagnostics": []
+      },
+      "python_script_body": "await expect(page.get_by_role('heading', name='Test login')).to_be_visible()\nawait expect(page.get_by_label('Username')).to_be_visible()\nawait expect(page.get_by_label('Password')).to_be_visible()\nawait expect(page.get_by_role('button', name='Submit')).to_be_visible()",
+      "human_readable_steps": [
+        "Vérifier que le titre principal de la page de login est visible",
+        "Vérifier que le champ Username est visible",
+        "Vérifier que le champ Password est visible",
+        "Vérifier que le bouton Submit est visible"
+      ],
+      "provided_inputs": {},
+      "preflight_checks": [],
+      "steps": [
+        {
+          "action": "Vérifier que le titre principal de la page de login est visible"
+        },
+        {
+          "action": "Vérifier que le champ Username est visible"
+        },
+        {
+          "action": "Vérifier que le champ Password est visible"
+        },
+        {
+          "action": "Vérifier que le bouton Submit est visible"
+        }
+      ],
+      "asserts": []
+    }
+  ]
+}

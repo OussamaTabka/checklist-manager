@@ -1,0 +1,20 @@
+{
+  "run_id": "no-input-case-2-images",
+  "external_id": 1002,
+  "test_case_title": "Images — Toutes les images de la page de login se chargent correctement",
+  "test_case_description": "Vérifier que toutes les balises <img> présentes sur la page de login ont un attribut src non vide et sont complètement chargées (naturalWidth > 0 et complete === true).",
+  "test_case_text": "Charger https://www.saucedemo.com. Pour chaque élément <img> sur la page : vérifier que img.complete === true et que img.naturalWidth > 0 (indiquant que l'image s'est chargée sans erreur 404 ni erreur réseau). Aucun champ de saisie n'est nécessaire pour ce test.",
+  "base_url": "https://www.saucedemo.com",
+  "use_auth": false,
+  "environment_name": "production-public",
+  "notes": "Test de vérification d'assets visuels. Aucun login requis. Aucun champ de saisie. Utiliser page.evaluate() pour inspecter les propriétés DOM des images.",
+  "priority": "Low",
+  "criticality": "Low",
+  "current_status": "pending",
+  "target_type": "version_item",
+  "source_app": "sauce_demo",
+  "provided_inputs": {},
+  "expected_result": {
+    "assertion_keywords": ["image complete", "naturalWidth", "img loaded", "no broken images"]
+  }
+}

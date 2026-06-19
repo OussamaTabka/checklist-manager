@@ -9,27 +9,29 @@ function refreshPage() {
 <template>
   <button class="logo-header" type="button" @click="refreshPage" title="Refresh page">
     <div class="icon" aria-hidden="true">
-      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="11" y="7" width="26" height="34" rx="7" fill="url(#paper)" />
-        <rect x="11" y="7" width="26" height="34" rx="7" stroke="url(#border)" stroke-width="1.4" />
-        <path d="M18 6.5C18 4.84315 19.3431 3.5 21 3.5H27C28.6569 3.5 30 4.84315 30 6.5V9H18V6.5Z" fill="url(#clip)" />
-        <path d="M17.75 17H30.25" stroke="#294FA6" stroke-width="1.9" stroke-linecap="round" />
-        <path d="M17.75 23.5H25.5" stroke="#294FA6" stroke-width="1.9" stroke-linecap="round" />
-        <path d="M17.75 30H27.25" stroke="#294FA6" stroke-width="1.9" stroke-linecap="round" />
-        <circle cx="30.5" cy="24" r="5.5" fill="#1F6FEB" />
-        <path d="M28.1 24.1L29.75 25.75L33.1 22.45" stroke="white" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+      <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- clipboard body -->
+        <rect x="10" y="12" width="36" height="38" rx="6" fill="url(#body)" />
+        <rect x="10" y="12" width="36" height="38" rx="6" fill="rgba(255,255,255,0.12)" />
+        <!-- clip at top -->
+        <rect x="21" y="9" width="14" height="8" rx="3" fill="#94A3B8" />
+        <rect x="23" y="11" width="10" height="4" rx="2" fill="#CBD5E1" />
+        <!-- row 1: green check circle + line -->
+        <circle cx="19" cy="26" r="4.5" fill="#22C55E" />
+        <path d="M17 26l1.5 1.5 3-3" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="26" y="24.5" width="14" height="3" rx="1.5" fill="rgba(255,255,255,0.55)" />
+        <!-- row 2: green check circle + line -->
+        <circle cx="19" cy="35" r="4.5" fill="#22C55E" />
+        <path d="M17 35l1.5 1.5 3-3" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="26" y="33.5" width="10" height="3" rx="1.5" fill="rgba(255,255,255,0.55)" />
+        <!-- row 3: grey minus circle + line -->
+        <circle cx="19" cy="44" r="4.5" fill="#94A3B8" />
+        <path d="M16.5 44h5" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        <rect x="26" y="42.5" width="12" height="3" rx="1.5" fill="rgba(255,255,255,0.35)" />
         <defs>
-          <linearGradient id="paper" x1="24" y1="7" x2="24" y2="41" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#FFFFFF" />
-            <stop offset="1" stop-color="#EEF4FF" />
-          </linearGradient>
-          <linearGradient id="border" x1="11" y1="7" x2="38" y2="42" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#C7D8F7" />
-            <stop offset="1" stop-color="#DCE7FA" />
-          </linearGradient>
-          <linearGradient id="clip" x1="24" y1="3.5" x2="24" y2="9" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#0F172A" />
-            <stop offset="1" stop-color="#294FA6" />
+          <linearGradient id="body" x1="10" y1="12" x2="46" y2="50" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#3B82F6" />
+            <stop offset="1" stop-color="#1D4ED8" />
           </linearGradient>
         </defs>
       </svg>
@@ -58,13 +60,13 @@ function refreshPage() {
 .icon {
   width: 42px;
   height: 42px;
-  background: linear-gradient(135deg, #6366F1, #8B5CF6);
-  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: linear-gradient(145deg, #4F8EF7, #2563EB);
+  border: 1px solid rgba(37, 99, 235, 0.3);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 16px 32px -24px rgba(15, 23, 42, 0.28);
+  box-shadow: 0 8px 20px -8px rgba(37, 99, 235, 0.45);
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
@@ -82,8 +84,8 @@ function refreshPage() {
 }
 
 .icon svg {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   position: relative;
   z-index: 1;
 }
@@ -105,18 +107,16 @@ function refreshPage() {
 }
 
 .part1 {
-  color: #0f172a;
+  color: #0F172A;
 }
 
 :global(.dark) .part1 {
-  color: #f8fafc;
+  color: #F1F5F9;
 }
 
 .part2 {
-  background: linear-gradient(180deg, #059669, #10B981);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #7EC8E3;
+  -webkit-text-fill-color: #7EC8E3;
 }
 
 .brand-subtitle {

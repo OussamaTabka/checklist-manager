@@ -93,7 +93,7 @@ const fallbackDescription = 'Aucune description disponible.'
           :disabled="loading || actionsDisabled"
           @click="$emit('create-draft')"
         >
-          Creer un brouillon
+          Créer un brouillon
         </button>
       </div>
     </div>

@@ -12,7 +12,7 @@ defineProps({
 </script>
 
 <template>
-  <ol class="flex flex-wrap items-center gap-2">
+  <ol class="flex flex-nowrap items-center gap-2">
     <li
       v-for="step in steps"
       :key="step.id"
@@ -27,7 +27,7 @@ defineProps({
       >
         {{ step.id }}
       </span>
-      <span class="font-medium">{{ step.label }}</span>
+      <span class="font-medium whitespace-nowrap">{{ step.label }}</span>
     </li>
   </ol>
 </template>

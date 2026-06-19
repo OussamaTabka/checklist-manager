@@ -43,9 +43,16 @@ const reportOptions = ref({
 
 const storyStatusLabels = {
   backlog: 'Backlog',
-  in_progress: 'In Progress',
-  ready_for_test: 'Ready for Test',
-  completed: 'Completed',
+  in_progress: 'En cours',
+  ready_for_test: 'Prêt pour test',
+  completed: 'Terminée',
+}
+
+const storyPriorityLabels = {
+  critical: 'Critique',
+  high: 'Haute',
+  medium: 'Moyenne',
+  low: 'Basse',
 }
 
 const isAdminReadonly = auth.isSystemAdmin && !auth.isProjectManager && !auth.isTester
@@ -197,7 +204,7 @@ async function submitProjectEdit() {
     await loadProject()
     fillProjectEditForm()
     showProjectEditForm.value = false
-    toast.success('Le projet a ete mis a jour avec succes.')
+    toast.success('Le projet a été mis à jour avec succès.')
   } catch (error) {
     projectFormError.value = localizeError(error, 'error_generic', settings.language)
   } finally {
@@ -379,29 +386,29 @@ onBeforeUnmount(() => {
       <div class="project-execution-hero">
         <div class="project-execution-copy">
           <div class="project-execution-copy-top">
-            <p class="project-execution-kicker">{{ isAdminReadonly ? 'Project overview' : 'Project workspace' }}</p>
+            <p class="project-execution-kicker">{{ isAdminReadonly ? 'Vue du projet' : 'Espace projet' }}</p>
           </div>
           <h1>{{ project.name }}</h1>
           <p class="project-execution-subtitle">
             {{ isAdminReadonly
-              ? 'Project details and linked user stories in read-only mode.'
-              : 'Project context and linked user stories in one place.' }}
+              ? 'Détails du projet et user stories en lecture seule.'
+              : 'Contexte du projet et user stories en un seul endroit.' }}
           </p>
 
           <div class="project-meta-pills">
             <span class="project-meta-pill">
               <ClipboardList :size="14" />
-              <span>{{ storiesStore.stories.length }} stor{{ storiesStore.stories.length === 1 ? 'y' : 'ies' }}</span>
+              <span>{{ storiesStore.stories.length }} user stor{{ storiesStore.stories.length === 1 ? 'y' : 'ies' }}</span>
             </span>
             <span class="project-meta-pill">
               <Layers3 :size="14" />
-              <span>{{ (project.testers || []).length }} tester<span v-if="(project.testers || []).length !== 1">s</span></span>
+              <span>{{ (project.testers || []).length }} testeur<span v-if="(project.testers || []).length !== 1">s</span></span>
             </span>
           </div>
 
           <div class="project-execution-app-card compact project-context-app-card">
             <div class="project-side-topline">
-              <span class="project-execution-side-label">Target application</span>
+              <span class="project-execution-side-label">Application cible</span>
             </div>
             <a
               v-if="project.app_url"
@@ -413,10 +420,10 @@ onBeforeUnmount(() => {
               <span>{{ project.app_url }}</span>
               <ExternalLink :size="14" />
             </a>
-            <p v-else class="muted">No app URL configured yet.</p>
+            <p v-else class="muted">Aucune URL d'application configurée.</p>
             <div class="project-side-copy">
-              <p class="muted">Objectives: {{ project.test_objectives || 'No test objectives defined yet.' }}</p>
-              <p class="muted">{{ project.description || 'No project description defined yet.' }}</p>
+              <p class="muted">Objectifs : {{ project.test_objectives || 'Aucun objectif de test défini.' }}</p>
+              <p class="muted">{{ project.description || 'Aucune description de projet définie.' }}</p>
             </div>
           </div>
         </div>
@@ -444,7 +451,7 @@ onBeforeUnmount(() => {
           <div class="section-header">
             <div>
               <h3>Modifier le projet</h3>
-              <p class="muted">Mettez a jour les details du projet avant de continuer avec les user stories.</p>
+              <p class="muted">Mettez à jour les détails du projet avant de continuer avec les user stories.</p>
             </div>
           </div>
 
@@ -500,7 +507,7 @@ onBeforeUnmount(() => {
         <div class="section-header">
           <div>
             <h3>User stories</h3>
-            <p class="muted">Review user stories linked to this project.</p>
+            <p class="muted">Consultez les user stories liées à ce projet.</p>
           </div>
           <RouterLink
             v-if="auth.canManageStories"
@@ -514,15 +521,15 @@ onBeforeUnmount(() => {
 
         <p v-if="actionError" class="error">{{ actionError }}</p>
         <p v-if="storiesStore.error" class="error">{{ storiesStore.error }}</p>
-        <p v-else-if="storiesStore.loading" class="muted">Loading user stories...</p>
+        <p v-else-if="storiesStore.loading" class="muted">Chargement des user stories...</p>
 
         <div v-else-if="storiesStore.stories.length > 0" class="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>Story</th>
-                <th>Status</th>
-                <th>Priority</th>
+                <th>Statut</th>
+                <th>Priorité</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -535,12 +542,12 @@ onBeforeUnmount(() => {
                   >
                     <div class="stack stack-xs">
                       <strong>{{ story.title }}</strong>
-                      <span class="muted">{{ story.description || 'No description' }}</span>
+                      <span class="muted">{{ story.description || 'Aucune description' }}</span>
                     </div>
                   </RouterLink>
                 </td>
-                <td>{{ storyStatusLabels[story.status] || story.status }}</td>
-                <td>{{ story.priority }}</td>
+                <td class="story-col-status">{{ storyStatusLabels[story.status] || story.status }}</td>
+                <td class="story-col-priority">{{ storyPriorityLabels[story.priority] || story.priority }}</td>
                 <td>
                   <div v-if="auth.canManageStories" class="story-row-actions">
                     <button
@@ -571,7 +578,7 @@ onBeforeUnmount(() => {
           </table>
         </div>
 
-        <p v-else class="muted">No user stories yet. Start with stories to build your project backlog.</p>
+        <p v-else class="muted">Aucune user story pour le moment. Commencez par créer des stories pour alimenter le backlog.</p>
       </div>
     </template>
 
@@ -1295,6 +1302,12 @@ onBeforeUnmount(() => {
 
 .story-row-link:hover strong {
   color: #0f766e;
+}
+
+.story-col-status,
+.story-col-priority {
+  white-space: nowrap;
+  width: 1%;
 }
 
 .story-row-actions {

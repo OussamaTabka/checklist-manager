@@ -778,7 +778,7 @@ watch(successMessage, (message) => {
             <Rocket :size="30" :stroke-width="2.3" />
             <span>{{ projectPageCopy.title }}</span>
           </h1>
-          <p class="muted page-subtitle">{{ projectPageCopy.description }}</p>
+          <p class="dashboard-command-text">{{ projectPageCopy.description }}</p>
         </div>
 
         <div v-if="auth.canManageProjects" class="projects-hero-actions">
@@ -789,7 +789,7 @@ watch(successMessage, (message) => {
             data-testid="projects-btn-open-create"
           >
             <CirclePlus :size="16" :stroke-width="2" />
-            <span>Creer un projet</span>
+            <span>Créer un projet</span>
           </button>
         </div>
       </div>

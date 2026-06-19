@@ -1,0 +1,30 @@
+{
+  "execution_profile": {
+    "intent_summary": "Vérifier que le formulaire de connexion Sauce Demo reste visible et utilisable en viewport mobile 375×667 sans débordement horizontal.",
+    "coverage_type": "generic_ui",
+    "preconditions": [
+      "Le site Sauce Demo doit être accessible.",
+      "Le test doit pouvoir définir le viewport du navigateur avant le chargement de la page.",
+      "Aucune donnée de connexion n'est nécessaire pour ce contrôle d'affichage responsive."
+    ],
+    "required_inputs": [],
+    "expected_observations": [
+      "Le champ Username est visible en viewport mobile.",
+      "Le champ Password est visible en viewport mobile.",
+      "Le bouton Login est visible en viewport mobile.",
+      "Le formulaire de connexion est affiché sans débordement horizontal de la page.",
+      "Les éléments critiques du formulaire restent dans la zone visible de l'écran."
+    ]
+  },
+  "python_script_body": "await page.set_viewport_size({\"width\": 375, \"height\": 667})\nawait page.goto('/')\nusername = page.get_by_label('Username')\npassword = page.get_by_label('Password')\nlogin_button = page.get_by_role('button', name='Login')\nlogin_text = page.get_by_text('Login')\nawait expect(username).to_be_visible()\nawait expect(password).to_be_visible()\nawait expect(login_button).to_be_visible()\nawait expect(login_text).to_be_visible()\nusername_box = await username.bounding_box()\npassword_box = await password.bounding_box()\nbutton_box = await login_button.bounding_box()\nbody = page.locator('body')\nbody_box = await body.bounding_box()\nawait expect(page.locator('html')).to_be_visible()\nif username_box is None:\n    raise Exception('Username bounding box unavailable')\nif password_box is None:\n    raise Exception('Password bounding box unavailable')\nif button_box is None:\n    raise Exception('Login button bounding box unavailable')\nif body_box is None:\n    raise Exception('Body bounding box unavailable')\nif username_box['x'] < 0 or username_box['x'] + username_box['width'] > 375:\n    raise Exception('Username field overflows horizontally in mobile viewport')\nif password_box['x'] < 0 or password_box['x'] + password_box['width'] > 375:\n    raise Exception('Password field overflows horizontally in mobile viewport')\nif button_box['x'] < 0 or button_box['x'] + button_box['width'] > 375:\n    raise Exception('Login button overflows horizontally in mobile viewport')\nif body_box['width'] > 375:\n    raise Exception('Page body overflows horizontally in mobile viewport')",
+  "human_readable_steps": [
+    "Définir le viewport mobile à 375×667 pixels.",
+    "Charger la page de connexion Sauce Demo.",
+    "Vérifier que le champ Username est visible.",
+    "Vérifier que le champ Password est visible.",
+    "Vérifier que le bouton Login est visible.",
+    "Vérifier que le texte Login est affiché sur la page.",
+    "Contrôler que les champs et le bouton restent dans la largeur du viewport mobile.",
+    "Contrôler que la page ne présente pas de débordement horizontal."
+  ]
+}

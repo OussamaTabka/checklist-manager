@@ -1,0 +1,128 @@
+{
+  "schema_version": "1.0",
+  "run_id": "dsl-diag-001",
+  "runner_run_id": "runner-1781885966736",
+  "base_url_used": "https://practicetestautomation.com/practice-test-login",
+  "status": "done",
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 3001,
+      "status": "passed",
+      "attempt": 1,
+      "duration_ms": 15026,
+      "error_type": null,
+      "error_message": null,
+      "generated_plan": {
+        "title": "La page de login Practice Test se charge correctement",
+        "intent_summary": "Vérifier que la page publique de login est accessible et affiche les contrôles principaux sans erreur d'interaction.",
+        "coverage_type": "smoke",
+        "preflight_checks": [],
+        "steps": [
+          {
+            "action": "goto",
+            "url": "https://practicetestautomation.com/practice-test-login/"
+          },
+          {
+            "action": "wait_for_url",
+            "contains": "/practice-test-login/",
+            "timeout_ms": 15000
+          },
+          {
+            "action": "wait_for_selector",
+            "selector": {
+              "by": "label",
+              "text": "Username"
+            },
+            "state": "visible",
+            "timeout_ms": 15000
+          },
+          {
+            "action": "wait_for_selector",
+            "selector": {
+              "by": "role",
+              "role": "button",
+              "name": "Submit",
+              "exact": true
+            },
+            "state": "visible",
+            "timeout_ms": 15000
+          },
+          {
+            "action": "screenshot",
+            "name": "practice-test-login-page-loaded"
+          }
+        ],
+        "asserts": [
+          {
+            "type": "expect_url_contains",
+            "value": "/practice-test-login/"
+          },
+          {
+            "type": "expect_visible",
+            "selector": {
+              "by": "label",
+              "text": "Username"
+            }
+          },
+          {
+            "type": "expect_visible",
+            "selector": {
+              "by": "label",
+              "text": "Password"
+            }
+          },
+          {
+            "type": "expect_visible",
+            "selector": {
+              "by": "role",
+              "role": "button",
+              "name": "Submit",
+              "exact": true
+            }
+          }
+        ],
+        "expected_observations": [
+          "La page de login Practice Test se charge depuis l'URL fournie.",
+          "Le champ Username est visible et prêt à être utilisé.",
+          "Le bouton Submit est visible sur le formulaire de login."
+        ]
+      },
+      "failure_source": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      },
+      "execution_trace": [
+        "[chrome] Planning: browser context starting",
+        "[chrome] Planning: Vérifier que la page publique de login est accessible et affiche les contrôles principaux sans erreur d'interaction.",
+        "[chrome] Preflight 0: page_accessible -> started (attempt 1/3, url=https://practicetestautomation.com/practice-test-login/)",
+        "[chrome] Preflight 0: page_accessible -> ok (attempt 1/3)",
+        "[chrome] Step 2: wait_for_url contains '/practice-test-login/' -> started",
+        "[chrome] Step 2: wait_for_url contains '/practice-test-login/' -> ok (3ms)",
+        "[chrome] Step 3: wait_for_selector label=Username state=visible -> started",
+        "[chrome] Step 3: wait_for_selector label=Username state=visible -> ok (34ms)",
+        "[chrome] Step 4: wait_for_selector role=button, name=Submit state=visible -> started",
+        "[chrome] Step 4: wait_for_selector role=button, name=Submit state=visible -> ok (16ms)",
+        "[chrome] Step 5: screenshot practice-test-login-page-loaded -> started",
+        "[chrome] Step 5: screenshot practice-test-login-page-loaded -> ok (130ms)",
+        "[chrome] Assert 1: expect_url_contains '/practice-test-login/' -> started",
+        "[chrome] Assert 1: expect_url_contains '/practice-test-login/' -> ok (1ms)",
+        "[chrome] Assert 2: expect_visible label=Username -> started",
+        "[chrome] Assert 2: expect_visible label=Username -> ok (12ms)",
+        "[chrome] Assert 3: expect_visible label=Password -> started",
+        "[chrome] Assert 3: expect_visible label=Password -> ok (9ms)",
+        "[chrome] Assert 4: expect_visible role=button, name=Submit -> started",
+        "[chrome] Assert 4: expect_visible role=button, name=Submit -> ok (10ms)",
+        "[chrome] Failure analysis: none",
+        "[chrome] Run completed successfully"
+      ]
+    }
+  ]
+}

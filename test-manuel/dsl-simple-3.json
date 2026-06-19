@@ -1,0 +1,21 @@
+{
+  "run_id": "dsl-diag-003",
+  "external_id": 3003,
+  "test_case_title": "Cross-browser compatibility — la page d'accueil the-internet se charge sur chromium et firefox",
+  "test_case_description": "Vérifier la compatibilité cross-browser de la page d'accueil. Test de chargement pur.",
+  "test_case_text": "Ouvrir https://the-internet.herokuapp.com/ et vérifier la compatibilité cross-browser. Le titre 'Welcome to the-internet' doit être visible. Aucune saisie requise.",
+  "base_url": "https://the-internet.herokuapp.com/",
+  "use_auth": false,
+  "environment_name": "production-public",
+  "notes": "Page publique. Test de compatibilité cross-browser chromium et firefox.",
+  "priority": "Medium",
+  "criticality": "Low",
+  "current_status": "pending",
+  "target_type": "version_item",
+  "source_app": "the_internet",
+  "provided_inputs": {},
+  "expected_result": {
+    "visible_text_contains": "Welcome to the-internet",
+    "assertion_keywords": ["Welcome to the-internet"]
+  }
+}

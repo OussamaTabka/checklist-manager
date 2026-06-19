@@ -335,14 +335,16 @@
   }
 
   .create-project-btn {
-    background: linear-gradient(90deg, #059669, #047857);
-    border-color: #047857;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background: rgba(255, 255, 255, 0.95);
+    color: #065f46;
+    border-color: rgba(255, 255, 255, 0.6);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.15s ease;
   }
 
   .create-project-btn:hover {
+    background: #ffffff;
     transform: translateY(-1px);
-    box-shadow: 0 12px 24px -16px #047857;
+    box-shadow: 0 12px 24px -16px rgba(0, 0, 0, 0.25);
   }
 
   .chip-row {
@@ -686,8 +688,22 @@
   }
 
   .status-at-risk {
-    background: #fecdd3;
-    color: #9f1239;
+    background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+    color: #be123c;
+    border: 1px solid #fda4af;
+    box-shadow: 0 1px 3px rgba(190, 18, 60, 0.12);
+    gap: 0.35rem;
+  }
+
+  .status-at-risk::before {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #e11d48;
+    box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.25);
+    flex-shrink: 0;
   }
 
   .status-not-started {
@@ -2509,7 +2525,7 @@
     font-size: clamp(2rem, 3vw, 3rem);
     line-height: 0.98;
     letter-spacing: -0.05em;
-    color: #0f172a;
+    color: #ffffff;
   }
 
   .dashboard-command-text,

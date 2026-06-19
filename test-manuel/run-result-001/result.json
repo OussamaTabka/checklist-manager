@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0",
+  "run_id": "cross-browser-diag-001",
+  "status": "done",
+  "summary": {
+    "passed": 0,
+    "failed": 0,
+    "blocked": 1,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 2001,
+      "title": "Compatibilité cross-browser — La page de login Practice se charge sur Chromium, Firefox et WebKit",
+      "status": "blocked",
+      "error_type": "browser_not_installed",
+      "error_message": "[firefox] BrowserType.launch: Executable doesn't exist at C:\\Users\\Yahia Ghoufa\\AppData\\Local\\ms-playwright\\firefox-1522\\firefox\\firefox.exe",
+      "duration_ms": 2362,
+      "browsers_detail": [
+        {
+          "browser": "chromium",
+          "status": "passed",
+          "error_type": null,
+          "error_message": null,
+          "duration_ms": 2352
+        },
+        {
+          "browser": "firefox",
+          "status": "blocked",
+          "error_type": "browser_not_installed",
+          "error_message": "BrowserType.launch: Executable doesn't exist at C:\\Users\\Yahia Ghoufa\\AppData\\Local\\ms-playwright\\firefox-1522\\firefox\\firefox.exe",
+          "duration_ms": 6
+        },
+        {
+          "browser": "webkit",
+          "status": "blocked",
+          "error_type": "browser_not_installed",
+          "error_message": "BrowserType.launch: Executable doesn't exist at C:\\Users\\Yahia Ghoufa\\AppData\\Local\\ms-playwright\\webkit-2287\\Playwright.exe",
+          "duration_ms": 4
+        }
+      ]
+    }
+  ]
+}

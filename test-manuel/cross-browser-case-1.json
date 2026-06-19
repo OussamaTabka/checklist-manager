@@ -1,0 +1,21 @@
+{
+  "run_id": "cross-browser-diag-001",
+  "external_id": 2001,
+  "test_case_title": "Compatibilité cross-browser — La page de login Practice se charge sur Chromium, Firefox et WebKit",
+  "test_case_description": "Vérifier que la page d'accueil de Practice Test Automation se charge correctement sur plusieurs navigateurs (cross-browser compatibility : chromium, firefox, webkit) et qu'un élément clé est visible sans aucune interaction.",
+  "test_case_text": "Ouvrir https://practicetestautomation.com/practice-test-login/ sur chromium, firefox et webkit. Vérifier que la page se charge (pas de timeout, pas d'erreur réseau) et que le titre 'Test Login Page' ou l'élément principal de la page est visible. Aucun identifiant à saisir, aucune action à effectuer : test de chargement pur.",
+  "base_url": "https://practicetestautomation.com/practice-test-login/",
+  "use_auth": false,
+  "environment_name": "production-public",
+  "notes": "Page publique Practice Test Automation. Aucun identifiant requis. Test de chargement cross-browser pur.",
+  "priority": "High",
+  "criticality": "Medium",
+  "current_status": "pending",
+  "target_type": "version_item",
+  "source_app": "practice_test_automation",
+  "provided_inputs": {},
+  "expected_result": {
+    "visible_text_contains": "Username",
+    "assertion_keywords": ["Username", "Password", "Submit", "login"]
+  }
+}

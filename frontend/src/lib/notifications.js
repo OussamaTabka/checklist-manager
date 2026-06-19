@@ -6,8 +6,8 @@ const FILTER_LABELS = {
   projects: { fr: 'Projets', en: 'Projects' },
   tests: { fr: 'Tests', en: 'Tests' },
   comments: { fr: 'Commentaires', en: 'Comments' },
-  system: { fr: 'Systeme', en: 'System' },
-  archived: { fr: 'Archivees', en: 'Archived' },
+  system: { fr: 'Système', en: 'System' },
+  archived: { fr: 'Archivées', en: 'Archived' },
 }
 
 export const notificationFilters = Object.keys(FILTER_LABELS).map((value) => ({
@@ -44,7 +44,7 @@ export function formatNotificationDate(value, language = getCurrentLanguage()) {
 
 export function notificationStatusLabel(notification, language = getCurrentLanguage()) {
   if (notification.is_archived) {
-    return { fr: 'Archivee', en: 'Archived' }[language] || 'Archivee'
+    return { fr: 'Archivée', en: 'Archived' }[language] || 'Archivée'
   }
 
   if (notification.is_read) {
@@ -67,7 +67,7 @@ export function notificationTypeLabel(notification, language = getCurrentLanguag
     projects: { fr: 'Projet', en: 'Project' },
     tests: { fr: 'Test', en: 'Test' },
     comments: { fr: 'Commentaire', en: 'Comment' },
-    system: { fr: 'Systeme', en: 'System' },
+    system: { fr: 'Système', en: 'System' },
     default: { fr: 'Notification', en: 'Notification' },
   }
 

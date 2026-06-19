@@ -23,15 +23,15 @@
     </div>
 
     <div v-if="showResults && !error && results" class="run-tests-summary mt-3" role="status">
-      <h5 class="run-tests-summary-heading">Resultats d execution</h5>
+      <h5 class="run-tests-summary-heading">Résultats d'exécution</h5>
       <hr />
-      <p><strong>Reussis :</strong> {{ results.passed }}</p>
-      <p><strong>Echoues :</strong> {{ results.failed }}</p>
+      <p><strong>Réussis :</strong> {{ results.passed }}</p>
+      <p><strong>Échoués :</strong> {{ results.failed }}</p>
       <p v-if="results.total" class="mb-0"><strong>Total :</strong> {{ results.total }}</p>
     </div>
 
     <div v-if="error" class="alert alert-danger mt-3" role="alert">
-      <h5 class="alert-heading">Erreur d execution</h5>
+      <h5 class="alert-heading">Erreur d'exécution</h5>
       <p class="mb-0">{{ error }}</p>
       <button
         @click="clearError"
@@ -43,7 +43,7 @@
 
     <div v-if="showHealthWarning" class="alert alert-warning mt-3" role="alert">
       <small>
-        Le service d execution ne repond pas. Verifiez qu il est bien demarre sur
+        Le service d'exécution ne répond pas. Vérifiez qu'il est bien démarré sur
         {{ testAgentUrl }}
       </small>
     </div>
@@ -145,7 +145,7 @@ async function pollUntilComplete(id) {
     const elapsedTime = Date.now() - startTime
 
     if (elapsedTime > maxWait) {
-      throw new Error(localizeMessage('L execution des tests a depasse 10 minutes.', settings.language))
+      throw new Error(localizeMessage("L'exécution des tests a dépassé 10 minutes.", settings.language))
     }
 
     try {
@@ -158,7 +158,7 @@ async function pollUntilComplete(id) {
       }
 
       if (jobStatus.status === 'failed' || jobStatus.error) {
-        throw new Error(jobStatus.error || localizeMessage('L execution a echoue.', settings.language))
+        throw new Error(jobStatus.error || localizeMessage("L'exécution a échoué.", settings.language))
       }
 
       await new Promise((resolve) => setTimeout(resolve, pollInterval))

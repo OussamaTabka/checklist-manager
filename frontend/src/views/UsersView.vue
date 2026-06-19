@@ -49,8 +49,8 @@ const roleOptions = computed(() => [
 
 const usersPageCopy = computed(() => ({
   kicker: 'Espace administrateur',
-  title: 'Utilisateurs et roles',
-  description: 'Invitez les collaborateurs, attribuez les roles et gardez un controle clair des acces a la plateforme.',
+  title: 'Utilisateurs et rôles',
+  description: 'Invitez les collaborateurs, attribuez les rôles et gardez un contrôle clair des accès à la plateforme.',
 }))
 
 function accountStatusLabel(status) {
@@ -372,12 +372,12 @@ onBeforeUnmount(() => {
       <div>
         <p class="dashboard-eyebrow">{{ usersPageCopy.kicker }}</p>
         <h1>{{ usersPageCopy.title }}</h1>
-        <p class="muted page-subtitle">{{ usersPageCopy.description }}</p>
+        <p class="dashboard-command-text">{{ usersPageCopy.description }}</p>
       </div>
     </div>
 
     <div class="card stack">
-      <h2 v-if="showUserForm || form.id">{{ form.id ? `Modifier le role de l'utilisateur #${form.id}` : 'Creer un utilisateur' }}</h2>
+      <h2 v-if="showUserForm || form.id">{{ form.id ? `Modifier le rôle de l'utilisateur #${form.id}` : 'Créer un utilisateur' }}</h2>
 
       <div class="users-form-header">
         <button
@@ -387,7 +387,7 @@ onBeforeUnmount(() => {
           @click="showUserForm = true"
           data-testid="users-btn-open-create"
         >
-          Créer utilisateur
+          Créer un utilisateur
         </button>
       </div>
 
@@ -407,22 +407,22 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="field">
-            <label>Role</label>
+            <label>Rôle</label>
             <select v-model="form.role" required data-testid="users-select-role">
               <option v-for="option in roleOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
             </select>
           </div>
         </div>
 
-        <p v-if="isEditingUser" class="muted">Le nom et l'email ne sont pas modifiables ici. Seul le role peut etre change.</p>
+        <p v-if="isEditingUser" class="muted">Le nom et l'email ne sont pas modifiables ici. Seul le rôle peut être changé.</p>
         <p v-else class="muted">L'utilisateur recevra automatiquement un email pour initialiser son mot de passe.</p>
 
         <div class="actions">
           <button class="btn btn-primary" type="submit" data-testid="users-btn-submit">
-            {{ form.id ? 'Enregistrer le role' : "Creer l'utilisateur" }}
+            {{ form.id ? 'Enregistrer le rôle ' : "Créer l'utilisateur" }}
           </button>
           <button class="btn btn-secondary" type="button" @click="resetForm">
-            {{ form.id ? 'Annuler' : 'Reinitialiser' }}
+            {{ form.id ? 'Annuler' : 'Réinitialiser' }}
           </button>
         </div>
       </form>
@@ -533,9 +533,9 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="card stack">
-      <h2>Utilisateurs archives</h2>
-      <p class="muted">Les utilisateurs archives peuvent etre restaures ou supprimes definitivement. Les projets encore possedes doivent etre reassignes avant suppression.</p>
-      <p v-if="loadingArchived" class="muted">Chargement des utilisateurs archives...</p>
+      <h2>Utilisateurs archivés</h2>
+      <p class="muted">Les utilisateurs archivés peuvent être restaurés ou supprimés définitivement. Les projets encore possédés doivent être réassignés avant suppression.</p>
+      <p v-if="loadingArchived" class="muted">Chargement des utilisateurs archivés...</p>
 
       <div v-if="!loadingArchived" class="table-wrap">
         <table data-testid="users-table-archived">
@@ -561,7 +561,7 @@ onBeforeUnmount(() => {
                   <button
                     type="button"
                     class="user-menu-trigger"
-                    aria-label="Ouvrir les actions archivees de l'utilisateur"
+                    aria-label="Ouvrir les actions archivées de l'utilisateur"
                     @click.stop="toggleUserMenu(`archived-${user.id}`)"
                   >
                     <Ellipsis :size="18" />
@@ -574,7 +574,7 @@ onBeforeUnmount(() => {
                     </button>
                     <button type="button" class="user-row-menu-item danger" @click="openPermanentDeleteModal(user)">
                       <Trash2 :size="16" />
-                      <span>Supprimer definitivement</span>
+                      <span>Supprimer définitivement</span>
                     </button>
                   </div>
                 </div>

@@ -1,0 +1,21 @@
+{
+  "run_id": "no-input-case-6-seo-metadata",
+  "external_id": 1006,
+  "test_case_title": "SEO — La balise <title> est non vide et <html> possède un attribut lang",
+  "test_case_description": "Vérifier que la page d'accueil de Sauce Demo possède une balise <title> avec un contenu non vide, et que la balise <html> racine a un attribut lang défini (ex: 'en'), conformément aux bonnes pratiques SEO et d'accessibilité.",
+  "test_case_text": "Charger https://www.saucedemo.com. Vérifier que : (1) le titre de la page (document.title) est non vide, (2) la balise <html> possède un attribut lang non vide. Ces deux éléments sont requis pour le référencement naturel et l'accessibilité. Aucun champ de saisie n'est nécessaire.",
+  "base_url": "https://www.saucedemo.com",
+  "use_auth": false,
+  "environment_name": "production-public",
+  "notes": "Test de métadonnées SEO et accessibilité. Utiliser expect(page).to_have_title() pour le titre et page.evaluate() pour l'attribut lang. Aucune interaction utilisateur. Aucun champ de saisie.",
+  "priority": "Low",
+  "criticality": "Low",
+  "current_status": "pending",
+  "target_type": "version_item",
+  "source_app": "sauce_demo",
+  "provided_inputs": {},
+  "expected_result": {
+    "assertion_keywords": ["title non vide", "lang attribute", "SEO", "html lang"],
+    "visible_text_contains": "Swag Labs"
+  }
+}

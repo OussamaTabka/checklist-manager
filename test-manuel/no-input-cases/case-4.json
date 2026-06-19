@@ -1,0 +1,20 @@
+{
+  "run_id": "no-input-case-4-alt-accessibility",
+  "external_id": 1004,
+  "test_case_title": "Accessibilité — Toutes les images de la page de login ont un attribut alt non vide",
+  "test_case_description": "Vérifier que chaque balise <img> présente sur la page de login de Sauce Demo possède un attribut alt non vide, conformément aux standards d'accessibilité WCAG 2.1 (critère 1.1.1).",
+  "test_case_text": "Charger https://www.saucedemo.com. Sélectionner toutes les balises <img> de la page. Pour chacune, vérifier que l'attribut alt est présent et non vide. Un attribut alt manquant ou vide constitue un échec d'accessibilité. Aucun champ de saisie n'est nécessaire pour ce test.",
+  "base_url": "https://www.saucedemo.com",
+  "use_auth": false,
+  "environment_name": "production-public",
+  "notes": "Test d'accessibilité WCAG. Utiliser page.evaluate() ou des locateurs pour inspecter les attributs alt. Aucune interaction utilisateur requise. Aucun champ de saisie.",
+  "priority": "Medium",
+  "criticality": "Medium",
+  "current_status": "pending",
+  "target_type": "version_item",
+  "source_app": "sauce_demo",
+  "provided_inputs": {},
+  "expected_result": {
+    "assertion_keywords": ["alt attribute", "non-empty alt", "accessibility", "WCAG 1.1.1"]
+  }
+}

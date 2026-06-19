@@ -467,7 +467,7 @@ function maybeShowDeletedStoryToast(item) {
     return
   }
 
-  toast.info('La user story concernee a ete supprimee. Verifiez les checklists associees.')
+  toast.info('La user story concernée a été supprimée. Vérifiez les checklists associées.')
 }
 
 async function goToNotificationsPage() {
@@ -685,7 +685,6 @@ watch(
             </button>
 
             <div v-if="showProfileMenu" class="profile-menu">
-              <button type="button" class="profile-menu-item" @click="goToProfile">Profil</button>
               <button type="button" class="profile-menu-item" @click="goToSettings">Paramètres</button>
               <button type="button" class="profile-menu-item danger" @click="handleLogout">Déconnexion</button>
             </div>

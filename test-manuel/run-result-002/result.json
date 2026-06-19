@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0",
+  "run_id": "cross-browser-diag-001",
+  "status": "done",
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 2001,
+      "title": "Compatibilité cross-browser — La page de login Practice se charge sur Chromium, Firefox et WebKit",
+      "status": "passed",
+      "error_type": null,
+      "error_message": null,
+      "duration_ms": 7745,
+      "browsers_detail": [
+        {
+          "browser": "chromium",
+          "status": "passed",
+          "error_type": null,
+          "error_message": null,
+          "duration_ms": 1803
+        },
+        {
+          "browser": "firefox",
+          "status": "passed",
+          "error_type": null,
+          "error_message": null,
+          "duration_ms": 3690
+        },
+        {
+          "browser": "webkit",
+          "status": "passed",
+          "error_type": null,
+          "error_message": null,
+          "duration_ms": 2252
+        }
+      ]
+    }
+  ]
+}

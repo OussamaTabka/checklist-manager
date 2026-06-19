@@ -1,0 +1,120 @@
+{
+  "schema_version": "1.0",
+  "run_id": "dsl-diag-003",
+  "runner_run_id": "runner-1781885865150",
+  "base_url_used": "https://the-internet.herokuapp.com",
+  "status": "done",
+  "summary": {
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "external_id": 3003,
+      "status": "passed",
+      "attempt": 1,
+      "duration_ms": 32916,
+      "error_type": null,
+      "error_message": null,
+      "generated_plan": {
+        "title": "Cross-browser compatibility — la page d'accueil the-internet se charge sur chromium et firefox",
+        "intent_summary": "Verify that the public the-internet home page loads successfully and shows its main welcome heading for cross-browser smoke coverage.",
+        "coverage_type": "cross_browser_smoke",
+        "preflight_checks": [],
+        "steps": [
+          {
+            "action": "goto",
+            "url": "https://the-internet.herokuapp.com/"
+          },
+          {
+            "action": "wait_for_selector",
+            "selector": {
+              "by": "role",
+              "role": "heading",
+              "name": "Welcome to the-internet",
+              "exact": true
+            },
+            "state": "visible",
+            "timeout_ms": 15000
+          },
+          {
+            "action": "screenshot",
+            "name": "the-internet-homepage-loaded"
+          }
+        ],
+        "asserts": [
+          {
+            "type": "expect_url_contains",
+            "value": "the-internet.herokuapp.com/"
+          },
+          {
+            "type": "expect_visible",
+            "selector": {
+              "by": "role",
+              "role": "heading",
+              "name": "Welcome to the-internet",
+              "exact": true
+            }
+          },
+          {
+            "type": "expect_text",
+            "selector": {
+              "by": "role",
+              "role": "heading",
+              "name": "Welcome to the-internet",
+              "exact": true
+            },
+            "text": "Welcome to the-internet"
+          }
+        ],
+        "expected_observations": [
+          "The base URL is reachable and loads without requiring authentication.",
+          "The home page renders the main heading text 'Welcome to the-internet'.",
+          "The visible page state is sufficient for equivalent verification across Chromium and Firefox runs."
+        ]
+      },
+      "failure_source": null,
+      "artifacts": {
+        "trace_path": null,
+        "screenshot_path": null,
+        "video_path": null
+      },
+      "execution_trace": [
+        "[chrome] Planning: browser context starting",
+        "[chrome] Planning: Verify that the public the-internet home page loads successfully and shows its main welcome heading for cross-browser smoke coverage.",
+        "[chrome] Preflight 0: page_accessible -> started (attempt 1/3, url=https://the-internet.herokuapp.com/)",
+        "[chrome] Preflight 0: page_accessible -> ok (attempt 1/3)",
+        "[chrome] Step 2: wait_for_selector role=heading, name=Welcome to the-internet state=visible -> started",
+        "[chrome] Step 2: wait_for_selector role=heading, name=Welcome to the-internet state=visible -> ok (37ms)",
+        "[chrome] Step 3: screenshot the-internet-homepage-loaded -> started",
+        "[chrome] Step 3: screenshot the-internet-homepage-loaded -> ok (130ms)",
+        "[chrome] Assert 1: expect_url_contains 'the-internet.herokuapp.com/' -> started",
+        "[chrome] Assert 1: expect_url_contains 'the-internet.herokuapp.com/' -> ok (0ms)",
+        "[chrome] Assert 2: expect_visible role=heading, name=Welcome to the-internet -> started",
+        "[chrome] Assert 2: expect_visible role=heading, name=Welcome to the-internet -> ok (31ms)",
+        "[chrome] Assert 3: expect_text role=heading, name=Welcome to the-internet -> started",
+        "[chrome] Assert 3: expect_text role=heading, name=Welcome to the-internet -> ok (16ms)",
+        "[chrome] Failure analysis: none",
+        "[chrome] Run completed successfully",
+        "[firefox] Planning: browser context starting",
+        "[firefox] Planning: Verify that the public the-internet home page loads successfully and shows its main welcome heading for cross-browser smoke coverage.",
+        "[firefox] Preflight 0: page_accessible -> started (attempt 1/3, url=https://the-internet.herokuapp.com/)",
+        "[firefox] Preflight 0: page_accessible -> ok (attempt 1/3)",
+        "[firefox] Step 2: wait_for_selector role=heading, name=Welcome to the-internet state=visible -> started",
+        "[firefox] Step 2: wait_for_selector role=heading, name=Welcome to the-internet state=visible -> ok (45ms)",
+        "[firefox] Step 3: screenshot the-internet-homepage-loaded -> started",
+        "[firefox] Step 3: screenshot the-internet-homepage-loaded -> ok (77ms)",
+        "[firefox] Assert 1: expect_url_contains 'the-internet.herokuapp.com/' -> started",
+        "[firefox] Assert 1: expect_url_contains 'the-internet.herokuapp.com/' -> ok (0ms)",
+        "[firefox] Assert 2: expect_visible role=heading, name=Welcome to the-internet -> started",
+        "[firefox] Assert 2: expect_visible role=heading, name=Welcome to the-internet -> ok (17ms)",
+        "[firefox] Assert 3: expect_text role=heading, name=Welcome to the-internet -> started",
+        "[firefox] Assert 3: expect_text role=heading, name=Welcome to the-internet -> ok (12ms)",
+        "[firefox] Failure analysis: none",
+        "[firefox] Run completed successfully"
+      ]
+    }
+  ]
+}

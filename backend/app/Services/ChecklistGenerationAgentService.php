@@ -65,12 +65,7 @@ class ChecklistGenerationAgentService
 
             $checklist = Checklist::create([
                 'name' => $this->buildChecklistName($userStory, count($reusableItems) > 0, $language),
-                'description' => $this->buildChecklistDescription(
-                    $userStory,
-                    $generation['generator_name'] ?? $this->generationText->text($language, 'draft_base_reuse'),
-                    $recommendations,
-                    $language
-                ),
+                'description' => $this->buildChecklistDescription($userStory, $language),
                 'project_id' => $userStory->project_id,
                 'category' => 'agent-generated',
                 'is_active' => true,
@@ -273,18 +268,9 @@ class ChecklistGenerationAgentService
         ];
     }
 
-    private function buildChecklistDescription(UserStory $userStory, string $generatorName, array $recommendations, string $language): string
+    private function buildChecklistDescription(UserStory $userStory, string $language): string
     {
-        $action = $recommendations['summary']['recommended_action'] ?? 'GENERATE_NEW';
-        $score = $recommendations['summary']['best_score'] ?? 0;
-
         return <<<DESC
-{$this->generationText->text($language, 'description_generated_from', ['title' => $userStory->title])}
-{$this->generationText->text($language, 'description_generator', ['generator' => $generatorName])}
-{$this->generationText->text($language, 'description_reuse_decision', ['action' => $action])}
-{$this->generationText->text($language, 'description_reuse_score', ['score' => $score])}
-{$this->generationText->text($language, 'description_generated_at', ['timestamp' => $this->getCurrentTimestamp()])}
-
 {$this->generationText->text($language, 'description_label')}
 {$userStory->description}
 

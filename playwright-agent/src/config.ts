@@ -172,8 +172,8 @@ export function getOpenAIConfig(): OpenAIConfig {
 export const config = {
   generationEngine: getGenerationEngine(),
   runHeadless: readEnvBoolean('RUN_HEADLESS', false),
-  runSlowMoMs: readEnvInt('RUN_SLOW_MO_MS', 300),
-  runHoldOpenMs: readEnvInt('RUN_HOLD_OPEN_MS', 12000),
+  runSlowMoMs: readEnvInt('RUN_SLOW_MO_MS', 0),
+  runHoldOpenMs: readEnvInt('RUN_HOLD_OPEN_MS', 0),
   orchestratorDir: readEnv('ORCHESTRATOR_DIR', '../playwright-orchestrator'),
   targetBaseUrl: readEnv('TARGET_BASE_URL', 'http://host.docker.internal:5173'),
 } as const

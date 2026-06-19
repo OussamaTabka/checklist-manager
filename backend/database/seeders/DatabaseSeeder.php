@@ -18,6 +18,8 @@ class DatabaseSeeder extends Seeder
             RolesAndAdminSeeder::class,
             AdvancedQaExamplesSeeder::class,
             SauceDemoExecutionWorkspaceSeeder::class,
+            PfeDemoSeeder::class,
+            AppleTunisieSeeder::class,
         ]);
     }
 }

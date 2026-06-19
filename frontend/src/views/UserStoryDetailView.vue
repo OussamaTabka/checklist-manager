@@ -58,7 +58,7 @@ const storyPriorityLabel = computed(() => {
   const priority = storiesStore.currentStory?.priority || ''
   return priority ? priority.charAt(0).toUpperCase() + priority.slice(1) : '-'
 })
-const acceptanceCriteriaText = computed(() => storiesStore.currentStory?.acceptance_criteria || 'No acceptance criteria provided.')
+const acceptanceCriteriaText = computed(() => storiesStore.currentStory?.acceptance_criteria || 'Aucun critère d\'acceptation renseigné.')
 const attachableChecklists = computed(() =>
   availableChecklists.value.filter((checklist) => {
     const checklistId = Number(checklist.id)
@@ -102,8 +102,8 @@ const workflowCurrentStep = computed(() => {
 })
 const summaryChips = computed(() => [
   { label: 'Statut', value: storyStatusLabel.value, tone: 'neutral' },
-  { label: 'Priorite', value: storyPriorityLabel.value, tone: 'warning' },
-  { label: 'Checklists associees', value: String(attachedChecklistCount.value), tone: 'success' },
+  { label: 'Priorité', value: storyPriorityLabel.value, tone: 'warning' },
+  { label: 'Checklists associées', value: String(attachedChecklistCount.value), tone: 'success' },
 ])
 const storyTabs = computed(() => [
   {
@@ -356,8 +356,8 @@ async function attachExistingChecklist() {
 
     toast.success(
       checklistIds.length > 1
-        ? localizeMessage('Checklists existantes associees a la User Story.', currentLanguage.value)
-        : localizeMessage('Checklist existante associee a la User Story.', currentLanguage.value),
+        ? localizeMessage('Checklists existantes associées à la User Story.', currentLanguage.value)
+        : localizeMessage('Checklist existante associée à la User Story.', currentLanguage.value),
     )
     showAttachExistingPanel.value = false
     selectedExistingChecklistIds.value = []
@@ -528,7 +528,7 @@ function executionSpaceRoute(checklistId = null) {
     return {
       name: 'checklist-detail',
       params: { id: checklistId },
-      query: { projectId: projectId.value },
+      query: { projectId: projectId.value, storyId },
     }
   }
 
@@ -537,7 +537,7 @@ function executionSpaceRoute(checklistId = null) {
     return {
       name: 'checklist-detail',
       params: { id: firstChecklistId },
-      query: { projectId: projectId.value },
+      query: { projectId: projectId.value, storyId },
     }
   }
 
@@ -588,6 +588,12 @@ function localizeGeneratedText(text) {
     .replace(/ƒ§/g, 'ç')
     .replace(/ââ‚¬â„¢/g, "'")
     .replace(/‚/g, '')
+}
+
+function cleanDraftDescription(text) {
+  const clean = localizeGeneratedText(text)
+  const match = clean.match(/Description\s*:?\s*([\s\S]+?)(?=\s*Crit[^:]+:|Acceptance\s+criteria\s*:|$)/i)
+  return match ? match[1].trim() : clean
 }
 
 function provenanceLabel(item) {
@@ -869,8 +875,8 @@ onBeforeUnmount(() => {
                 </div>
                 <p class="max-w-4xl text-sm leading-7 text-slate-600">
                   {{ isAdminReadonly
-                    ? 'Consultez la story, son contexte et les checklists deja rattachees dans un mode lecture seule.'
-                    : "Analysez le besoin, preparez la checklist la plus pertinente, puis faites progresser la validation jusqu a l execution." }}
+                    ? 'Consultez la story, son contexte et les checklists déjà rattachées dans un mode lecture seule.'
+                    : "Analysez le besoin, préparez la checklist la plus pertinente, puis faites progresser la validation jusqu'à l'exécution." }}
                 </p>
               </div>
             </div>
@@ -913,7 +919,7 @@ onBeforeUnmount(() => {
                     @click="openManualDraft(); openHeaderActions = false"
                   >
                     <Plus :size="15" />
-                    <span>Creer manuellement</span>
+                    <span>Créer manuellement</span>
                   </button>
                   <RouterLink
                     v-if="projectId && auth.isTester"
@@ -922,7 +928,7 @@ onBeforeUnmount(() => {
                     @click="openHeaderActions = false"
                   >
                     <FlaskConical :size="15" />
-                    <span>Ouvrir l espace d execution</span>
+                    <span>Ouvrir l'espace d'exécution</span>
                   </RouterLink>
                   <button
                     v-if="auth.isProjectManager"
@@ -1028,13 +1034,13 @@ onBeforeUnmount(() => {
                 </p>
                 <p class="text-sm text-slate-500">
                   {{ storiesStore.isGenerating
-                    ? 'Veuillez patienter pendant que le systeme prepare la checklist.'
-                    : 'Le generateur privilegie la reutilisation avant de completer la couverture manquante.' }}
+                    ? 'Veuillez patienter pendant que le système prépare la checklist.'
+                    : 'Le générateur privilégie la réutilisation avant de compléter la couverture manquante.' }}
                 </p>
               </div>
             </div>
             <p class="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-              {{ storiesStore.isGenerating ? 'Generation en cours...' : 'Pret a lancer' }}
+              {{ storiesStore.isGenerating ? 'Génération en cours...' : 'Prêt à lancer' }}
             </p>
           </button>
 
@@ -1070,7 +1076,7 @@ onBeforeUnmount(() => {
           <div v-else-if="attachableChecklists.length === 0" class="mt-4 rounded-3xl border border-dashed border-slate-200 bg-white px-5 py-8 text-center">
             <AlertCircle :size="30" class="mx-auto mb-3 text-slate-400" />
             <p class="font-medium text-slate-900">Aucune checklist existante disponible</p>
-            <p class="mt-2 text-sm text-slate-500">Toutes les checklists actives du projet sont deja associees ou archivées.</p>
+            <p class="mt-2 text-sm text-slate-500">Toutes les checklists actives du projet sont déjà associées ou archivées.</p>
           </div>
 
           <form v-else class="mt-4 space-y-4" @submit.prevent="attachExistingChecklist">
@@ -1090,7 +1096,7 @@ onBeforeUnmount(() => {
                 <span class="min-w-0">
                   <strong class="block text-sm font-semibold text-slate-900">{{ checklist.name }}</strong>
                   <small class="mt-1 block text-sm text-slate-500">
-                    {{ checklist.category || 'Sans categorie' }} · {{ checklist.items?.length || 0 }} cas de test · {{ checklist.lifecycle_status || checklist.status || 'validee' }}
+                    {{ checklist.category || 'Sans catégorie' }} · {{ checklist.items?.length || 0 }} cas de test · {{ checklist.lifecycle_status || checklist.status || 'validée' }}
                   </small>
                   <span v-if="checklist.description" class="mt-1 block text-sm leading-6 text-slate-600">{{ checklist.description }}</span>
                 </span>
@@ -1118,8 +1124,8 @@ onBeforeUnmount(() => {
             </div>
 
             <div v-if="selectedExistingChecklists.length > 0" class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-              <strong class="block text-sm font-semibold text-slate-900">{{ selectedExistingChecklists.length }} checklist(s) selectionnee(s)</strong>
-              <p class="mt-1 text-sm text-slate-500">Elles seront associees a cette user story et visibles dans la section des checklists associees.</p>
+              <strong class="block text-sm font-semibold text-slate-900">{{ selectedExistingChecklists.length }} checklist(s) sélectionnée(s)</strong>
+              <p class="mt-1 text-sm text-slate-500">Elles seront associées à cette user story et visibles dans la section des checklists associées.</p>
             </div>
 
             <div class="flex justify-end gap-3">
@@ -1158,7 +1164,7 @@ onBeforeUnmount(() => {
                   </span>
                 </div>
                 <p class="text-sm leading-6 text-slate-600">
-                  {{ localizeGeneratedText(draft.description) || 'Brouillon pret pour relecture et validation.' }}
+                  {{ cleanDraftDescription(draft.description) || 'Brouillon pret pour relecture et validation.' }}
                 </p>
                 <div class="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
                   <span class="rounded-full bg-white px-2.5 py-1">{{ draft.items?.length || 0 }} test case(s)</span>
@@ -1345,7 +1351,7 @@ onBeforeUnmount(() => {
                 <input v-model="previewForm.name" class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3" />
               </label>
               <label class="block">
-                <span class="text-sm font-medium text-slate-700">Categorie</span>
+                <span class="text-sm font-medium text-slate-700">Catégorie</span>
                 <input v-model="previewForm.category" class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3" />
               </label>
             </div>

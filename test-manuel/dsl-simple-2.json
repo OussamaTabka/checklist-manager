@@ -1,0 +1,21 @@
+{
+  "run_id": "dsl-diag-002",
+  "external_id": 3002,
+  "test_case_title": "La page d'accueil the-internet se charge correctement",
+  "test_case_description": "Vérifier que la page d'accueil de the-internet.herokuapp.com se charge et affiche les liens de navigation.",
+  "test_case_text": "Ouvrir https://the-internet.herokuapp.com/ et vérifier que la page se charge. Le titre 'Welcome to the-internet' doit être visible. Aucune saisie requise.",
+  "base_url": "https://the-internet.herokuapp.com/",
+  "use_auth": true,
+  "environment_name": "production-public",
+  "notes": "Page publique sans authentification.",
+  "priority": "High",
+  "criticality": "Critical",
+  "current_status": "pending",
+  "target_type": "version_item",
+  "source_app": "the_internet",
+  "provided_inputs": {},
+  "expected_result": {
+    "visible_text_contains": "Welcome to the-internet",
+    "assertion_keywords": ["Welcome to the-internet", "Available Examples"]
+  }
+}

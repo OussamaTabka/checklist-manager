@@ -1,0 +1,21 @@
+{
+  "run_id": "no-input-case-5-responsive-mobile",
+  "external_id": 1005,
+  "test_case_title": "Responsive — Le formulaire de login reste visible et utilisable en viewport mobile (375×667)",
+  "test_case_description": "Vérifier que le formulaire de login de Sauce Demo est correctement affiché et utilisable lorsque la fenêtre du navigateur est réduite à une résolution mobile standard (375×667 pixels, iPhone SE).",
+  "test_case_text": "Configurer le viewport à 375×667 pixels. Charger https://www.saucedemo.com. Vérifier que le champ username, le champ password et le bouton Login sont tous visibles et non tronqués. Vérifier que le formulaire ne déborde pas hors de l'écran. Aucun champ de saisie de données de test n'est nécessaire.",
+  "base_url": "https://www.saucedemo.com",
+  "use_auth": false,
+  "environment_name": "production-public",
+  "notes": "Test responsive design. Viewport 375x667 (iPhone SE). Utiliser page.set_viewport_size() avant la navigation. Vérifier la visibilité des éléments critiques du formulaire. Aucune donnée de saisie requise.",
+  "priority": "Medium",
+  "criticality": "Medium",
+  "current_status": "pending",
+  "target_type": "version_item",
+  "source_app": "sauce_demo",
+  "provided_inputs": {},
+  "expected_result": {
+    "assertion_keywords": ["form visible", "username visible", "password visible", "login button visible", "mobile layout"],
+    "visible_text_contains": "Login"
+  }
+}

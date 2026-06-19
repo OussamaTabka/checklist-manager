@@ -413,7 +413,7 @@ const EXTRA_PHRASES = {
     en: 'Checklist restored successfully.'
   },
   'checklist supprimee definitivement avec succes.': {
-    fr: 'Checklist supprimee definitivement avec succes.',
+    fr: 'Checklist supprimée définitivement avec succès.',
     en: 'Checklist permanently deleted successfully.'
   },
   'checklist status updated': {
@@ -512,9 +512,17 @@ const EXTRA_PHRASES = {
     fr: 'Checklist existante associée à la user story.',
     en: 'Checklist attached successfully to the user story.'
   },
+  'checklist existante associee a la user story.': {
+    fr: 'Checklist existante associée à la user story.',
+    en: 'Checklist attached successfully to the user story.'
+  },
   'checklists associées à la user story avec succès.': {
     fr: 'Checklists existantes associées à la user story.',
-    en: 'checklists attached successfully to the user story.'
+    en: 'Checklists attached successfully to the user story.'
+  },
+  'checklists existantes associees a la user story.': {
+    fr: 'Checklists existantes associées à la user story.',
+    en: 'Checklists attached successfully to the user story.'
   },
   'checklist approuvée et associée à la user story.': {
     fr: 'Checklist approuvée et associée à la user story.',
